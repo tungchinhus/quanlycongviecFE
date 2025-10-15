@@ -1,0 +1,39 @@
+/* You can add global styles to this file, and also import other style files */
+
+// Import Angular Material theme
+@use '@angular/material' as mat;
+
+// Create Material Design 3 theme using Angular Material v20 API
+$custom-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+// Apply the theme
+@include mat.all-component-themes($custom-theme);
+
+// Global styles
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  font-family: 'Roboto', sans-serif;
+}
+
+// Custom utility classes for colors
+.text-primary { color: #1976d2 !important; }
+.text-secondary { color: #42a5f5 !important; }
+.text-success { color: #4caf50 !important; }
+.text-warning { color: #ff9800 !important; }
+.text-error { color: #f44336 !important; }
+
+.bg-primary { background-color: #1976d2 !important; }
+.bg-secondary { background-color: #42a5f5 !important; }
+.bg-success { background-color: #4caf50 !important; }
+.bg-warning { background-color: #ff9800 !important; }
+.bg-error { background-color: #f44336 !important; }
