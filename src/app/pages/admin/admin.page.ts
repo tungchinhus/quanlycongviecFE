@@ -7,14 +7,8 @@ import { HasRoleDirective } from '../../directives/has-role.directive';
   selector: 'app-admin-page',
   standalone: true,
   imports: [CommonModule, HasRoleDirective],
-  template: `
-    <h2>Admin</h2>
-    <p>Only users with Administrator role can access this route.</p>
-
-    <div *appHasRole="'Administrator'">
-      <p>Welcome, {{ auth.user()?.name }} ({{ auth.user()?.email }})</p>
-    </div>
-  `
+  templateUrl: './admin.page.html',
+  styleUrl: './admin.page.css'
 })
 export class AdminPage {
   readonly auth = inject(AuthService);

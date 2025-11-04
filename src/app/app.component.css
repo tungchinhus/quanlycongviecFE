@@ -3,7 +3,10 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa;
+}
+
+.app-container:has(> router-outlet:only-child) {
+  background-color: transparent;
 }
 
 .top-header {

@@ -8,7 +8,11 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "increment-build": "node scripts/increment-build.js",
-    "build:prod": "npm run increment-build && ng build --configuration production"
+    "build:prod": "ng build --configuration production",
+    "deploy": "npm run build:prod && firebase deploy --only hosting:quanlyfiles",
+    "deploy:hosting": "firebase deploy --only hosting:quanlyfiles",
+    "deploy:quanlycongviec": "npm run build:prod && firebase deploy --only hosting:quanlycongviec",
+    "deploy:all": "npm run build:prod && firebase deploy --only hosting"
   },
   "private": true,
   "dependencies": {
@@ -17,10 +21,12 @@
     "@angular/common": "^20.1.0",
     "@angular/compiler": "^20.1.0",
     "@angular/core": "^20.1.0",
+    "@angular/fire": "^20.0.1",
     "@angular/forms": "^20.1.0",
     "@angular/material": "^20.2.2",
     "@angular/platform-browser": "^20.1.0",
     "@angular/router": "^20.1.0",
+    "firebase": "^11.10.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

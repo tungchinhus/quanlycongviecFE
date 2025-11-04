@@ -1,97 +1,136 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UsersService } from '../../services/users.service';
+import { UsersService, CreateUserRequest } from '../../services/users.service';
 import { UserRole } from '../../services/auth.service';
 import { FormsModule } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-users-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <h2>Quản lý người dùng</h2>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Tên</th>
-          <th>Email</th>
-          <th>Roles</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let u of users()">
-          <td>{{ u.name }}</td>
-          <td>{{ u.email }}</td>
-          <td>
-            <label *ngFor="let r of allRoles" style="margin-right:12px; display:inline-flex; align-items:center;">
-              <input type="checkbox" [checked]="u.roles.includes(r)" (change)="onToggleRole(u.id, r, $any($event.target).checked)" />
-              <span style="margin-left:6px">{{ r }}</span>
-            </label>
-          </td>
-          <td>
-            <button (click)="remove(u.id)">Xoá</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <form (ngSubmit)="add()" style="margin-top:16px; display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
-      <div>
-        <label>Họ tên<br>
-          <input [(ngModel)]="newName" name="name" required />
-        </label>
-      </div>
-      <div>
-        <label>Email<br>
-          <input [(ngModel)]="newEmail" name="email" required />
-        </label>
-      </div>
-      <div>
-        <label>Quyền mặc định<br>
-          <select [(ngModel)]="newRole" name="role">
-            <option *ngFor="let r of allRoles" [value]="r">{{ r }}</option>
-          </select>
-        </label>
-      </div>
-      <button type="submit">Thêm người dùng</button>
-    </form>
-  `,
-  styles: [`
-    .table { width: 100%; border-collapse: collapse; }
-    .table th, .table td { border: 1px solid #ddd; padding: 8px; }
-    .table th { background: #f8f8f8; }
-  `]
+  imports: [CommonModule, FormsModule, MatSnackBarModule],
+  templateUrl: './users.page.html',
+  styleUrl: './users.page.css'
 })
 export class UsersPage {
   private readonly usersService = inject(UsersService);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly users = this.usersService.users;
   readonly allRoles: UserRole[] = ['Administrator', 'Manager', 'User', 'Guest'];
 
   newName = '';
   newEmail = '';
+  newPassword = '';
   newRole: UserRole = 'User';
+  isCreating = false;
+  errorMessage = '';
 
   onToggleRole(userId: string, role: UserRole, checked: boolean | undefined): void {
     const user = this.users().find(u => u.id === userId);
     if (!user) return;
     const next = new Set(user.roles);
     if (checked) next.add(role); else next.delete(role);
-    this.usersService.setRoles(userId, Array.from(next));
+    
+    this.usersService.updateUserRoles(userId, Array.from(next)).subscribe({
+      next: () => {
+        this.snackBar.open('Cập nhật quyền thành công!', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+      },
+      error: (error) => {
+        console.error('Error updating roles:', error);
+        this.snackBar.open('Cập nhật quyền thất bại. Vui lòng thử lại.', 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   remove(userId: string): void {
-    this.usersService.removeUser(userId);
+    if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+      this.usersService.deleteUser(userId).subscribe({
+        next: () => {
+          this.snackBar.open('Xóa người dùng thành công!', 'Đóng', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
+        },
+        error: (error) => {
+          console.error('Error deleting user:', error);
+          this.snackBar.open('Xóa người dùng thất bại. Vui lòng thử lại.', 'Đóng', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
   }
 
   add(): void {
-    const id = Math.random().toString(36).slice(2);
-    this.usersService.addUser({ id, name: this.newName, email: this.newEmail, roles: [this.newRole] });
-    this.newName = '';
-    this.newEmail = '';
-    this.newRole = 'User';
+    if (!this.newName || !this.newEmail || !this.newPassword) {
+      this.errorMessage = 'Vui lòng điền đầy đủ thông tin.';
+      return;
+    }
+
+    if (this.newPassword.length < 6) {
+      this.errorMessage = 'Mật khẩu phải có ít nhất 6 ký tự.';
+      return;
+    }
+
+    this.isCreating = true;
+    this.errorMessage = '';
+
+    const userData: CreateUserRequest = {
+      name: this.newName,
+      email: this.newEmail,
+      password: this.newPassword,
+      roles: [this.newRole]
+    };
+
+    // Tạo user: API sẽ tạo trên Firebase trước, sau đó tạo trong local DB
+    this.usersService.createUser(userData).subscribe({
+      next: () => {
+        this.isCreating = false;
+        this.snackBar.open('Tạo người dùng thành công!', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+        // Reset form
+        this.newName = '';
+        this.newEmail = '';
+        this.newPassword = '';
+        this.newRole = 'User';
+      },
+      error: (error) => {
+        this.isCreating = false;
+        console.error('Error creating user:', error);
+        
+        let errorMsg = 'Tạo người dùng thất bại. Vui lòng thử lại.';
+        if (error.error?.message) {
+          errorMsg = error.error.message;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        
+        this.errorMessage = errorMsg;
+        this.snackBar.open(errorMsg, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 }
 

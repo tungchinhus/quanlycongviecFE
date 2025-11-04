@@ -1,126 +1,131 @@
 <div class="app-container">
-  <!-- Top Header Bar (always visible) -->
-  <mat-toolbar class="top-header">
-    <div class="header-left">
-      <button mat-icon-button 
-              (click)="sidenavService.toggleCollapse()" 
-              class="menu-toggle-btn"
-              [matTooltip]="sidenavService.isCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">
-        <mat-icon>{{ sidenavService.isCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
-      </button>
-      <div class="project-info">
-        <span class="project-name">Thibidi</span>
-        <mat-icon class="chevron">chevron_right</mat-icon>
-        <span class="current-page">Quản Lý File & Công Việc</span>
-      </div>
-    </div>
-    <div class="header-right">
-      <button mat-icon-button [matTooltip]="'Trợ giúp'">
-        <mat-icon>help_outline</mat-icon>
-      </button>
-      <button mat-icon-button [matTooltip]="'Thông báo'">
-        <mat-icon>notifications</mat-icon>
-      </button>
-      <button mat-icon-button [matMenuTriggerFor]="userMenu" [matTooltip]="'Tài khoản'">
-        <mat-icon>account_circle</mat-icon>
-      </button>
-      <mat-menu #userMenu="matMenu">
-        <div class="user-info">
-          <div class="user-avatar">U</div>
-          <div class="user-details">
-            <div class="user-name">Người dùng</div>
-            <div class="user-email">user@company.com</div>
-            <div class="user-role">User</div>
-          </div>
+  @if (showLayout) {
+    <!-- Top Header Bar (only visible when authenticated and not on login page) -->
+    <mat-toolbar class="top-header">
+      <div class="header-left">
+        <button mat-icon-button 
+                (click)="sidenavService.toggleCollapse()" 
+                class="menu-toggle-btn"
+                [matTooltip]="sidenavService.isCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">
+          <mat-icon>{{ sidenavService.isCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
+        </button>
+        <div class="project-info">
+          <span class="project-name">Thibidi</span>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+          <span class="current-page">Quản Lý File & Công Việc</span>
         </div>
-        <mat-divider></mat-divider>
-        <button mat-menu-item>
-          <mat-icon>person</mat-icon>
-          <span>Thông tin cá nhân</span>
+      </div>
+      <div class="header-right">
+        <button mat-icon-button [matTooltip]="'Trợ giúp'">
+          <mat-icon>help_outline</mat-icon>
         </button>
-        <button mat-menu-item>
-          <mat-icon>settings</mat-icon>
-          <span>Cài đặt</span>
+        <button mat-icon-button [matTooltip]="'Thông báo'">
+          <mat-icon>notifications</mat-icon>
         </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item>
-          <mat-icon>logout</mat-icon>
-          <span>Đăng xuất</span>
+        <button mat-icon-button [matMenuTriggerFor]="userMenu" [matTooltip]="'Tài khoản'">
+          <mat-icon>account_circle</mat-icon>
         </button>
-      </mat-menu>
-    </div>
-  </mat-toolbar>
-
-  <!-- Main Content Area -->
-  <div class="main-layout">
-    <!-- Left Sidebar -->
-    <mat-sidenav #drawer class="sidenav" 
-        [mode]="sidenavService.mode()"
-        [opened]="sidenavService.isOpen()"
-        [disableClose]="false"
-        [class.collapsed]="sidenavService.isCollapsed()">
-      
-      <div class="sidenav-header">
-        <div class="brand-section">
-          <div class="brand-logo" [class.collapsed]="sidenavService.isCollapsed()">
-            <div class="logo-container">
-              <img src="assets/icons/thibidiLogo.png" 
-                   alt="Thibidi Logo" 
-                   class="logo-image"
-                   [class.collapsed]="sidenavService.isCollapsed()">
+        <mat-menu #userMenu="matMenu">
+          <div class="user-info">
+            <div class="user-avatar">{{ getCurrentUserInitials() }}</div>
+            <div class="user-details">
+              <div class="user-name">{{ getCurrentUserName() }}</div>
+              <div class="user-email">{{ getCurrentUserEmail() }}</div>
+              <div class="user-role">{{ getCurrentUserRole() }}</div>
             </div>
           </div>
-          <div class="brand-name" [class.hidden]="sidenavService.isCollapsed()">
-            Thibidi
+          <mat-divider></mat-divider>
+          <button mat-menu-item>
+            <mat-icon>person</mat-icon>
+            <span>Thông tin cá nhân</span>
+          </button>
+          <button mat-menu-item>
+            <mat-icon>settings</mat-icon>
+            <span>Cài đặt</span>
+          </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Đăng xuất</span>
+          </button>
+        </mat-menu>
+      </div>
+    </mat-toolbar>
+
+    <!-- Main Content Area with Sidebar (only visible when authenticated and not on login page) -->
+    <div class="main-layout">
+      <!-- Left Sidebar -->
+      <mat-sidenav #drawer class="sidenav" 
+          [mode]="sidenavService.mode()"
+          [opened]="sidenavService.isOpen()"
+          [disableClose]="false"
+          [class.collapsed]="sidenavService.isCollapsed()">
+        
+        <div class="sidenav-header">
+          <div class="brand-section">
+            <div class="brand-logo" [class.collapsed]="sidenavService.isCollapsed()">
+              <div class="logo-container">
+                <img src="assets/icons/thibidiLogo.png" 
+                     alt="Thibidi Logo" 
+                     class="logo-image"
+                     [class.collapsed]="sidenavService.isCollapsed()">
+              </div>
+            </div>
+            <div class="brand-name" [class.hidden]="sidenavService.isCollapsed()">
+              Thibidi
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="nav-list">
-        <a routerLink="/files" routerLinkActive="active" 
-           [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"
-           matTooltipPosition="right"
-           class="nav-item">
-          <div class="nav-icon">
-            <mat-icon>folder</mat-icon>
-          </div>
-          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý File</span>
-        </a>
-        <a routerLink="/assignments" routerLinkActive="active"
-           [matTooltip]="sidenavService.isCollapsed() ? 'Gán Công Việc' : ''"
-           matTooltipPosition="right"
-           class="nav-item">
-          <div class="nav-icon">
-            <mat-icon>assignment</mat-icon>
-          </div>
-          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Gán Công Việc</span>
-        </a>
-        <a routerLink="/approvals" routerLinkActive="active"
-           [matTooltip]="sidenavService.isCollapsed() ? 'Ký Duyệt' : ''"
-           matTooltipPosition="right"
-           class="nav-item">
-          <div class="nav-icon">
-            <mat-icon>check_circle</mat-icon>
-          </div>
-          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Ký Duyệt</span>
-        </a>
-        <a routerLink="/work-items" routerLinkActive="active"
-           [matTooltip]="sidenavService.isCollapsed() ? 'Công Việc' : ''"
-           matTooltipPosition="right"
-           class="nav-item">
-          <div class="nav-icon">
-            <mat-icon>work</mat-icon>
-          </div>
-          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
-        </a>
-        <div class="nav-spacer"></div>
-      </div>
-    </mat-sidenav>
+        <div class="nav-list">
+          <a routerLink="/files" routerLinkActive="active" 
+             [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"
+             matTooltipPosition="right"
+             class="nav-item">
+            <div class="nav-icon">
+              <mat-icon>folder</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý File</span>
+          </a>
+          <a routerLink="/assignments" routerLinkActive="active"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Gán Công Việc' : ''"
+             matTooltipPosition="right"
+             class="nav-item">
+            <div class="nav-icon">
+              <mat-icon>assignment</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Gán Công Việc</span>
+          </a>
+          <a routerLink="/approvals" routerLinkActive="active"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Ký Duyệt' : ''"
+             matTooltipPosition="right"
+             class="nav-item">
+            <div class="nav-icon">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Ký Duyệt</span>
+          </a>
+          <a routerLink="/work-items" routerLinkActive="active"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Công Việc' : ''"
+             matTooltipPosition="right"
+             class="nav-item">
+            <div class="nav-icon">
+              <mat-icon>work</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
+          </a>
+          <div class="nav-spacer"></div>
+        </div>
+      </mat-sidenav>
 
-    <!-- Main Content Area -->
-    <div class="main-content">
-      <router-outlet></router-outlet>
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <router-outlet></router-outlet>
+      </div>
     </div>
-  </div>
+  } @else {
+    <!-- Login page - no header, no sidebar -->
+    <router-outlet></router-outlet>
+  }
 </div>
 

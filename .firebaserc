@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "quanlyfiles-9891e"
+  },
+  "targets": {
+    "quanlyfiles-9891e": {
+      "hosting": {
+        "quanlyfiles": [
+          "quanlyfiles"
+        ],
+        "quanlycongviec": [
+          "quanlycongviec-ptk"
+        ]
+      }
+    }
+  }
+}
+
