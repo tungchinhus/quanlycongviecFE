@@ -1,0 +1,62 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Danh Sách Ký Duyệt</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <button mat-raised-button color="primary" (click)="openApprovalDialog()">
+        <mat-icon>check_circle</mat-icon>
+        Tạo Ký Duyệt Mới
+      </button>
+    </div>
+
+    <table mat-table [dataSource]="approvals" class="approval-table">
+      <ng-container matColumnDef="assignmentID">
+        <th mat-header-cell *matHeaderCellDef>Mã Gán Công Việc</th>
+        <td mat-cell *matCellDef="let approval">{{ approval.assignmentID }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="approverRole">
+        <th mat-header-cell *matHeaderCellDef>Vai Trò</th>
+        <td mat-cell *matCellDef="let approval">{{ approval.approverRole || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="approverName">
+        <th mat-header-cell *matHeaderCellDef>Người Ký</th>
+        <td mat-cell *matCellDef="let approval">{{ approval.approverName || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="approvalDate">
+        <th mat-header-cell *matHeaderCellDef>Ngày Ký</th>
+        <td mat-cell *matCellDef="let approval">
+          {{ approval.approvalDate ? (approval.approvalDate | date:'dd/MM/yyyy HH:mm') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="notes">
+        <th mat-header-cell *matHeaderCellDef>Ghi Chú</th>
+        <td mat-cell *matCellDef="let approval">{{ approval.notes || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+        <td mat-cell *matCellDef="let approval">
+          <button mat-icon-button [matTooltip]="'Xóa'" (click)="deleteApproval(approval)" color="warn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div *ngIf="approvals.length === 0" class="no-data">
+      <mat-icon>check_circle</mat-icon>
+      <p>Chưa có ký duyệt nào</p>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+
+

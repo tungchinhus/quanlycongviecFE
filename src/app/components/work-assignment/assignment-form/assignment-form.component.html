@@ -1,0 +1,53 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Tạo Gán Công Việc Mới</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="assignmentForm" (ngSubmit)="onSubmit()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tên Máy *</mat-label>
+        <input matInput formControlName="machineName" required>
+        <mat-error *ngIf="assignmentForm.get('machineName')?.hasError('required')">
+          Tên máy là bắt buộc
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Yêu Cầu Tiêu Chuẩn</mat-label>
+        <textarea matInput formControlName="standardRequirement" rows="3"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Yêu Cầu Bổ Sung</mat-label>
+        <textarea matInput formControlName="additionalRequest" rows="3"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Ngày Giao</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="deliveryDate">
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Người Thiết Kế</mat-label>
+        <input matInput formControlName="designer">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Trưởng Nhóm</mat-label>
+        <input matInput formControlName="teamLeader">
+      </mat-form-field>
+
+      <div class="actions">
+        <button mat-button type="button" (click)="onCancel()">Hủy</button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="assignmentForm.invalid">
+          Lưu
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+
+

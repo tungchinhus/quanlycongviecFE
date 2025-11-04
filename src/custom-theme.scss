@@ -1,0 +1,30 @@
+@use '@angular/material' as mat;
+
+// Material Design 3 theme configuration
+$primary-palette: mat.$azure-palette;
+$tertiary-palette: mat.$blue-palette;
+
+// Create the theme
+$my-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: $primary-palette,
+    tertiary: $tertiary-palette,
+  ),
+  typography: (
+    brand-family: 'Roboto, Inter, Noto Sans',
+    plain-family: 'Roboto, Inter, Noto Sans',
+    bold-weight: 700,
+    medium-weight: 500,
+    regular-weight: 400,
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+// Include the theme styles
+html {
+  @include mat.all-component-themes($my-theme);
+}
+

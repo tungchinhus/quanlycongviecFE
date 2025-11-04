@@ -1,0 +1,46 @@
+<h2 mat-dialog-title>Tạo Ký Duyệt Mới</h2>
+<mat-dialog-content>
+  <form [formGroup]="approvalForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Gán Công Việc *</mat-label>
+      <mat-select formControlName="assignmentID" required>
+        <mat-option *ngFor="let assignment of assignments" [value]="assignment.assignmentID">
+          {{ assignment.machineName }} (ID: {{ assignment.assignmentID }})
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="approvalForm.get('assignmentID')?.hasError('required')">
+        Vui lòng chọn gán công việc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Vai Trò Người Ký *</mat-label>
+      <input matInput formControlName="approverRole" required>
+      <mat-error *ngIf="approvalForm.get('approverRole')?.hasError('required')">
+        Vai trò là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tên Người Ký *</mat-label>
+      <input matInput formControlName="approverName" required>
+      <mat-error *ngIf="approvalForm.get('approverName')?.hasError('required')">
+        Tên người ký là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Ghi Chú</mat-label>
+      <textarea matInput formControlName="notes" rows="3"></textarea>
+    </mat-form-field>
+  </form>
+  </mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="onApprove()" [disabled]="approvalForm.invalid">
+    Ký Duyệt
+  </button>
+  </mat-dialog-actions>
+
+
+

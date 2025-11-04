@@ -1,0 +1,78 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Danh Sách Gán Công Việc</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <button mat-raised-button color="primary" routerLink="/assignments/new">
+        <mat-icon>add</mat-icon>
+        Tạo Gán Công Việc Mới
+      </button>
+    </div>
+
+    <table mat-table [dataSource]="assignments" class="assignment-table">
+      <ng-container matColumnDef="machineName">
+        <th mat-header-cell *matHeaderCellDef>Tên Máy</th>
+        <td mat-cell *matCellDef="let assignment">{{ assignment.machineName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="designer">
+        <th mat-header-cell *matHeaderCellDef>Người Thiết Kế</th>
+        <td mat-cell *matCellDef="let assignment">{{ assignment.designer || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="teamLeader">
+        <th mat-header-cell *matHeaderCellDef>Trưởng Nhóm</th>
+        <td mat-cell *matCellDef="let assignment">{{ assignment.teamLeader || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="deliveryDate">
+        <th mat-header-cell *matHeaderCellDef>Ngày Giao</th>
+        <td mat-cell *matCellDef="let assignment">
+          {{ assignment.deliveryDate ? (assignment.deliveryDate | date:'dd/MM/yyyy') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="workItems">
+        <th mat-header-cell *matHeaderCellDef>Công Việc</th>
+        <td mat-cell *matCellDef="let assignment">
+          <mat-chip [matBadge]="assignment.workItems?.length || 0" matBadgeColor="primary">
+            {{ assignment.workItems?.length || 0 }} công việc
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="approvals">
+        <th mat-header-cell *matHeaderCellDef>Ký Duyệt</th>
+        <td mat-cell *matCellDef="let assignment">
+          <mat-chip [matBadge]="assignment.approvals?.length || 0" matBadgeColor="accent">
+            {{ assignment.approvals?.length || 0 }} ký duyệt
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+        <td mat-cell *matCellDef="let assignment">
+          <button mat-icon-button [matTooltip]="'Chi tiết'" [routerLink]="['/assignments', assignment.assignmentID]">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="'Xóa'" (click)="deleteAssignment(assignment)" color="warn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div *ngIf="assignments.length === 0" class="no-data">
+      <mat-icon>assignment</mat-icon>
+      <p>Chưa có gán công việc nào</p>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+
+

@@ -1,0 +1,23 @@
+.toolbar {
+  margin-bottom: 24px;
+}
+
+.approval-table {
+  width: 100%;
+}
+
+.no-data {
+  text-align: center;
+  padding: 48px;
+  color: var(--thibidi-text-secondary);
+}
+
+.no-data mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+}
+
+
+

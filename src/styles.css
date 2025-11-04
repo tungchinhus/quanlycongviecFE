@@ -1,0 +1,48 @@
+/* THIBIDI Brand CSS Variables */
+:root {
+  --thibidi-primary: #1976d2;
+  --thibidi-secondary: #424242;
+  --thibidi-accent: #ff4081;
+  --thibidi-success: #4caf50;
+  --thibidi-warning: #ff9800;
+  --thibidi-error: #f44336;
+  --thibidi-info: #2196f3;
+  --thibidi-background: #f5f5f5;
+  --thibidi-surface: #ffffff;
+  --thibidi-text-primary: rgba(0, 0, 0, 0.87);
+  --thibidi-text-secondary: rgba(0, 0, 0, 0.6);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', 'Noto Sans', 'Roboto', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--thibidi-background);
+  color: var(--thibidi-text-primary);
+}
+
+/* Global utility classes */
+.text-center {
+  text-align: center;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+

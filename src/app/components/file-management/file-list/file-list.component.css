@@ -1,0 +1,52 @@
+.toolbar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-field {
+  width: 150px;
+}
+
+.file-table {
+  width: 100%;
+}
+
+.file-icon {
+  vertical-align: middle;
+  margin-right: 8px;
+  color: var(--thibidi-primary);
+}
+
+mat-chip {
+  font-size: 12px;
+}
+
+.status-draft { background-color: #e0e0e0; }
+.status-pending { background-color: #fff3cd; }
+.status-approved { background-color: #d4edda; }
+.status-rejected { background-color: #f8d7da; }
+.status-archived { background-color: #d1ecf1; }
+
+.no-data {
+  text-align: center;
+  padding: 48px;
+  color: var(--thibidi-text-secondary);
+}
+
+.no-data mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+}
+
+
+

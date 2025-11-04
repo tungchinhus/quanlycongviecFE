@@ -1,0 +1,75 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Danh Sách Công Việc</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <button mat-raised-button color="primary" (click)="openWorkItemDialog()">
+        <mat-icon>add</mat-icon>
+        Tạo Công Việc Mới
+      </button>
+    </div>
+
+    <table mat-table [dataSource]="workItems" class="work-item-table">
+      <ng-container matColumnDef="workType">
+        <th mat-header-cell *matHeaderCellDef>Loại Công Việc</th>
+        <td mat-cell *matCellDef="let item">{{ item.workType || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="personName">
+        <th mat-header-cell *matHeaderCellDef>Người Thực Hiện</th>
+        <td mat-cell *matCellDef="let item">{{ item.personName || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="startDate">
+        <th mat-header-cell *matHeaderCellDef>Ngày Bắt Đầu</th>
+        <td mat-cell *matCellDef="let item">
+          {{ item.startDate ? (item.startDate | date:'dd/MM/yyyy') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="expectedFinish">
+        <th mat-header-cell *matHeaderCellDef>Dự Kiến Hoàn Thành</th>
+        <td mat-cell *matCellDef="let item">
+          {{ item.expectedFinish ? (item.expectedFinish | date:'dd/MM/yyyy') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actualFinish">
+        <th mat-header-cell *matHeaderCellDef>Hoàn Thành Thực Tế</th>
+        <td mat-cell *matCellDef="let item">
+          {{ item.actualFinish ? (item.actualFinish | date:'dd/MM/yyyy') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="personConfirmation">
+        <th mat-header-cell *matHeaderCellDef>Xác Nhận</th>
+        <td mat-cell *matCellDef="let item">
+          <mat-chip [color]="item.personConfirmation ? 'primary' : 'warn'">
+            {{ item.personConfirmation ? 'Đã xác nhận' : 'Chưa xác nhận' }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+        <td mat-cell *matCellDef="let item">
+          <button mat-icon-button [matTooltip]="'Xóa'" (click)="deleteWorkItem(item)" color="warn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div *ngIf="workItems.length === 0" class="no-data">
+      <mat-icon>work</mat-icon>
+      <p>Chưa có công việc nào</p>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+
+

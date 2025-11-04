@@ -1,0 +1,42 @@
+.assignment-detail {
+  max-width: 1200px;
+}
+
+.header-actions {
+  margin-left: auto;
+}
+
+.info-section {
+  padding: 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.label {
+  font-weight: 500;
+  color: var(--thibidi-text-secondary);
+}
+
+.work-items-list, .approvals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.work-item-card, .approval-card {
+  margin-bottom: 16px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 48px;
+  color: var(--thibidi-text-secondary);
+}
+
+
+

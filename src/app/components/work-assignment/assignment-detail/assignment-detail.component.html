@@ -1,0 +1,115 @@
+<div *ngIf="assignment" class="assignment-detail">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>{{ assignment.machineName }}</mat-card-title>
+      <div class="header-actions">
+        <button mat-icon-button [routerLink]="['/assignments']">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-tab-group>
+        <mat-tab label="Thông Tin Chung">
+          <div class="info-section">
+            <div class="info-row">
+              <span class="label">Tên Máy:</span>
+              <span>{{ assignment.machineName }}</span>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="info-row">
+              <span class="label">Người Thiết Kế:</span>
+              <span>{{ assignment.designer || '-' }}</span>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="info-row">
+              <span class="label">Trưởng Nhóm:</span>
+              <span>{{ assignment.teamLeader || '-' }}</span>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="info-row">
+              <span class="label">Ngày Giao:</span>
+              <span>{{ assignment.deliveryDate ? (assignment.deliveryDate | date:'dd/MM/yyyy') : '-' }}</span>
+            </div>
+            <mat-divider *ngIf="assignment.standardRequirement"></mat-divider>
+            <div class="info-row" *ngIf="assignment.standardRequirement">
+              <span class="label">Yêu Cầu Tiêu Chuẩn:</span>
+              <span>{{ assignment.standardRequirement }}</span>
+            </div>
+            <mat-divider *ngIf="assignment.additionalRequest"></mat-divider>
+            <div class="info-row" *ngIf="assignment.additionalRequest">
+              <span class="label">Yêu Cầu Bổ Sung:</span>
+              <span>{{ assignment.additionalRequest }}</span>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Bản Vẽ Kỹ Thuật" *ngIf="assignment.technicalSheet">
+          <div class="info-section">
+            <div class="info-row">
+              <span class="label">TBKT_ID:</span>
+              <span>{{ assignment.technicalSheet.tbkt_ID }}</span>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="info-row" *ngIf="assignment.technicalSheet.power_kVA">
+              <span class="label">Công Suất (kVA):</span>
+              <span>{{ assignment.technicalSheet.power_kVA }}</span>
+            </div>
+            <mat-divider *ngIf="assignment.technicalSheet.voltageSpec"></mat-divider>
+            <div class="info-row" *ngIf="assignment.technicalSheet.voltageSpec">
+              <span class="label">Điện Áp:</span>
+              <span>{{ assignment.technicalSheet.voltageSpec }}</span>
+            </div>
+            <mat-divider *ngIf="assignment.technicalSheet.phase"></mat-divider>
+            <div class="info-row" *ngIf="assignment.technicalSheet.phase">
+              <span class="label">Pha:</span>
+              <span>{{ assignment.technicalSheet.phase }}</span>
+            </div>
+            <mat-divider *ngIf="assignment.technicalSheet.notes"></mat-divider>
+            <div class="info-row" *ngIf="assignment.technicalSheet.notes">
+              <span class="label">Ghi Chú:</span>
+              <span>{{ assignment.technicalSheet.notes }}</span>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Công Việc ({{ assignment.workItems?.length || 0 }})">
+          <div class="work-items-list" *ngIf="assignment.workItems && assignment.workItems.length > 0">
+            <mat-card *ngFor="let item of assignment.workItems" class="work-item-card">
+              <mat-card-content>
+                <h4>{{ item.workType || 'Công việc' }}</h4>
+                <p><strong>Người thực hiện:</strong> {{ item.personName || '-' }}</p>
+                <p><strong>Ngày bắt đầu:</strong> {{ item.startDate ? (item.startDate | date:'dd/MM/yyyy') : '-' }}</p>
+                <p><strong>Dự kiến hoàn thành:</strong> {{ item.expectedFinish ? (item.expectedFinish | date:'dd/MM/yyyy') : '-' }}</p>
+                <p><strong>Hoàn thành thực tế:</strong> {{ item.actualFinish ? (item.actualFinish | date:'dd/MM/yyyy') : '-' }}</p>
+                <p *ngIf="item.notes"><strong>Ghi chú:</strong> {{ item.notes }}</p>
+              </mat-card-content>
+            </mat-card>
+          </div>
+          <div *ngIf="!assignment.workItems || assignment.workItems.length === 0" class="no-data">
+            <p>Chưa có công việc nào</p>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Ký Duyệt ({{ assignment.approvals?.length || 0 }})">
+          <div class="approvals-list" *ngIf="assignment.approvals && assignment.approvals.length > 0">
+            <mat-card *ngFor="let approval of assignment.approvals" class="approval-card">
+              <mat-card-content>
+                <h4>{{ approval.approverRole || 'Người ký duyệt' }}</h4>
+                <p><strong>Người ký:</strong> {{ approval.approverName || '-' }}</p>
+                <p><strong>Ngày ký:</strong> {{ approval.approvalDate ? (approval.approvalDate | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
+                <p *ngIf="approval.notes"><strong>Ghi chú:</strong> {{ approval.notes }}</p>
+              </mat-card-content>
+            </mat-card>
+          </div>
+          <div *ngIf="!assignment.approvals || assignment.approvals.length === 0" class="no-data">
+            <p>Chưa có ký duyệt nào</p>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+
+

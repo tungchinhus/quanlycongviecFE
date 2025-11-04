@@ -1,0 +1,71 @@
+<h2 mat-dialog-title>Tạo Công Việc Mới</h2>
+<mat-dialog-content>
+  <form [formGroup]="workItemForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Gán Công Việc *</mat-label>
+      <mat-select formControlName="assignmentID" required>
+        <mat-option *ngFor="let assignment of assignments" [value]="assignment.assignmentID">
+          {{ assignment.machineName }} (ID: {{ assignment.assignmentID }})
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="workItemForm.get('assignmentID')?.hasError('required')">
+        Vui lòng chọn gán công việc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Loại Công Việc *</mat-label>
+      <input matInput formControlName="workType" required>
+      <mat-error *ngIf="workItemForm.get('workType')?.hasError('required')">
+        Loại công việc là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Người Thực Hiện *</mat-label>
+      <input matInput formControlName="personName" required>
+      <mat-error *ngIf="workItemForm.get('personName')?.hasError('required')">
+        Người thực hiện là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Ngày Bắt Đầu</mat-label>
+      <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+      <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Dự Kiến Hoàn Thành</mat-label>
+      <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish">
+      <mat-datepicker-toggle matIconSuffix [for]="expectedPicker"></mat-datepicker-toggle>
+      <mat-datepicker #expectedPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Hoàn Thành Thực Tế</mat-label>
+      <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish">
+      <mat-datepicker-toggle matIconSuffix [for]="actualPicker"></mat-datepicker-toggle>
+      <mat-datepicker #actualPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-checkbox formControlName="personConfirmation">
+      Xác nhận của người thực hiện
+    </mat-checkbox>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Ghi Chú</mat-label>
+      <textarea matInput formControlName="notes" rows="3"></textarea>
+    </mat-form-field>
+  </form>
+  </mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="workItemForm.invalid">
+    Lưu
+  </button>
+  </mat-dialog-actions>
+
+
+
