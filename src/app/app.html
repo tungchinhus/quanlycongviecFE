@@ -1,0 +1,151 @@
+<div class="app-container">
+  <!-- Top Header Bar (always visible) -->
+  <mat-toolbar class="top-header">
+    <div class="header-left">
+      <button mat-icon-button 
+              (click)="sidenavService.toggleCollapse()" 
+              class="menu-toggle-btn"
+              *ngIf="isAuthenticated"
+              [matTooltip]="sidenavService.isOpen() ? 'Ẩn menu' : 'Hiện menu'">
+        <mat-icon>{{ sidenavService.isOpen() ? 'menu_open' : 'menu' }}</mat-icon>
+      </button>
+      <div class="project-info">
+        <span class="project-name">Thibidi</span>
+        <mat-icon class="chevron">chevron_right</mat-icon>
+        <span class="current-page">Hệ thống Quản lý File</span>
+      </div>
+    </div>
+    <div class="header-right" *ngIf="isAuthenticated">
+      <button mat-icon-button>
+        <mat-icon>help_outline</mat-icon>
+      </button>
+      <button mat-icon-button>
+        <mat-icon>notifications</mat-icon>
+      </button>
+      <button mat-icon-button [matMenuTriggerFor]="userMenu">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu">
+        <div class="user-info">
+          <div class="user-avatar">{{getCurrentUserInitials()}}</div>
+          <div class="user-details">
+            <div class="user-name">{{getCurrentUserName()}}</div>
+            <div class="user-email">{{getCurrentUserEmail()}}</div>
+            <div class="user-role">{{getCurrentUserRole()}}</div>
+          </div>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item>
+          <mat-icon>person</mat-icon>
+          <span>Thông tin cá nhân</span>
+        </button>
+        <button mat-menu-item>
+          <mat-icon>settings</mat-icon>
+          <span>Cài đặt</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Đăng xuất</span>
+        </button>
+      </mat-menu>
+    </div>
+  </mat-toolbar>
+
+  <!-- Main Content Area - Show layout only when authenticated -->
+  <div class="main-layout" *ngIf="isAuthenticated">
+    <!-- Left Sidebar -->
+    <mat-sidenav #drawer class="sidenav" 
+        [mode]="sidenavService.mode()"
+        [opened]="sidenavService.isOpen()"
+        [disableClose]="false"
+        [class.collapsed]="sidenavService.isCollapsed()">
+      
+      <div class="sidenav-header">
+        <div class="brand-section">
+          <div class="brand-logo" [class.collapsed]="sidenavService.isCollapsed()">
+            <div class="logo-container">
+              <img src="assets/icons/thibidiLogo.png" 
+                   alt="Thibidi Logo" 
+                   class="logo-image"
+                   [class.collapsed]="sidenavService.isCollapsed()">
+            </div>
+          </div>
+          <div class="brand-name" [class.hidden]="sidenavService.isCollapsed()">
+            Thibidi
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-list">
+        <a routerLink="/dashboard" routerLinkActive="active" 
+           [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>dashboard</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
+        </a>
+        <a routerLink="/files" 
+           [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>folder</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý File</span>
+        </a>
+        <a routerLink="/upload" 
+           [matTooltip]="sidenavService.isCollapsed() ? 'Upload File' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>cloud_upload</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Upload File</span>
+        </a>
+        <a routerLink="/categories" 
+           [matTooltip]="sidenavService.isCollapsed() ? 'Danh mục' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>category</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Danh mục</span>
+        </a>
+        <a routerLink="/users" 
+           *ngIf="hasAdminRole()"
+           [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý người dùng' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>people</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý người dùng</span>
+        </a>
+        <a routerLink="/settings" 
+           *ngIf="hasAdminRole()"
+           [matTooltip]="sidenavService.isCollapsed() ? 'Cài đặt hệ thống' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>settings</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Cài đặt hệ thống</span>
+        </a>
+        <div class="nav-spacer"></div>
+      </div>
+    </mat-sidenav>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <router-outlet />
+    </div>
+  </div>
+
+  <!-- Content for non-authenticated pages -->
+  <div *ngIf="!isAuthenticated">
+    <router-outlet />
+  </div>
+</div>
