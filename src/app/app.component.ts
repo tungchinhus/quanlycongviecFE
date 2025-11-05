@@ -8,9 +8,11 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { SidenavService } from './services/sidenav.service';
 import { AuthService } from './services/auth.service';
+import { ChangePasswordDialogComponent } from './components/change-password-dialog/change-password-dialog.component';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -27,7 +29,8 @@ import { filter } from 'rxjs/operators';
     MatListModule,
     MatMenuModule,
     MatTooltipModule,
-    MatDividerModule
+    MatDividerModule,
+    MatDialogModule
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
@@ -37,6 +40,7 @@ export class AppComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private dialog = inject(MatDialog);
   
   isLoginPage = false;
 
@@ -89,7 +93,10 @@ export class AppComponent {
   }
 
   hasAdminRole(): boolean {
-    return this.authService.hasRole('Administrator');
+    const user = this.authService.user();
+    if (!user || !user.roles || user.roles.length === 0) return false;
+    // Roles đã được normalize trong AuthService ("Admin" -> "Administrator")
+    return user.roles.includes('Administrator');
   }
 
   logout(): void {
@@ -103,6 +110,20 @@ export class AppComponent {
         console.error('Logout error:', error);
         // Vẫn navigate về login ngay cả khi có lỗi
         this.router.navigate(['/login']);
+      }
+    });
+  }
+
+  openChangePasswordDialog(): void {
+    const dialogRef = this.dialog.open(ChangePasswordDialogComponent, {
+      width: '500px',
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Password changed successfully
+        console.log('Password changed successfully');
       }
     });
   }

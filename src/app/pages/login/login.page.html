@@ -10,14 +10,11 @@
         }
         
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="Nhập email">
-          <mat-icon matPrefix>email</mat-icon>
-          @if (loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched) {
-            <mat-error>Email là bắt buộc</mat-error>
-          }
-          @if (loginForm.get('email')?.hasError('email') && loginForm.get('email')?.touched) {
-            <mat-error>Email không hợp lệ</mat-error>
+          <mat-label>Tên đăng nhập hoặc Email</mat-label>
+          <input matInput type="text" formControlName="usernameOrEmail" placeholder="Nhập tên đăng nhập hoặc email">
+          <mat-icon matPrefix>person</mat-icon>
+          @if (loginForm.get('usernameOrEmail')?.hasError('required') && loginForm.get('usernameOrEmail')?.touched) {
+            <mat-error>Tên đăng nhập hoặc Email là bắt buộc</mat-error>
           }
         </mat-form-field>
 

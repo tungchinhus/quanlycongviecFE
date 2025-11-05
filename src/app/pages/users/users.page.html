@@ -1,75 +1,92 @@
-<h2>Quản lý người dùng</h2>
-
-@if (errorMessage) {
-  <div class="error-message">{{ errorMessage }}</div>
-}
-
-<table class="table">
-  <thead>
-    <tr>
-      <th>Tên</th>
-      <th>Email</th>
-      <th>Firebase UID</th>
-      <th>Roles</th>
-      <th>Thao tác</th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (users().length === 0) {
-      <tr>
-        <td colspan="5" style="text-align: center; padding: 20px;">
-          Chưa có người dùng nào. Hãy tạo người dùng mới.
-        </td>
-      </tr>
-    } @else {
-      <tr *ngFor="let u of users()">
-        <td>{{ u.name }}</td>
-        <td>{{ u.email }}</td>
-        <td><small style="color: #666;">{{ u.firebaseUid || 'N/A' }}</small></td>
-        <td>
-          <label *ngFor="let r of allRoles" style="margin-right:12px; display:inline-flex; align-items:center;">
-            <input type="checkbox" [checked]="u.roles.includes(r)" (change)="onToggleRole(u.id, r, $any($event.target).checked)" />
-            <span style="margin-left:6px">{{ r }}</span>
-          </label>
-        </td>
-        <td>
-          <button (click)="remove(u.id)" class="btn-danger">Xoá</button>
-        </td>
-      </tr>
-    }
-  </tbody>
-</table>
-
-<div class="add-user-section">
-  <h3>Thêm người dùng mới</h3>
-  <p class="info-text">Tạo user trên Firebase Authentication, sau đó tạo trong Database local.</p>
-  
-  <form (ngSubmit)="add()" class="add-user-form">
-    <div class="form-group">
-      <label>Họ tên *</label>
-      <input [(ngModel)]="newName" name="name" required [disabled]="isCreating" />
-    </div>
-    <div class="form-group">
-      <label>Email *</label>
-      <input type="email" [(ngModel)]="newEmail" name="email" required [disabled]="isCreating" />
-    </div>
-    <div class="form-group">
-      <label>Mật khẩu * (tối thiểu 6 ký tự)</label>
-      <input type="password" [(ngModel)]="newPassword" name="password" required minlength="6" [disabled]="isCreating" />
-    </div>
-    <div class="form-group">
-      <label>Quyền mặc định</label>
-      <select [(ngModel)]="newRole" name="role" [disabled]="isCreating">
-        <option *ngFor="let r of allRoles" [value]="r">{{ r }}</option>
-      </select>
-    </div>
-    <button type="submit" [disabled]="isCreating || !newName || !newEmail || !newPassword || newPassword.length < 6">
-      @if (isCreating) {
-        <span>Đang tạo...</span>
-      } @else {
-        <span>Thêm người dùng</span>
+<div class="users-management-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>
+          <mat-icon>people</mat-icon>
+          Quản lý người dùng
+        </h1>
+        <p class="page-description">Quản lý người dùng và phân quyền trong hệ thống</p>
+      </div>
+      @if (isAdmin()) {
+        <button mat-raised-button color="primary" (click)="onCreateUser()">
+          <mat-icon>person_add</mat-icon>
+          Thêm người dùng
+        </button>
       }
-    </button>
-  </form>
-</div>
+    </div>
+  </div>
 
+  @if (!isAdmin()) {
+    <mat-card class="access-denied-card">
+      <div class="access-denied-content">
+        <mat-icon>lock</mat-icon>
+        <h2>Không có quyền truy cập</h2>
+        <p>Chỉ Administrator mới có thể truy cập trang quản lý người dùng.</p>
+      </div>
+    </mat-card>
+  } @else {
+    <mat-tab-group #tabGroup class="management-tabs" animationDuration="300ms">
+      <!-- Tab 1: Danh sách người dùng -->
+      <mat-tab label="Danh sách người dùng">
+        <div class="tab-content">
+          <app-user-list
+            [users]="users()"
+            [isLoading]="isLoading()"
+            [isAdmin]="isAdmin()"
+            (onUserDeleted)="onUserDeleted($event)"
+            (onUsersReload)="onUsersReload()"
+            (onUserSelected)="onUserSelected($event)">
+          </app-user-list>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 2: Quản lý quyền -->
+      <mat-tab label="Quản lý quyền">
+        <div class="tab-content">
+          @if (!selectedUser()) {
+            <div class="no-user-selected">
+              <mat-icon>person_search</mat-icon>
+              <h3>Chọn người dùng để quản lý quyền</h3>
+              <p>Vui lòng chọn một người dùng từ danh sách để xem và chỉnh sửa quyền</p>
+              
+              <div class="users-selection">
+                <mat-card *ngFor="let user of users()" class="user-card" (click)="onUserSelected(user)">
+                  <mat-card-content>
+                    <div class="user-card-content">
+                      <mat-icon class="user-avatar">person</mat-icon>
+                      <div class="user-info">
+                        <div class="user-name">{{ user.name }}</div>
+                        <div class="user-email">{{ user.email }}</div>
+                        <div class="user-roles">
+                          @for (role of user.roles; track role) {
+                            <span class="role-badge">{{ role }}</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+            </div>
+          } @else {
+            <div class="role-management-wrapper">
+              <div class="selected-user-info">
+                <button mat-icon-button (click)="selectedUser.set(null)" matTooltip="Quay lại">
+                  <mat-icon>arrow_back</mat-icon>
+                </button>
+                <span class="selected-user-name">{{ selectedUser()?.name }}</span>
+              </div>
+              
+              <app-role-management
+                [user]="selectedUser()!"
+                [isAdmin]="isAdmin()"
+                (onRoleUpdated)="onRoleUpdated()">
+              </app-role-management>
+            </div>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>

@@ -1,18 +1,22 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, getIdTokenResult, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from '@angular/fire/auth';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
-import { map, switchMap, catchError } from 'rxjs/operators';
+import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export type UserRole = 'Administrator' | 'Manager' | 'User' | 'Guest';
 
 export interface AuthUser {
-  id: string;
-  firebaseUid: string;
-  name: string;
+  id: string; // userId từ backend (string)
+  userId?: number; // userId từ backend (number) - optional để tương thích
+  firebaseUid: string; // firebaseUID từ backend
+  userName?: string; // userName từ backend
+  name: string; // fullName từ backend
   email: string;
   roles: UserRole[];
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,20 +26,77 @@ export class AuthService {
   private readonly currentUserSignal = signal<AuthUser | null>(null);
 
   constructor() {
+    // Khôi phục user session từ localStorage khi app khởi động
+    this.restoreUserSession();
+    
     // Theo dõi trạng thái đăng nhập Firebase
     onAuthStateChanged(this.auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Lấy thông tin user từ local DB
-        this.loadUserFromLocalDB(firebaseUser.uid).subscribe({
+        // Nếu đã có user session trong localStorage, không cần load lại
+        const existingUser = this.currentUserSignal();
+        if (existingUser && localStorage.getItem('token')) {
+          return; // Đã có user session, không cần reload
+        }
+        
+        // Nếu chưa có user session, load từ Firebase custom claims hoặc local DB
+        this.loadUserFromFirebase(firebaseUser).subscribe({
           error: (error) => {
-            console.error('Error loading user from local DB on auth state change:', error);
+            console.error('Error loading user from Firebase on auth state change:', error);
+            // Fallback: load từ local DB nếu không có custom claims
+            this.loadUserFromLocalDB(firebaseUser.uid).subscribe({
+              error: (err) => {
+                console.error('Error loading user from local DB on auth state change:', err);
+              }
+            });
           }
         });
       } else {
+        // Nếu Firebase user là null, clear user session
         this.currentUserSignal.set(null);
         localStorage.removeItem('user_session');
+        localStorage.removeItem('token');
       }
     });
+  }
+
+  /**
+   * Normalize roles: map "Admin" -> "Administrator" để đảm bảo consistency
+   */
+  private normalizeRoles(roles: string[]): UserRole[] {
+    return roles.map(role => {
+      // Map "Admin" -> "Administrator" để đảm bảo consistency
+      if (role === 'Admin' || role === 'admin') {
+        return 'Administrator';
+      }
+      return role as UserRole;
+    });
+  }
+
+  /**
+   * Khôi phục user session từ localStorage khi app khởi động
+   */
+  private restoreUserSession(): void {
+    const userSession = localStorage.getItem('user_session');
+    const token = localStorage.getItem('token');
+    
+    if (userSession && token) {
+      try {
+        const user = JSON.parse(userSession) as AuthUser;
+        // Normalize roles khi restore từ localStorage
+        user.roles = this.normalizeRoles(user.roles || []);
+        this.currentUserSignal.set(user);
+        // Cập nhật lại localStorage với roles đã normalize
+        localStorage.setItem('user_session', JSON.stringify(user));
+        // Đồng bộ ngầm thông tin user và roles xuống local DB để nhất quán với danh sách Users
+        this.syncUserToLocalDB(user, true).subscribe({
+          error: (err) => console.warn('Silent sync on restore failed:', err)
+        });
+      } catch (error) {
+        console.error('Error restoring user session:', error);
+        localStorage.removeItem('user_session');
+        localStorage.removeItem('token');
+      }
+    }
   }
 
   get user() {
@@ -43,7 +104,10 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentUserSignal() !== null;
+    // Kiểm tra cả user signal và JWT token
+    const user = this.currentUserSignal();
+    const token = localStorage.getItem('token');
+    return user !== null && token !== null;
   }
 
   hasRole(required: UserRole | UserRole[]): boolean {
@@ -61,24 +125,112 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập với email và password qua Firebase
+   * Kiểm tra xem input có phải là email format không
    */
-  loginWithEmailAndPassword(email: string, password: string): Observable<AuthUser> {
-    return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
-      switchMap((userCredential) => {
-        const firebaseUser = userCredential.user;
-        // Lấy thông tin user từ local DB
-        return this.loadUserFromLocalDB(firebaseUser.uid).pipe(
-          map(() => this.currentUserSignal()!),
+  private isEmailFormat(input: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  }
+
+  /**
+   * Resolve email từ username hoặc email
+   * Nếu input là email format thì trả về email đó
+   * Nếu không thì query từ backend để lấy email từ username
+   */
+  private resolveEmailFromUsernameOrEmail(usernameOrEmail: string): Observable<string> {
+    // Nếu là email format thì dùng trực tiếp
+    if (this.isEmailFormat(usernameOrEmail)) {
+      return of(usernameOrEmail);
+    }
+
+    // Nếu không phải email format, coi như username và query từ backend
+    return this.http.get<{ email: string }>(`${environment.apiUrl}/users/by-username/${encodeURIComponent(usernameOrEmail)}`).pipe(
+      map((response: { email: string }) => response.email),
+      catchError((error) => {
+        // Nếu không tìm thấy username, throw error
+        if (error.status === 404) {
+          throw { ...error, message: 'Tên đăng nhập hoặc email không tồn tại.' };
+        }
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Đăng nhập với username/email và password qua Firebase
+   * Flow: Login Firebase -> Lấy ID Token -> Gửi lên backend -> Nhận JWT token và user info
+   */
+  loginWithEmailAndPassword(usernameOrEmail: string, password: string): Observable<AuthUser> {
+    // Resolve email từ username hoặc email
+    return this.resolveEmailFromUsernameOrEmail(usernameOrEmail).pipe(
+      switchMap((email) => {
+        // Bước 1: Đăng nhập với Firebase (email/password)
+        return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
+          switchMap((userCredential) => {
+            const firebaseUser = userCredential.user;
+            // Bước 2: Lấy ID Token từ Firebase
+            return from(firebaseUser.getIdToken()).pipe(
+              switchMap((idToken) => {
+                // Bước 3: Gửi ID Token lên backend để verify và lấy JWT token
+                return this.http.post<{
+                  token: string;
+                  user: {
+                    userId: number;
+                    userName?: string;
+                    fullName: string;
+                    email: string;
+                    firebaseUID: string;
+                    roles: string[];
+                    emailVerified: boolean;
+                  };
+                }>(`${environment.apiUrl}/auth/login/firebase-token`, {
+                  idToken: idToken
+                }).pipe(
+                  map((response) => {
+                    // Bước 4: Lưu JWT token từ backend vào localStorage
+                    localStorage.setItem('token', response.token);
+                    
+                    // Bước 5: Map user từ backend response sang AuthUser
+                    const authUser: AuthUser = {
+                      id: response.user.userId.toString(),
+                      userId: response.user.userId,
+                      firebaseUid: response.user.firebaseUID,
+                      userName: response.user.userName,
+                      name: response.user.fullName,
+                      email: response.user.email,
+                      roles: this.normalizeRoles(response.user.roles || []),
+                      isActive: true
+                    };
+                    
+                    // Lưu user vào signal và localStorage
+                    this.currentUserSignal.set(authUser);
+                    localStorage.setItem('user_session', JSON.stringify(authUser));
+                  
+                  // Đồng bộ user và roles xuống local DB để đảm bảo danh sách Users hiển thị đúng
+                  this.syncUserToLocalDB(authUser, true).subscribe({
+                    error: (err) => console.warn('Silent sync after login failed:', err)
+                  });
+                    
+                    return authUser;
+                  }),
+                  catchError((error) => {
+                    console.error('Error during backend login:', error);
+                    // Nếu backend login thất bại, đăng xuất khỏi Firebase
+                    signOut(this.auth).catch(() => {});
+                    throw error;
+                  })
+                );
+              }),
+              catchError((error) => {
+                console.error('Error getting Firebase ID token:', error);
+                throw error;
+              })
+            );
+          }),
           catchError((error) => {
-            console.error('Error loading user from local DB:', error);
+            console.error('Login error:', error);
             throw error;
           })
         );
-      }),
-      catchError((error) => {
-        console.error('Login error:', error);
-        throw error;
       })
     );
   }
@@ -91,19 +243,200 @@ export class AuthService {
       map(() => {
         this.currentUserSignal.set(null);
         localStorage.removeItem('user_session');
+        localStorage.removeItem('token'); // Xóa JWT token khi đăng xuất
       })
     );
   }
 
   /**
-   * Lấy thông tin user từ local DB dựa trên Firebase UID
+   * Lấy thông tin user từ Firebase custom claims (ưu tiên)
+   * Roles luôn lấy từ Firebase Custom Claims, không từ API/DB
+   */
+  private loadUserFromFirebase(firebaseUser: FirebaseUser): Observable<AuthUser> {
+    return from(getIdTokenResult(firebaseUser, true)).pipe(
+      map((tokenResult) => {
+        // Lấy roles từ custom claims - đây là source of truth
+        const claims = tokenResult.claims;
+        let roles: UserRole[] = [];
+        
+        if (claims['roles']) {
+          if (Array.isArray(claims['roles'])) {
+            roles = this.normalizeRoles(claims['roles'] as string[]);
+          } else {
+            // Nếu roles không phải array, convert thành array
+            roles = this.normalizeRoles([claims['roles'] as string]);
+          }
+        } else {
+          // Nếu không có custom claims, mặc định là User
+          roles = ['User'];
+        }
+
+        // Tạo AuthUser từ Firebase user và custom claims
+        // Roles luôn lấy từ Firebase Custom Claims, không từ DB
+        const authUser: AuthUser = {
+          id: firebaseUser.uid,
+          firebaseUid: firebaseUser.uid,
+          name: firebaseUser.displayName || (claims['name'] as string) || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email || '',
+          roles: roles // Luôn từ Firebase Custom Claims
+        };
+
+        // Lưu vào signal và localStorage
+        this.currentUserSignal.set(authUser);
+        localStorage.setItem('user_session', JSON.stringify(authUser));
+
+        // Sync thông tin user lên local DB (có sync roles)
+        // Giúp danh sách Users và các trang quản trị phản ánh đúng quyền
+        this.syncUserToLocalDB(authUser, true).subscribe({
+          error: (error) => {
+            console.warn('Failed to sync user to local DB:', error);
+            // Không throw error vì đây chỉ là sync operation
+          }
+        });
+
+        return authUser;
+      }),
+      catchError((error) => {
+        console.error('Error loading user from Firebase custom claims:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Đồng bộ thông tin user lên local DB (không bắt buộc)
+   * @param authUser User cần sync
+   * @param syncRoles Có sync roles không (default: true). Nếu false, chỉ sync name và email
+   */
+  private syncUserToLocalDB(authUser: AuthUser, syncRoles: boolean = true): Observable<AuthUser> {
+    const syncData: any = {
+      name: authUser.name,
+      email: authUser.email
+    };
+    
+    // Chỉ sync roles nếu được yêu cầu
+    // Current user không sync roles vì roles luôn lấy từ Firebase Custom Claims
+    if (syncRoles) {
+      syncData.roles = authUser.roles;
+    }
+
+    return this.http.put<any>(`${environment.apiUrl}/users/by-firebase-uid/${authUser.firebaseUid}`, syncData).pipe(
+      map(dto => {
+        // Map từ DB nhưng giữ nguyên roles từ Firebase Custom Claims
+        const dbUser = this.mapUserDtoToAuthUser(dto);
+        // Quan trọng: Không ghi đè roles từ DB, giữ nguyên roles từ Firebase
+        return {
+          ...dbUser,
+          roles: syncRoles ? dbUser.roles : authUser.roles // Nếu không sync roles, giữ nguyên từ Firebase
+        };
+      }),
+      catchError((error) => {
+        // Nếu user chưa tồn tại trong DB, tạo mới
+        if (error.status === 404) {
+          const createData: any = {
+            name: authUser.name,
+            email: authUser.email,
+            password: '' // Không có password khi sync từ Firebase
+          };
+          
+          if (syncRoles) {
+            createData.roles = authUser.roles;
+          }
+          
+          return this.http.post<any>(`${environment.apiUrl}/users/firebase`, createData).pipe(
+            map(dto => {
+              const dbUser = this.mapUserDtoToAuthUser(dto);
+              // Giữ nguyên roles từ Firebase Custom Claims
+              return {
+                ...dbUser,
+                roles: syncRoles ? dbUser.roles : authUser.roles
+              };
+            })
+          );
+        }
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Map UserDto từ backend sang AuthUser
+   */
+  private mapUserDtoToAuthUser(dto: any): AuthUser {
+    // Nếu đã là AuthUser format thì return trực tiếp
+    if (dto.id && dto.firebaseUid) {
+      return dto as AuthUser;
+    }
+    
+    // Map từ UserDto format
+    return {
+      id: dto.userId?.toString() || dto.id || '',
+      userId: dto.userId,
+      firebaseUid: dto.firebaseUID || dto.firebaseUid || '',
+      userName: dto.userName,
+      name: dto.fullName || dto.name || dto.userName || '',
+      email: dto.email || '',
+      roles: this.normalizeRoles(dto.roles || []),
+      isActive: dto.isActive,
+      createdAt: dto.createdAt
+    };
+  }
+
+  /**
+   * Lấy thông tin user từ local DB dựa trên Firebase UID (fallback)
+   * Chỉ dùng khi không thể lấy từ Firebase Custom Claims
+   * Roles vẫn được lấy từ Firebase Custom Claims nếu có thể
    */
   private loadUserFromLocalDB(firebaseUid: string): Observable<AuthUser> {
-    return this.http.get<AuthUser>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`).pipe(
-      map((user) => {
-        this.currentUserSignal.set(user);
-        localStorage.setItem('user_session', JSON.stringify(user));
-        return user;
+    const firebaseUser = this.auth.currentUser;
+    
+    return this.http.get<any>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`).pipe(
+      switchMap((dto) => {
+        // Cố gắng lấy roles từ Firebase Custom Claims trước
+        if (firebaseUser && firebaseUser.uid === firebaseUid) {
+          return from(getIdTokenResult(firebaseUser, false)).pipe(
+            map((tokenResult) => {
+              const claims = tokenResult.claims;
+              let roles: UserRole[] = [];
+              
+              if (claims['roles']) {
+                if (Array.isArray(claims['roles'])) {
+                  roles = this.normalizeRoles(claims['roles'] as string[]);
+                } else {
+                  roles = this.normalizeRoles([claims['roles'] as string]);
+                }
+              } else {
+                // Fallback về roles từ DB nếu không có Custom Claims
+                const dbUser = this.mapUserDtoToAuthUser(dto);
+                roles = dbUser.roles.length > 0 ? dbUser.roles : ['User'];
+              }
+              
+              // Map từ DB nhưng dùng roles từ Firebase Custom Claims
+              const dbUser = this.mapUserDtoToAuthUser(dto);
+              const user: AuthUser = {
+                ...dbUser,
+                roles: roles // Ưu tiên roles từ Firebase Custom Claims
+              };
+              
+              this.currentUserSignal.set(user);
+              localStorage.setItem('user_session', JSON.stringify(user));
+              return user;
+            }),
+            catchError(() => {
+              // Nếu không lấy được từ Firebase, dùng roles từ DB
+              const user = this.mapUserDtoToAuthUser(dto);
+              this.currentUserSignal.set(user);
+              localStorage.setItem('user_session', JSON.stringify(user));
+              return of(user);
+            })
+          );
+        } else {
+          // Nếu không có Firebase user, dùng roles từ DB
+          const user = this.mapUserDtoToAuthUser(dto);
+          this.currentUserSignal.set(user);
+          localStorage.setItem('user_session', JSON.stringify(user));
+          return of(user);
+        }
       }),
       catchError((error) => {
         console.error('Error loading user from local DB:', error);
@@ -127,19 +460,21 @@ export class AuthService {
       return new Observable(observer => {
         onAuthStateChanged(this.auth, (user) => {
           if (user && user.uid === firebaseUid) {
-            const defaultUser: Partial<AuthUser> = {
-              firebaseUid: firebaseUid,
+            // Không tạo user nếu không có password - user đã được tạo trên Firebase
+            // Chỉ sync thông tin từ Firebase
+            const defaultUser = {
               name: user.displayName || user.email?.split('@')[0] || 'User',
               email: user.email || '',
               roles: ['User']
             };
 
-            // Tạo user trong local DB
-            this.http.post<AuthUser>(`${environment.apiUrl}/users`, defaultUser).subscribe({
+            // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)
+            this.http.put<any>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`, defaultUser).subscribe({
               next: (createdUser) => {
-                this.currentUserSignal.set(createdUser);
-                localStorage.setItem('user_session', JSON.stringify(createdUser));
-                observer.next(createdUser);
+                const authUser = this.mapUserDtoToAuthUser(createdUser);
+                this.currentUserSignal.set(authUser);
+                localStorage.setItem('user_session', JSON.stringify(authUser));
+                observer.next(authUser);
                 observer.complete();
               },
               error: (err) => observer.error(err)
@@ -151,16 +486,16 @@ export class AuthService {
       });
     }
 
-    const defaultUser: Partial<AuthUser> = {
-      firebaseUid: firebaseUid,
+    const defaultUser = {
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
       email: firebaseUser.email || '',
       roles: ['User']
     };
 
-    // Tạo user trong local DB
-    return this.http.post<AuthUser>(`${environment.apiUrl}/users`, defaultUser).pipe(
-      map((user) => {
+    // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)
+    return this.http.put<any>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`, defaultUser).pipe(
+      map((dto) => {
+        const user = this.mapUserDtoToAuthUser(dto);
         this.currentUserSignal.set(user);
         localStorage.setItem('user_session', JSON.stringify(user));
         return user;
@@ -173,6 +508,69 @@ export class AuthService {
    */
   getCurrentFirebaseUser(): FirebaseUser | null {
     return this.auth.currentUser;
+  }
+
+  /**
+   * Refresh ID token để lấy custom claims mới nhất từ Firebase
+   * Chỉ lấy từ Firebase Custom Claims, không gọi API
+   */
+  refreshUserClaims(): Observable<AuthUser> {
+    const firebaseUser = this.auth.currentUser;
+    if (!firebaseUser) {
+      throw new Error('No authenticated user');
+    }
+    
+    // Force refresh ID token để lấy Custom Claims mới nhất
+    return from(firebaseUser.getIdToken(true)).pipe(
+      switchMap(() => {
+        // Load lại user từ Firebase Custom Claims (không từ API)
+        return this.loadUserFromFirebase(firebaseUser);
+      }),
+      tap((authUser) => {
+        console.log('User claims refreshed from Firebase:', {
+          email: authUser.email,
+          roles: authUser.roles
+        });
+      })
+    );
+  }
+
+  /**
+   * Đổi mật khẩu
+   * @param currentPassword Mật khẩu hiện tại (để re-authenticate)
+   * @param newPassword Mật khẩu mới
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    const firebaseUser = this.auth.currentUser;
+    if (!firebaseUser || !firebaseUser.email) {
+      throw new Error('No authenticated user');
+    }
+
+    // Re-authenticate user trước khi đổi mật khẩu
+    const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+    
+    return from(reauthenticateWithCredential(firebaseUser, credential)).pipe(
+      switchMap(() => {
+        // Sau khi re-authenticate thành công, đổi mật khẩu
+        return from(updatePassword(firebaseUser, newPassword));
+      }),
+      catchError((error) => {
+        console.error('Error changing password:', error);
+        let errorMessage = 'Đổi mật khẩu thất bại.';
+        
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          errorMessage = 'Mật khẩu hiện tại không đúng.';
+        } else if (error.code === 'auth/weak-password') {
+          errorMessage = 'Mật khẩu mới quá yếu. Vui lòng chọn mật khẩu mạnh hơn.';
+        } else if (error.code === 'auth/requires-recent-login') {
+          errorMessage = 'Vui lòng đăng nhập lại để đổi mật khẩu.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        throw { ...error, message: errorMessage };
+      })
+    );
   }
 }
 

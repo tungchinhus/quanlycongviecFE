@@ -39,6 +39,10 @@
             <mat-icon>person</mat-icon>
             <span>Thông tin cá nhân</span>
           </button>
+          <button mat-menu-item (click)="openChangePasswordDialog()">
+            <mat-icon>lock</mat-icon>
+            <span>Đổi mật khẩu</span>
+          </button>
           <button mat-menu-item>
             <mat-icon>settings</mat-icon>
             <span>Cài đặt</span>
@@ -114,6 +118,26 @@
             </div>
             <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
           </a>
+          @if (hasAdminRole()) {
+            <a routerLink="/users" routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý người dùng' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>people</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý User</span>
+            </a>
+            <a routerLink="/users" [queryParams]="{tab: 'roles'}" routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý Roles' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>admin_panel_settings</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
+            </a>
+          }
           <div class="nav-spacer"></div>
         </div>
       </mat-sidenav>
