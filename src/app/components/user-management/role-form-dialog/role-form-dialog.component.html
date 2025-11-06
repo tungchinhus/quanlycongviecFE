@@ -1,0 +1,63 @@
+<div class="role-form-dialog">
+  <h2 mat-dialog-title>
+    @if (mode === 'create') {
+      <mat-icon>add</mat-icon>
+      Thêm Role mới
+    } @else {
+      <mat-icon>edit</mat-icon>
+      Chỉnh sửa Role
+    }
+  </h2>
+
+  <mat-dialog-content>
+    <form [formGroup]="roleForm" class="role-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tên Role</mat-label>
+        <input matInput formControlName="roleName" placeholder="Nhập tên role (ví dụ: Manager, Editor)">
+        <mat-icon matPrefix>admin_panel_settings</mat-icon>
+        @if (roleForm.get('roleName')?.hasError('required') && roleForm.get('roleName')?.touched) {
+          <mat-error>{{ getErrorMessage('roleName') }}</mat-error>
+        }
+        @if (roleForm.get('roleName')?.hasError('minlength') && roleForm.get('roleName')?.touched) {
+          <mat-error>{{ getErrorMessage('roleName') }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Mô tả</mat-label>
+        <textarea matInput formControlName="description" 
+                  placeholder="Nhập mô tả cho role (tùy chọn)"
+                  rows="4"></textarea>
+        <mat-icon matPrefix>description</mat-icon>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="isSubmitting">
+      <mat-icon>close</mat-icon>
+      Hủy
+    </button>
+    <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="isSubmitting || roleForm.invalid">
+      @if (isSubmitting) {
+        <mat-icon class="spinning">refresh</mat-icon>
+      } @else {
+        @if (mode === 'create') {
+          <mat-icon>add</mat-icon>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+      }
+      @if (isSubmitting) {
+        Đang xử lý...
+      } @else {
+        @if (mode === 'create') {
+          Tạo mới
+        } @else {
+          Lưu
+        }
+      }
+    </button>
+  </mat-dialog-actions>
+</div>
+

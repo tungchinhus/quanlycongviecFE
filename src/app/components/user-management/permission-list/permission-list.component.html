@@ -1,0 +1,81 @@
+<div class="permission-list-container">
+  <div class="header-actions">
+    <h2>
+      <mat-icon>security</mat-icon>
+      Quản lý Permissions
+    </h2>
+    @if (isAdmin) {
+      <button mat-raised-button color="primary" (click)="onCreatePermission()">
+        <mat-icon>add</mat-icon>
+        Thêm Permission
+      </button>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải danh sách permissions...</p>
+    </div>
+  } @else {
+    @if (permissions().length === 0) {
+      <div class="empty-state">
+        <mat-icon>security</mat-icon>
+        <h3>Chưa có permission nào</h3>
+        <p>Hãy tạo permission mới để bắt đầu</p>
+      </div>
+    } @else {
+      <div class="table-container">
+        <table mat-table [dataSource]="permissions()" class="permissions-table">
+          <!-- Permission Name Column -->
+          <ng-container matColumnDef="permissionName">
+            <th mat-header-cell *matHeaderCellDef>Tên Permission</th>
+            <td mat-cell *matCellDef="let permission">
+              <div class="permission-name-cell">
+                <mat-icon>lock</mat-icon>
+                <span>{{ permission.permissionName }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Description Column -->
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Mô tả</th>
+            <td mat-cell *matCellDef="let permission">
+              <span class="description-text">{{ permission.description || 'Không có mô tả' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header">Thao tác</th>
+            <td mat-cell *matCellDef="let permission" class="actions-cell">
+              <div class="actions-container">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="onEditPermission(permission)"
+                  [disabled]="!isAdmin"
+                  matTooltip="Chỉnh sửa">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="onDeletePermission(permission)"
+                  [disabled]="!isAdmin"
+                  matTooltip="Xóa">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="permission-row"></tr>
+        </table>
+      </div>
+    }
+  }
+</div>
+

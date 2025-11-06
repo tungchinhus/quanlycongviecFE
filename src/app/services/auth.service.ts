@@ -4,8 +4,10 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { UserRole, UserRole as UserRoleEnum, normalizeRoleName, normalizeRoles as normalizeRolesEnum, ALL_USER_ROLES } from '../constants/enums';
 
-export type UserRole = 'Administrator' | 'Manager' | 'User' | 'Guest';
+// Export type để backward compatibility với code cũ
+export type { UserRole } from '../constants/enums';
 
 export interface AuthUser {
   id: string; // userId từ backend (string)
@@ -61,15 +63,10 @@ export class AuthService {
 
   /**
    * Normalize roles: map "Admin" -> "Administrator" để đảm bảo consistency
+   * Sử dụng enum để đảm bảo đồng nhất giữa frontend, backend và Firebase
    */
   private normalizeRoles(roles: string[]): UserRole[] {
-    return roles.map(role => {
-      // Map "Admin" -> "Administrator" để đảm bảo consistency
-      if (role === 'Admin' || role === 'admin') {
-        return 'Administrator';
-      }
-      return role as UserRole;
-    });
+    return normalizeRolesEnum(roles);
   }
 
   /**
@@ -133,22 +130,32 @@ export class AuthService {
 
   /**
    * Resolve email từ username hoặc email
-   * Nếu input là email format thì trả về email đó
-   * Nếu không thì query từ backend để lấy email từ username
+   * Hỗ trợ đăng nhập bằng cả email và username
+   * 
+   * Flow:
+   * 1. Nếu input là email format (có @ và .) → dùng trực tiếp
+   * 2. Nếu không phải email format → query từ backend /users/by-username/{username} để lấy email
+   * 
+   * @param usernameOrEmail - Có thể là email (user@example.com) hoặc username (user123)
+   * @returns Observable<string> - Email để đăng nhập Firebase
    */
   private resolveEmailFromUsernameOrEmail(usernameOrEmail: string): Observable<string> {
-    // Nếu là email format thì dùng trực tiếp
+    // Nếu là email format thì dùng trực tiếp (không cần query backend)
     if (this.isEmailFormat(usernameOrEmail)) {
       return of(usernameOrEmail);
     }
 
-    // Nếu không phải email format, coi như username và query từ backend
+    // Nếu không phải email format, coi như username và query từ backend để lấy email
     return this.http.get<{ email: string }>(`${environment.apiUrl}/users/by-username/${encodeURIComponent(usernameOrEmail)}`).pipe(
       map((response: { email: string }) => response.email),
       catchError((error) => {
-        // Nếu không tìm thấy username, throw error
+        console.error('Error resolving email from username:', error);
+        // Nếu không tìm thấy username, throw error với message rõ ràng
         if (error.status === 404) {
-          throw { ...error, message: 'Tên đăng nhập hoặc email không tồn tại.' };
+          throw { ...error, code: 'auth/user-not-found', message: 'Tên đăng nhập hoặc email không tồn tại.' };
+        } else if (error.status === 0 || !error.status) {
+          // Network error
+          throw { ...error, code: 'auth/network-request-failed', message: 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.' };
         }
         throw error;
       })
@@ -167,8 +174,8 @@ export class AuthService {
         return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
           switchMap((userCredential) => {
             const firebaseUser = userCredential.user;
-            // Bước 2: Lấy ID Token từ Firebase
-            return from(firebaseUser.getIdToken()).pipe(
+            // Bước 2: Lấy ID Token từ Firebase (force refresh để đảm bảo có custom claims mới nhất)
+            return from(firebaseUser.getIdToken(true)).pipe(
               switchMap((idToken) => {
                 // Bước 3: Gửi ID Token lên backend để verify và lấy JWT token
                 return this.http.post<{
@@ -214,9 +221,47 @@ export class AuthService {
                   }),
                   catchError((error) => {
                     console.error('Error during backend login:', error);
+                    
+                    // Xử lý các loại lỗi cụ thể
+                    let errorMessage = 'Đăng nhập thất bại.';
+                    
+                    if (error.status === 401) {
+                      errorMessage = 'Xác thực thất bại. Token Firebase không hợp lệ hoặc backend không thể verify.';
+                      console.error('Backend returned 401 Unauthorized. Possible causes:');
+                      console.error('  1. Firebase token không hợp lệ hoặc đã hết hạn');
+                      console.error('  2. Backend không thể verify Firebase token');
+                      console.error('  3. User chưa được sync trong backend DB');
+                      console.error('  4. Custom claims chưa được set trên Firebase');
+                    } else if (error.status === 403) {
+                      errorMessage = 'Bạn không có quyền truy cập.';
+                    } else if (error.status === 404) {
+                      errorMessage = 'Endpoint không tồn tại. Vui lòng kiểm tra cấu hình API.';
+                    } else if (error.status === 500) {
+                      // Lỗi 500 - Backend internal server error
+                      const backendError = error.error?.message || error.error?.error || '';
+                      if (backendError.includes('Google.Apis.Auth') || backendError.includes('FileNotFoundException')) {
+                        errorMessage = 'Lỗi backend: Thiếu package Google.Apis.Auth. Backend cần cài đặt NuGet package.';
+                      } else if (backendError.includes('Firebase') || backendError.includes('FirebaseService')) {
+                        errorMessage = 'Lỗi backend: Firebase Admin SDK chưa được khởi tạo đúng cách.';
+                      } else if (backendError) {
+                        errorMessage = `Lỗi server: ${backendError}`;
+                      } else {
+                        errorMessage = 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+                      }
+                      console.error('Backend 500 error:', backendError);
+                    } else if (error.status === 0 || !error.status) {
+                      errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+                    } else if (error.error?.message) {
+                      errorMessage = error.error.message;
+                    } else if (error.message) {
+                      errorMessage = error.message;
+                    }
+                    
                     // Nếu backend login thất bại, đăng xuất khỏi Firebase
                     signOut(this.auth).catch(() => {});
-                    throw error;
+                    
+                    // Throw error với message rõ ràng hơn
+                    throw { ...error, message: errorMessage };
                   })
                 );
               }),
@@ -227,8 +272,19 @@ export class AuthService {
             );
           }),
           catchError((error) => {
-            console.error('Login error:', error);
-            throw error;
+            console.error('Firebase login error:', error);
+            // Log thêm thông tin chi tiết về lỗi
+            if (error.code) {
+              console.error('Error code:', error.code);
+              console.error('Error message:', error.message);
+            }
+            // Đảm bảo error object có đầy đủ thông tin
+            const enhancedError = {
+              ...error,
+              code: error.code || 'unknown',
+              message: error.message || 'Đăng nhập thất bại. Vui lòng thử lại.'
+            };
+            throw enhancedError;
           })
         );
       })
@@ -268,7 +324,7 @@ export class AuthService {
           }
         } else {
           // Nếu không có custom claims, mặc định là User
-          roles = ['User'];
+          roles = [UserRole.User];
         }
 
         // Tạo AuthUser từ Firebase user và custom claims
@@ -408,7 +464,7 @@ export class AuthService {
               } else {
                 // Fallback về roles từ DB nếu không có Custom Claims
                 const dbUser = this.mapUserDtoToAuthUser(dto);
-                roles = dbUser.roles.length > 0 ? dbUser.roles : ['User'];
+                roles = dbUser.roles.length > 0 ? dbUser.roles : [UserRoleEnum.User];
               }
               
               // Map từ DB nhưng dùng roles từ Firebase Custom Claims
@@ -465,7 +521,7 @@ export class AuthService {
             const defaultUser = {
               name: user.displayName || user.email?.split('@')[0] || 'User',
               email: user.email || '',
-              roles: ['User']
+              roles: [UserRoleEnum.User]
             };
 
             // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)
@@ -489,7 +545,7 @@ export class AuthService {
     const defaultUser = {
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
       email: firebaseUser.email || '',
-      roles: ['User']
+      roles: [UserRoleEnum.User]
     };
 
     // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)

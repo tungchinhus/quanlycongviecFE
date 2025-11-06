@@ -1,0 +1,180 @@
+.role-permission-card {
+  margin-bottom: 24px;
+}
+
+.role-permission-card mat-card-header {
+  margin-bottom: 16px;
+}
+
+.role-permission-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.role-permission-card mat-card-title mat-icon {
+  color: #1976d2;
+}
+
+.role-permission-card mat-card-subtitle {
+  margin-top: 4px;
+  color: #666;
+  font-size: 14px;
+}
+
+.role-permission-card mat-card-content {
+  position: relative;
+}
+
+.updating-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+}
+
+.loading-container p {
+  margin: 0;
+  color: #666;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+  gap: 16px;
+}
+
+.empty-state mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  color: #ccc;
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: #666;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #999;
+}
+
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.permission-item:hover:not(.disabled) {
+  background: #f0f0f0;
+  border-color: #1976d2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.permission-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.permission-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.permission-icon {
+  color: #1976d2;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
+.permission-details {
+  flex: 1;
+}
+
+.permission-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.permission-description {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.save-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  margin-top: 16px;
+  color: #856404;
+  font-size: 14px;
+}
+
+.warning-message mat-icon {
+  color: #ff9800;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+::ng-deep .error-snackbar {
+  background-color: #c62828 !important;
+  color: white !important;
+}
+

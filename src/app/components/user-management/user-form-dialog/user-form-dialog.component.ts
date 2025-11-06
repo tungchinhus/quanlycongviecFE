@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UsersService, CreateUserRequest } from '../../../services/users.service';
 import { AuthService, UserRole } from '../../../services/auth.service';
+import { ALL_USER_ROLES } from '../../../constants/enums';
 
 export interface UserFormData {
   user?: any;
@@ -42,7 +43,7 @@ export class UserFormDialogComponent {
 
   readonly userForm: FormGroup;
   readonly mode: 'create' | 'edit';
-  readonly allRoles: UserRole[] = ['Administrator', 'Manager', 'User', 'Guest'];
+  readonly allRoles: UserRole[] = ALL_USER_ROLES;
   isSubmitting = false;
 
   constructor() {
@@ -76,15 +77,13 @@ export class UserFormDialogComponent {
     const formValue = this.userForm.getRawValue();
 
     if (this.mode === 'create') {
-      // Map roles sang roleIds
-      const roleIds = this.usersService.mapRoleNamesToIds(formValue.roles);
-      
+      // Gửi roles trực tiếp (array of strings), không cần map sang roleIds
       const userData: CreateUserRequest = {
         userName: formValue.userName,
         email: formValue.email,
         password: formValue.password,
         fullName: formValue.name,
-        roleIds: roleIds
+        roles: formValue.roles // Array of role names (strings)
       };
 
       this.usersService.createUser(userData).subscribe({

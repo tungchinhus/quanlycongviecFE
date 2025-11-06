@@ -78,11 +78,11 @@
                 <span class="selected-user-name">{{ selectedUser()?.name }}</span>
               </div>
               
-              <app-role-management
+              <app-user-role-assignment
                 [user]="selectedUser()!"
                 [isAdmin]="isAdmin()"
                 (onRoleUpdated)="onRoleUpdated()">
-              </app-role-management>
+              </app-user-role-assignment>
             </div>
           }
         </div>

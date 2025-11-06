@@ -11,8 +11,11 @@
         
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Tên đăng nhập hoặc Email</mat-label>
-          <input matInput type="text" formControlName="usernameOrEmail" placeholder="Nhập tên đăng nhập hoặc email">
-          <mat-icon matPrefix>person</mat-icon>
+          <input matInput 
+                 type="text" 
+                 formControlName="usernameOrEmail" 
+                 placeholder="Nhập tên đăng nhập hoặc email"
+                 autocomplete="username">
           @if (loginForm.get('usernameOrEmail')?.hasError('required') && loginForm.get('usernameOrEmail')?.touched) {
             <mat-error>Tên đăng nhập hoặc Email là bắt buộc</mat-error>
           }

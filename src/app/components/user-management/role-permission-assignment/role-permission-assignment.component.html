@@ -1,0 +1,74 @@
+<mat-card class="role-permission-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>security</mat-icon>
+      Gán Permissions cho Role
+    </mat-card-title>
+    <mat-card-subtitle>{{ role().roleName }}</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (isUpdating()) {
+      <div class="updating-overlay">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Đang cập nhật permissions...</p>
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Đang tải permissions...</p>
+      </div>
+    } @else {
+      @if (permissions().length === 0) {
+        <div class="empty-state">
+          <mat-icon>security</mat-icon>
+          <h3>Chưa có permission nào</h3>
+          <p>Hãy tạo permissions trước khi gán cho role</p>
+        </div>
+      } @else {
+        <div class="permissions-list">
+          @for (permission of permissions(); track permission.permissionId) {
+            <div class="permission-item" [class.disabled]="!isAdmin() || isUpdating()">
+              <div class="permission-info">
+                <mat-icon class="permission-icon">lock</mat-icon>
+                <div class="permission-details">
+                  <div class="permission-name">{{ permission.permissionName }}</div>
+                  <div class="permission-description">{{ getPermissionDescription(permission) }}</div>
+                </div>
+              </div>
+              <mat-checkbox
+                [checked]="hasPermission(permission.permissionId)"
+                [disabled]="!isAdmin() || isUpdating()"
+                (change)="onTogglePermission(permission.permissionId, $event.checked)"
+                color="primary">
+              </mat-checkbox>
+            </div>
+          }
+        </div>
+
+        @if (isAdmin()) {
+          <div class="save-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="onSavePermissions()"
+              [disabled]="isUpdating()">
+              <mat-icon>save</mat-icon>
+              Lưu Permissions
+            </button>
+          </div>
+        }
+      }
+    }
+
+    @if (!isAdmin()) {
+      <div class="warning-message">
+        <mat-icon>info</mat-icon>
+        <span>Chỉ Administrator mới có thể thay đổi permissions của role.</span>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+

@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UsersService } from '../../../services/users.service';
 import { AuthService, AuthUser } from '../../../services/auth.service';
+import { UserRole as UserRoleEnum } from '../../../constants/enums';
 import { UserFormDialogComponent } from '../user-form-dialog/user-form-dialog.component';
 
 @Component({
@@ -51,17 +52,17 @@ export class UserListComponent implements OnInit {
 
   getRoleColor(role: string): string {
     const colors: { [key: string]: string } = {
-      'Administrator': 'primary',
-      'Manager': 'accent',
-      'User': '',
-      'Guest': 'warn'
+      [UserRoleEnum.Administrator]: 'primary',
+      [UserRoleEnum.Manager]: 'accent',
+      [UserRoleEnum.User]: '',
+      [UserRoleEnum.Guest]: 'warn'
     };
     return colors[role] || '';
   }
 
   onDelete(userId: string, userName: string): void {
     if (!this.isAdmin()) {
-      this.snackBar.open('Chỉ Administrator mới có thể xóa người dùng.', 'Đóng', {
+      this.snackBar.open('Chỉ Administrator mới có thể vô hiệu hóa người dùng.', 'Đóng', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
@@ -81,10 +82,10 @@ export class UserListComponent implements OnInit {
       return;
     }
 
-    if (confirm(`Bạn có chắc chắn muốn xóa người dùng "${userName}"?`)) {
+    if (confirm(`Bạn có chắc chắn muốn vô hiệu hóa (ẩn) người dùng "${userName}"? Người dùng sẽ không thể đăng nhập nhưng dữ liệu vẫn được giữ lại.`)) {
       this.usersService.deleteUser(userId).subscribe({
         next: () => {
-          this.snackBar.open('Xóa người dùng thành công!', 'Đóng', {
+          this.snackBar.open('Vô hiệu hóa người dùng thành công!', 'Đóng', {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'top'
@@ -93,8 +94,14 @@ export class UserListComponent implements OnInit {
           this.onUsersReload.emit();
         },
         error: (error) => {
-          console.error('Error deleting user:', error);
-          this.snackBar.open('Xóa người dùng thất bại. Vui lòng thử lại.', 'Đóng', {
+          console.error('Error deactivating user:', error);
+          let errorMsg = 'Vô hiệu hóa người dùng thất bại. Vui lòng thử lại.';
+          if (error.error?.message) {
+            errorMsg = error.error.message;
+          } else if (error.message) {
+            errorMsg = error.message;
+          }
+          this.snackBar.open(errorMsg, 'Đóng', {
             duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'top',

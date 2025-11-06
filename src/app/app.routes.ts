@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './services/auth.guard';
 import { roleGuard } from './services/role-guard';
+import { UserRole } from './constants/enums';
 
 export const routes: Routes = [
   {
@@ -46,7 +47,13 @@ export const routes: Routes = [
     path: 'users',
     loadComponent: () => import('./pages/users/users.page').then(m => m.UsersPage),
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['Administrator'] }
+    data: { roles: [UserRole.Administrator] }
+  },
+  {
+    path: 'roles',
+    loadComponent: () => import('./pages/roles/roles.page').then(m => m.RolesPage),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: [UserRole.Administrator] }
   },
   {
     path: 'admin',

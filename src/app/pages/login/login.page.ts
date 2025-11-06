@@ -59,7 +59,10 @@ export class LoginPage {
       this.errorMessage = '';
       const { usernameOrEmail, password } = this.loginForm.value;
 
-      // Đăng nhập qua Firebase Authentication (hỗ trợ cả username và email)
+      // Đăng nhập qua Firebase Authentication
+      // Hỗ trợ cả username và email:
+      // - Nếu là email format → dùng trực tiếp
+      // - Nếu là username → query từ backend để lấy email, sau đó đăng nhập Firebase
       this.authService.loginWithEmailAndPassword(usernameOrEmail, password).subscribe({
         next: (user) => {
           this.isLoading = false;
@@ -73,6 +76,12 @@ export class LoginPage {
         error: (error) => {
           this.isLoading = false;
           console.error('Login error:', error);
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            status: error.status,
+            error: error.error
+          });
           
           // Xử lý các loại lỗi Firebase
           let errorMsg = 'Đăng nhập thất bại. Vui lòng thử lại.';
@@ -86,14 +95,30 @@ export class LoginPage {
             errorMsg = 'Email không hợp lệ.';
           } else if (error.code === 'auth/too-many-requests') {
             errorMsg = 'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau.';
+          } else if (error.code === 'auth/network-request-failed') {
+            errorMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.';
+          } else if (error.code === 'auth/internal-error') {
+            errorMsg = 'Lỗi hệ thống. Vui lòng thử lại sau.';
           }
           // Xử lý lỗi từ backend API
           else if (error.status === 401) {
-            errorMsg = 'Xác thực thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
+            // Sử dụng message từ auth.service nếu có, nếu không thì dùng message mặc định
+            errorMsg = error.message || 'Xác thực thất bại. Token Firebase không hợp lệ hoặc backend không thể verify.';
           } else if (error.status === 403) {
             errorMsg = 'Bạn không có quyền truy cập.';
           } else if (error.status === 500) {
-            errorMsg = 'Lỗi server. Vui lòng thử lại sau.';
+            // Lỗi 500 - Backend internal server error
+            // Có thể do: Firebase Admin SDK chưa được khởi tạo, thiếu packages, hoặc lỗi backend
+            const backendError = error.error?.message || error.error?.error || '';
+            if (backendError.includes('Google.Apis.Auth') || backendError.includes('FileNotFoundException')) {
+              errorMsg = 'Lỗi backend: Thiếu package Google.Apis.Auth. Vui lòng liên hệ quản trị viên.';
+            } else if (backendError.includes('Firebase') || backendError.includes('FirebaseService')) {
+              errorMsg = 'Lỗi backend: Firebase Admin SDK chưa được khởi tạo. Vui lòng liên hệ quản trị viên.';
+            } else if (backendError) {
+              errorMsg = `Lỗi server: ${backendError}`;
+            } else {
+              errorMsg = 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+            }
           } else if (error.status === 0 || error.status === undefined) {
             errorMsg = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
           } else if (error.error?.message) {

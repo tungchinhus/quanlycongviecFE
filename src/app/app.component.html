@@ -128,7 +128,7 @@
               </div>
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý User</span>
             </a>
-            <a routerLink="/users" [queryParams]="{tab: 'roles'}" routerLinkActive="active"
+            <a routerLink="/roles" routerLinkActive="active"
                [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý Roles' : ''"
                matTooltipPosition="right"
                class="nav-item">

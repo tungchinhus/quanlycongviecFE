@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, tap, switchMap, catchError } from 'rxjs/operators';
 import { AuthUser, UserRole } from './auth.service';
+import { UserRole as UserRoleEnum } from '../constants/enums';
 import { environment } from '../../environments/environment';
 import { Auth } from '@angular/fire/auth';
 import { from } from 'rxjs';
@@ -12,7 +13,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   fullName: string;
-  roleIds: number[];
+  roles: string[]; // Array of role names (strings), not roleIds
 }
 
 // Interface từ Backend API
@@ -152,13 +153,13 @@ export class UsersService {
    * Administrator = 1, Manager = 2, User = 3, Guest = 4
    */
   mapRoleNamesToIds(roles: UserRole[]): number[] {
-    const roleMapping: { [key in UserRole]: number } = {
-      'Administrator': 1,
-      'Manager': 2,
-      'User': 3,
-      'Guest': 4
+    const roleMapping: { [key in UserRoleEnum]: number } = {
+      [UserRoleEnum.Administrator]: 1,
+      [UserRoleEnum.Manager]: 2,
+      [UserRoleEnum.User]: 3,
+      [UserRoleEnum.Guest]: 4
     };
-    return roles.map(role => roleMapping[role]).filter(id => id !== undefined);
+    return roles.map(role => roleMapping[role as UserRoleEnum]).filter(id => id !== undefined);
   }
 
   /**
@@ -178,7 +179,7 @@ export class UsersService {
       email: userData.email,
       password: userData.password,
       fullName: userData.fullName,
-      roleIds: userData.roleIds
+      roles: userData.roles // Array of role names (strings)
     }).pipe(
       tap(dto => {
         console.log('API Response from createUser:', dto);
@@ -292,12 +293,16 @@ export class UsersService {
   }
 
   /**
-   * Xóa user (cả Firebase và local DB)
+   * Xóa mềm user (deactivate - chỉ ẩn đi, không xóa thật sự)
+   * Sử dụng endpoint PATCH /api/users/{id}/deactivate
    */
   deleteUser(userId: string): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/users/${userId}`).pipe(
+    return this.http.patch<void>(`${environment.apiUrl}/users/${userId}/deactivate`, {}).pipe(
       tap(() => {
-        this.usersSignal.update(list => list.filter(u => u.id !== userId));
+        // Cập nhật user trong list thành isActive = false thay vì xóa khỏi list
+        this.usersSignal.update(list => 
+          list.map(u => u.id === userId ? { ...u, isActive: false } : u)
+        );
       })
     );
   }

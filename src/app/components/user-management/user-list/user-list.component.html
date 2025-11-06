@@ -104,8 +104,8 @@
                   mat-icon-button 
                   color="warn"
                   (click)="onDelete(user.id, user.name)"
-                  [disabled]="!isAdmin() || currentUserId() === user.id"
-                  matTooltip="Xóa">
+                  [disabled]="!isAdmin() || currentUserId() === user.id || user.isActive === false"
+                  [matTooltip]="user.isActive === false ? 'Người dùng đã bị vô hiệu hóa' : 'Vô hiệu hóa người dùng'">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>

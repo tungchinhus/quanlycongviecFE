@@ -11,8 +11,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { UsersService } from '../../services/users.service';
 import { AuthService, AuthUser } from '../../services/auth.service';
+import { UserRole } from '../../constants/enums';
 import { UserListComponent } from '../../components/user-management/user-list/user-list.component';
-import { RoleManagementComponent } from '../../components/user-management/role-management/role-management.component';
+import { UserRoleAssignmentComponent } from '../../components/user-management/user-role-assignment/user-role-assignment.component';
 import { UserFormDialogComponent } from '../../components/user-management/user-form-dialog/user-form-dialog.component';
 
 @Component({
@@ -27,7 +28,7 @@ import { UserFormDialogComponent } from '../../components/user-management/user-f
     MatTooltipModule,
     MatSnackBarModule,
     UserListComponent,
-    RoleManagementComponent
+    UserRoleAssignmentComponent
   ],
   templateUrl: './users.page.html',
   styleUrl: './users.page.css'
@@ -41,7 +42,7 @@ export class UsersPage implements OnInit, AfterViewInit {
 
   readonly users = this.usersService.users;
   readonly currentUser = this.authService.user();
-  readonly isAdmin = computed(() => this.authService.hasRole('Administrator'));
+  readonly isAdmin = computed(() => this.authService.hasRole(UserRole.Administrator));
   
   @ViewChild('tabGroup') tabGroup!: MatTabGroup;
   

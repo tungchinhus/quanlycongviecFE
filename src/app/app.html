@@ -124,6 +124,16 @@
           </div>
           <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý người dùng</span>
         </a>
+        <a routerLink="/roles" 
+           *ngIf="hasAdminRole()"
+           [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý Roles' : ''"
+           matTooltipPosition="right"
+           class="nav-item">
+          <div class="nav-icon">
+            <mat-icon>admin_panel_settings</mat-icon>
+          </div>
+          <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
+        </a>
         <a routerLink="/settings" 
            *ngIf="hasAdminRole()"
            [matTooltip]="sidenavService.isCollapsed() ? 'Cài đặt hệ thống' : ''"

@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 import { SidenavService } from './services/sidenav.service';
 import { AuthService } from './services/auth.service';
 import { ChangePasswordDialogComponent } from './components/change-password-dialog/change-password-dialog.component';
+import { UserRole } from './constants/enums';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -96,7 +97,7 @@ export class AppComponent {
     const user = this.authService.user();
     if (!user || !user.roles || user.roles.length === 0) return false;
     // Roles đã được normalize trong AuthService ("Admin" -> "Administrator")
-    return user.roles.includes('Administrator');
+    return user.roles.includes(UserRole.Administrator);
   }
 
   logout(): void {
