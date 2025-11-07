@@ -1,0 +1,35 @@
+.full-width {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.half-width {
+  width: calc(50% - 8px);
+  margin-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.work-categories {
+  margin-top: 8px;
+}
+
+.work-categories h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+mat-dialog-content {
+  max-height: 90vh;
+  padding: 20px 24px;
+}
+
+mat-dialog-title {
+  margin-bottom: 8px !important;
+}
+

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UsersService, CreateUserRequest } from '../../../services/users.service';
 import { AuthService, UserRole } from '../../../services/auth.service';
-import { ALL_USER_ROLES } from '../../../constants/enums';
+import { RolesService } from '../../../services/roles.service';
 
 export interface UserFormData {
   user?: any;
@@ -34,16 +34,18 @@ export interface UserFormData {
   templateUrl: './user-form-dialog.component.html',
   styleUrl: './user-form-dialog.component.css'
 })
-export class UserFormDialogComponent {
+export class UserFormDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly dialogRef = inject(MatDialogRef<UserFormDialogComponent>);
   private readonly data = inject<UserFormData>(MAT_DIALOG_DATA);
   private readonly usersService = inject(UsersService);
+  private readonly rolesService = inject(RolesService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly userForm: FormGroup;
   readonly mode: 'create' | 'edit';
-  readonly allRoles: UserRole[] = ALL_USER_ROLES;
+  allRoles: string[] = []; // Dùng string[] để hỗ trợ tất cả roles từ DB
+  isLoadingRoles = true;
   isSubmitting = false;
 
   constructor() {
@@ -63,6 +65,23 @@ export class UserFormDialogComponent {
       this.userForm.get('email')?.disable();
       this.userForm.get('userName')?.disable();
     }
+  }
+
+  ngOnInit(): void {
+    // Load roles từ DB - trả về tất cả roles, không filter theo enum
+    this.rolesService.getUserRoles().subscribe({
+      next: (roles) => {
+        this.allRoles = roles;
+        this.isLoadingRoles = false;
+        console.log('Loaded roles from DB:', roles);
+      },
+      error: (error) => {
+        console.error('Error loading roles from DB:', error);
+        // Fallback về roles mặc định nếu không load được từ DB
+        this.allRoles = ['Administrator', 'Manager', 'User', 'Guest'];
+        this.isLoadingRoles = false;
+      }
+    });
   }
 
   onSubmit(): void {

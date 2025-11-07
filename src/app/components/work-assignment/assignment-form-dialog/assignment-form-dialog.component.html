@@ -1,0 +1,112 @@
+<h2 mat-dialog-title>Tạo Giao Việc Mới</h2>
+<mat-dialog-content>
+  <form [formGroup]="assignmentForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tên Máy *</mat-label>
+      <input matInput formControlName="machineName" required>
+      <mat-error *ngIf="assignmentForm.get('machineName')?.hasError('required')">
+        Tên máy là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <div class="row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Yêu Cầu Tiêu Chuẩn</mat-label>
+        <textarea matInput formControlName="standardRequirement" rows="2"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Yêu Cầu Bổ Sung</mat-label>
+        <textarea matInput formControlName="additionalRequest" rows="2"></textarea>
+      </mat-form-field>
+    </div>
+
+    <div class="row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Ngày Giao</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="deliveryDate">
+        <mat-datepicker-toggle matIconSuffix [for]="picker" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Người Giao việc</mat-label>
+        <input matInput [value]="currentUser?.name || currentUser?.userName || ''" readonly>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Trưởng Đ.vị</mat-label>
+      <mat-select formControlName="teamLeader">
+        <mat-option value="">-- Chọn --</mat-option>
+        @for (manager of managers; track manager.id) {
+          <mat-option [value]="manager.id">{{ manager.name || manager.userName }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Danh mục công việc -->
+    <div class="work-categories">
+      <h3>Người thực hiện</h3>
+      <div class="row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>T.kể ruột</mat-label>
+          <mat-select formControlName="coreDesignUser">
+            <mat-option value="">-- Chọn --</mat-option>
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>K.soat ruột</mat-label>
+          <mat-select formControlName="coreReviewUser">
+            <mat-option value="">-- Chọn --</mat-option>
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>T.ke vỏ</mat-label>
+          <mat-select formControlName="casingDesignUser">
+            <mat-option value="">-- Chọn --</mat-option>
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>K.soát vỏ</mat-label>
+          <mat-select formControlName="casingReviewUser">
+            <mat-option value="">-- Chọn --</mat-option>
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Đ. mức vật tư</mat-label>
+        <mat-select formControlName="materialLevelingUser">
+          <mat-option value="">-- Chọn --</mat-option>
+          @for (user of users; track user.id) {
+            <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="assignmentForm.invalid">
+    Lưu
+  </button>
+</mat-dialog-actions>

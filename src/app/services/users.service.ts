@@ -201,8 +201,9 @@ export class UsersService {
    * Backend sẽ:
    * 1. Update roles trong Local DB
    * 2. Set Custom Claims trên Firebase
+   * @param roles - Array of role names (string[]) để hỗ trợ roles mới từ DB
    */
-  updateUserRoles(userId: string, roles: UserRole[]): Observable<AuthUser> {
+  updateUserRoles(userId: string, roles: string[] | UserRole[]): Observable<AuthUser> {
     return this.http.put<UserDto>(`${environment.apiUrl}/users/${userId}/roles`, { roles }).pipe(
       map(dto => this.mapUserDtoToAuthUser(dto)),
       tap(updatedUser => {
@@ -218,8 +219,9 @@ export class UsersService {
    * Cập nhật custom claims cho user trên Firebase (qua backend)
    * Backend sẽ sử dụng Admin SDK để set custom claims
    * Đây là method để đảm bảo Firebase có claims mới nhất
+   * @param claims.roles - Array of role names (string[] | UserRole[]) để hỗ trợ roles mới từ DB
    */
-  setCustomClaims(firebaseUid: string, claims: { roles: UserRole[]; [key: string]: any }): Observable<{ success: boolean }> {
+  setCustomClaims(firebaseUid: string, claims: { roles: string[] | UserRole[]; [key: string]: any }): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(`${environment.apiUrl}/users/${firebaseUid}/set-custom-claims`, claims);
   }
 

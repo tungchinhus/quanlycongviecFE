@@ -177,91 +177,116 @@ export class AuthService {
             // Bước 2: Lấy ID Token từ Firebase (force refresh để đảm bảo có custom claims mới nhất)
             return from(firebaseUser.getIdToken(true)).pipe(
               switchMap((idToken) => {
-                // Bước 3: Gửi ID Token lên backend để verify và lấy JWT token
-                return this.http.post<{
-                  token: string;
-                  user: {
-                    userId: number;
-                    userName?: string;
-                    fullName: string;
-                    email: string;
-                    firebaseUID: string;
-                    roles: string[];
-                    emailVerified: boolean;
-                  };
-                }>(`${environment.apiUrl}/auth/login/firebase-token`, {
-                  idToken: idToken
-                }).pipe(
-                  map((response) => {
-                    // Bước 4: Lưu JWT token từ backend vào localStorage
-                    localStorage.setItem('token', response.token);
+                // Bước 3: Lấy roles từ Firebase Custom Claims (source of truth)
+                return from(getIdTokenResult(firebaseUser, true)).pipe(
+                  switchMap((tokenResult) => {
+                    // Lấy roles từ custom claims
+                    const claims = tokenResult.claims;
+                    let roles: UserRole[] = [];
                     
-                    // Bước 5: Map user từ backend response sang AuthUser
-                    const authUser: AuthUser = {
-                      id: response.user.userId.toString(),
-                      userId: response.user.userId,
-                      firebaseUid: response.user.firebaseUID,
-                      userName: response.user.userName,
-                      name: response.user.fullName,
-                      email: response.user.email,
-                      roles: this.normalizeRoles(response.user.roles || []),
-                      isActive: true
-                    };
-                    
-                    // Lưu user vào signal và localStorage
-                    this.currentUserSignal.set(authUser);
-                    localStorage.setItem('user_session', JSON.stringify(authUser));
-                  
-                  // Đồng bộ user và roles xuống local DB để đảm bảo danh sách Users hiển thị đúng
-                  this.syncUserToLocalDB(authUser, true).subscribe({
-                    error: (err) => console.warn('Silent sync after login failed:', err)
-                  });
-                    
-                    return authUser;
-                  }),
-                  catchError((error) => {
-                    console.error('Error during backend login:', error);
-                    
-                    // Xử lý các loại lỗi cụ thể
-                    let errorMessage = 'Đăng nhập thất bại.';
-                    
-                    if (error.status === 401) {
-                      errorMessage = 'Xác thực thất bại. Token Firebase không hợp lệ hoặc backend không thể verify.';
-                      console.error('Backend returned 401 Unauthorized. Possible causes:');
-                      console.error('  1. Firebase token không hợp lệ hoặc đã hết hạn');
-                      console.error('  2. Backend không thể verify Firebase token');
-                      console.error('  3. User chưa được sync trong backend DB');
-                      console.error('  4. Custom claims chưa được set trên Firebase');
-                    } else if (error.status === 403) {
-                      errorMessage = 'Bạn không có quyền truy cập.';
-                    } else if (error.status === 404) {
-                      errorMessage = 'Endpoint không tồn tại. Vui lòng kiểm tra cấu hình API.';
-                    } else if (error.status === 500) {
-                      // Lỗi 500 - Backend internal server error
-                      const backendError = error.error?.message || error.error?.error || '';
-                      if (backendError.includes('Google.Apis.Auth') || backendError.includes('FileNotFoundException')) {
-                        errorMessage = 'Lỗi backend: Thiếu package Google.Apis.Auth. Backend cần cài đặt NuGet package.';
-                      } else if (backendError.includes('Firebase') || backendError.includes('FirebaseService')) {
-                        errorMessage = 'Lỗi backend: Firebase Admin SDK chưa được khởi tạo đúng cách.';
-                      } else if (backendError) {
-                        errorMessage = `Lỗi server: ${backendError}`;
+                    if (claims['roles']) {
+                      if (Array.isArray(claims['roles'])) {
+                        roles = this.normalizeRoles(claims['roles'] as string[]);
                       } else {
-                        errorMessage = 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+                        roles = this.normalizeRoles([claims['roles'] as string]);
                       }
-                      console.error('Backend 500 error:', backendError);
-                    } else if (error.status === 0 || !error.status) {
-                      errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
-                    } else if (error.error?.message) {
-                      errorMessage = error.error.message;
-                    } else if (error.message) {
-                      errorMessage = error.message;
+                    } else {
+                      // Nếu không có custom claims, mặc định là User
+                      roles = [UserRole.User];
                     }
                     
-                    // Nếu backend login thất bại, đăng xuất khỏi Firebase
-                    signOut(this.auth).catch(() => {});
-                    
-                    // Throw error với message rõ ràng hơn
-                    throw { ...error, message: errorMessage };
+                    // Bước 4: Gửi ID Token lên backend để verify và lấy JWT token
+                    return this.http.post<{
+                      token: string;
+                      user: {
+                        userId: number;
+                        userName?: string;
+                        fullName: string;
+                        email: string;
+                        firebaseUID: string;
+                        roles: string[];
+                        emailVerified: boolean;
+                      };
+                    }>(`${environment.apiUrl}/auth/login/firebase-token`, {
+                      idToken: idToken
+                    }).pipe(
+                      map((response) => {
+                        // Bước 5: Lưu JWT token từ backend vào localStorage
+                        localStorage.setItem('token', response.token);
+                        
+                        // Bước 6: Map user từ backend response sang AuthUser
+                        // QUAN TRỌNG: Sử dụng roles từ Firebase Custom Claims, không từ backend response
+                        const authUser: AuthUser = {
+                          id: response.user.userId.toString(),
+                          userId: response.user.userId,
+                          firebaseUid: response.user.firebaseUID,
+                          userName: response.user.userName,
+                          name: response.user.fullName,
+                          email: response.user.email,
+                          roles: roles, // Lấy từ Firebase Custom Claims, không từ backend
+                          isActive: true
+                        };
+                        
+                        // Lưu user vào signal và localStorage
+                        this.currentUserSignal.set(authUser);
+                        localStorage.setItem('user_session', JSON.stringify(authUser));
+                      
+                      // Đồng bộ user và roles xuống local DB để đảm bảo danh sách Users hiển thị đúng
+                      this.syncUserToLocalDB(authUser, true).subscribe({
+                        error: (err) => console.warn('Silent sync after login failed:', err)
+                      });
+                        
+                        return authUser;
+                      }),
+                      catchError((error) => {
+                        console.error('Error during backend login:', error);
+                        
+                        // Xử lý các loại lỗi cụ thể
+                        let errorMessage = 'Đăng nhập thất bại.';
+                        
+                        if (error.status === 401) {
+                          errorMessage = 'Xác thực thất bại. Token Firebase không hợp lệ hoặc backend không thể verify.';
+                          console.error('Backend returned 401 Unauthorized. Possible causes:');
+                          console.error('  1. Firebase token không hợp lệ hoặc đã hết hạn');
+                          console.error('  2. Backend không thể verify Firebase token');
+                          console.error('  3. User chưa được sync trong backend DB');
+                          console.error('  4. Custom claims chưa được set trên Firebase');
+                        } else if (error.status === 403) {
+                          errorMessage = 'Bạn không có quyền truy cập.';
+                        } else if (error.status === 404) {
+                          errorMessage = 'Endpoint không tồn tại. Vui lòng kiểm tra cấu hình API.';
+                        } else if (error.status === 500) {
+                          // Lỗi 500 - Backend internal server error
+                          const backendError = error.error?.message || error.error?.error || '';
+                          if (backendError.includes('Google.Apis.Auth') || backendError.includes('FileNotFoundException')) {
+                            errorMessage = 'Lỗi backend: Thiếu package Google.Apis.Auth. Backend cần cài đặt NuGet package.';
+                          } else if (backendError.includes('Firebase') || backendError.includes('FirebaseService')) {
+                            errorMessage = 'Lỗi backend: Firebase Admin SDK chưa được khởi tạo đúng cách.';
+                          } else if (backendError) {
+                            errorMessage = `Lỗi server: ${backendError}`;
+                          } else {
+                            errorMessage = 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+                          }
+                          console.error('Backend 500 error:', backendError);
+                        } else if (error.status === 0 || !error.status) {
+                          errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+                        } else if (error.error?.message) {
+                          errorMessage = error.error.message;
+                        } else if (error.message) {
+                          errorMessage = error.message;
+                        }
+                        
+                        // Nếu backend login thất bại, đăng xuất khỏi Firebase
+                        signOut(this.auth).catch(() => {});
+                        
+                        // Throw error với message rõ ràng hơn
+                        throw { ...error, message: errorMessage };
+                      })
+                    );
+                  }),
+                  catchError((error) => {
+                    console.error('Error getting Firebase ID token result:', error);
+                    throw error;
                   })
                 );
               }),

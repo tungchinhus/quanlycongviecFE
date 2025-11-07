@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -8,7 +8,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UsersService } from '../../../services/users.service';
 import { AuthService, AuthUser, UserRole } from '../../../services/auth.service';
-import { ALL_USER_ROLES, UserRole as UserRoleEnum } from '../../../constants/enums';
+import { UserRole as UserRoleEnum } from '../../../constants/enums';
+import { RolesService } from '../../../services/roles.service';
 
 /**
  * Component gán roles cho user cụ thể
@@ -29,26 +30,46 @@ import { ALL_USER_ROLES, UserRole as UserRoleEnum } from '../../../constants/enu
   templateUrl: './user-role-assignment.component.html',
   styleUrl: './user-role-assignment.component.css'
 })
-export class UserRoleAssignmentComponent {
+export class UserRoleAssignmentComponent implements OnInit {
   private readonly usersService = inject(UsersService);
   private readonly authService = inject(AuthService);
+  private readonly rolesService = inject(RolesService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly user = input.required<AuthUser>();
   readonly isAdmin = input<boolean>(false);
   readonly onRoleUpdated = output<void>();
 
-  readonly allRoles: UserRole[] = ALL_USER_ROLES;
+  allRoles: string[] = []; // Dùng string[] để hỗ trợ tất cả roles từ DB
+  isLoadingRoles = true;
   readonly currentUserId = computed(() => this.authService.user()?.id || '');
   readonly administratorRole = UserRoleEnum.Administrator;
 
   isUpdating = false;
 
-  hasRole(role: UserRole): boolean {
-    return this.user().roles.includes(role);
+  ngOnInit(): void {
+    // Load roles từ DB - trả về tất cả roles, không filter theo enum
+    this.rolesService.getUserRoles().subscribe({
+      next: (roles) => {
+        this.allRoles = roles;
+        this.isLoadingRoles = false;
+        console.log('Loaded roles from DB:', roles);
+      },
+      error: (error) => {
+        console.error('Error loading roles from DB:', error);
+        // Fallback về roles mặc định nếu không load được từ DB
+        this.allRoles = ['Administrator', 'Manager', 'User', 'Guest'];
+        this.isLoadingRoles = false;
+      }
+    });
   }
 
-  onToggleRole(role: UserRole, checked: boolean): void {
+  hasRole(role: string): boolean {
+    // user().roles có type UserRole[] nhưng có thể chứa string values
+    return this.user().roles.includes(role as any);
+  }
+
+  onToggleRole(role: string, checked: boolean): void {
     if (!this.isAdmin()) {
       this.snackBar.open('Chỉ Administrator mới có thể thay đổi quyền người dùng.', 'Đóng', {
         duration: 3000,
@@ -73,13 +94,13 @@ export class UserRoleAssignmentComponent {
       return;
     }
 
-    const next = new Set(user.roles);
+    const next = new Set<string>(user.roles as string[]);
     if (checked) {
       next.add(role);
     } else {
       next.delete(role);
     }
-    const newRoles = Array.from(next) as UserRole[];
+    const newRoles = Array.from(next);
 
     this.isUpdating = true;
 
@@ -131,24 +152,34 @@ export class UserRoleAssignmentComponent {
     });
   }
 
-  getRoleDescription(role: UserRole): string {
-    const descriptions: { [key in UserRoleEnum]: string } = {
-      [UserRoleEnum.Administrator]: 'Quyền quản trị viên, có toàn quyền truy cập hệ thống',
-      [UserRoleEnum.Manager]: 'Quyền quản lý, có thể quản lý các tài nguyên và người dùng',
-      [UserRoleEnum.User]: 'Quyền người dùng thông thường, có quyền truy cập cơ bản',
-      [UserRoleEnum.Guest]: 'Quyền khách, có quyền truy cập hạn chế'
+  getRoleDescription(role: string): string {
+    // Lấy description từ roles đã load từ DB
+    const roleObj = this.rolesService.roles().find(r => r.roleName === role);
+    if (roleObj && roleObj.description) {
+      return roleObj.description;
+    }
+    
+    // Fallback về descriptions mặc định
+    const descriptions: { [key: string]: string } = {
+      'Administrator': 'Quyền quản trị viên, có toàn quyền truy cập hệ thống',
+      'Manager': 'Quyền quản lý, có thể quản lý các tài nguyên và người dùng',
+      'User': 'Quyền người dùng thông thường, có quyền truy cập cơ bản',
+      'Guest': 'Quyền khách, có quyền truy cập hạn chế'
     };
-    return descriptions[role as UserRoleEnum] || '';
+    return descriptions[role] || '';
   }
 
-  getRoleIcon(role: UserRole): string {
-    const icons: { [key in UserRoleEnum]: string } = {
-      [UserRoleEnum.Administrator]: 'admin_panel_settings',
-      [UserRoleEnum.Manager]: 'manage_accounts',
-      [UserRoleEnum.User]: 'person',
-      [UserRoleEnum.Guest]: 'person_outline'
+  getRoleIcon(role: string): string {
+    const icons: { [key: string]: string } = {
+      'Administrator': 'admin_panel_settings',
+      'Manager': 'manage_accounts',
+      'ManagerL1': 'supervisor_account',
+      'ManagerL2': 'groups',
+      'ManagerL3': 'group',
+      'User': 'person',
+      'Guest': 'person_outline'
     };
-    return icons[role as UserRoleEnum] || 'person';
+    return icons[role] || 'person';
   }
 }
 

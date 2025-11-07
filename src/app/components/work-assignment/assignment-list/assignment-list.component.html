@@ -1,12 +1,12 @@
 <mat-card>
   <mat-card-header>
-    <mat-card-title>Danh Sách Gán Công Việc</mat-card-title>
+    <mat-card-title>Danh Sách Giao Việc</mat-card-title>
   </mat-card-header>
   <mat-card-content>
     <div class="toolbar">
-      <button mat-raised-button color="primary" routerLink="/assignments/new">
+      <button mat-raised-button color="primary" (click)="openAssignmentDialog()">
         <mat-icon>add</mat-icon>
-        Tạo Gán Công Việc Mới
+        Tạo Giao Việc Mới
       </button>
     </div>
 
