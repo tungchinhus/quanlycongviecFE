@@ -34,7 +34,9 @@ export class RoleListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  readonly roles = this.rolesService.roles;
+  // Dùng local signal thay vì bind trực tiếp vào service signal để tránh cache
+  private readonly rolesSignal = signal<Role[]>([]);
+  readonly roles = this.rolesSignal.asReadonly();
   readonly isAdmin = this.authService.hasRole(UserRole.Administrator);
   readonly isLoading = signal<boolean>(false);
 
@@ -47,26 +49,41 @@ export class RoleListComponent implements OnInit {
 
   loadRoles(): void {
     this.isLoading.set(true);
+    // Clear signal trước khi load để tránh hiển thị data cũ
+    this.rolesSignal.set([]);
+    // Force reload từ DB, không dùng cache
+    // Service đã có cache-busting trong HTTP request
+    console.log('Loading roles from DB...');
     this.rolesService.getRoles().subscribe({
       next: (roles) => {
         this.isLoading.set(false);
-        console.log('Roles loaded successfully, count:', roles.length);
-        console.log('Current roles signal:', this.rolesService.roles());
+        // Update local signal với data mới từ DB
+        this.rolesSignal.set(roles);
+        console.log('✅ Roles loaded successfully from DB, count:', roles.length);
+        console.log('📋 Roles data from API:', JSON.stringify(roles, null, 2));
+        console.log('🔄 Local roles signal updated, count:', this.rolesSignal().length);
+        // Log từng role để verify
+        roles.forEach((role, index) => {
+          console.log(`  Role ${index + 1}: ${role.roleName} - ${role.description}`);
+        });
       },
       error: (error) => {
         this.isLoading.set(false);
-        console.error('Error loading roles:', error);
+        console.error('Error loading roles from DB:', error);
         console.error('Error details:', {
           status: error.status,
           statusText: error.statusText,
           message: error.message,
-          error: error.error
+          error: error.error,
+          url: `${error.url || 'N/A'}`
         });
-        let errorMsg = 'Không thể tải danh sách roles. Vui lòng thử lại.';
+        let errorMsg = 'Không thể tải danh sách roles từ database. Vui lòng thử lại.';
         if (error.status === 401) {
           errorMsg = 'Không có quyền truy cập. Vui lòng đăng nhập lại.';
         } else if (error.status === 404) {
           errorMsg = 'API endpoint không tìm thấy. Vui lòng kiểm tra cấu hình.';
+        } else if (error.status === 0) {
+          errorMsg = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
         } else if (error.error?.message) {
           errorMsg = error.error.message;
         }

@@ -17,6 +17,25 @@
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-actions button[mat-icon-button] {
+  transition: transform 0.3s ease;
+}
+
+.header-actions button[mat-icon-button]:hover:not(:disabled) {
+  transform: rotate(180deg);
+}
+
+.header-actions button[mat-icon-button]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .header-text h1 {
   display: flex;
   align-items: center;

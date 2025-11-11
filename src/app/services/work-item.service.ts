@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { WorkItem, WorkChange } from '../models/machine-assignment.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorkItemService {
-  private apiUrl = 'api/work-items'; // Adjust to your API endpoint
+  private apiUrl = `${environment.apiUrl}/work-items`;
 
   constructor(private http: HttpClient) {}
 
@@ -37,11 +38,11 @@ export class WorkItemService {
 
   // Work Change methods
   getWorkChangesByAssignment(assignmentID: number): Observable<WorkChange[]> {
-    return this.http.get<WorkChange[]>(`api/work-changes?assignmentID=${assignmentID}`);
+    return this.http.get<WorkChange[]>(`${environment.apiUrl}/work-changes?assignmentID=${assignmentID}`);
   }
 
   createWorkChange(workChange: Partial<WorkChange>): Observable<WorkChange> {
-    return this.http.post<WorkChange>('api/work-changes', workChange);
+    return this.http.post<WorkChange>(`${environment.apiUrl}/work-changes`, workChange);
   }
 }
 

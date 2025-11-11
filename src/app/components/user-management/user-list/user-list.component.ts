@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, OnInit } from '@angular/core';
+import { Component, computed, inject, input, output, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
 import { UsersService } from '../../../services/users.service';
 import { AuthService, AuthUser } from '../../../services/auth.service';
 import { UserRole as UserRoleEnum } from '../../../constants/enums';
@@ -24,7 +27,10 @@ import { UserFormDialogComponent } from '../user-form-dialog/user-form-dialog.co
     MatTooltipModule,
     MatChipsModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule
   ],
   templateUrl: './user-list.component.html',
   styleUrl: './user-list.component.css'
@@ -45,9 +51,37 @@ export class UserListComponent implements OnInit {
   displayedColumns: string[] = ['name', 'email', 'roles', 'status', 'actions'];
   currentUserId = computed(() => this.authService.user()?.id || '');
   syncingUsers = new Set<string>(); // Track users being synced
+  
+  readonly searchTerm = signal<string>('');
+  
+  // Filtered users based on search term
+  readonly filteredUsers = computed(() => {
+    const search = this.searchTerm().toLowerCase().trim();
+    if (!search) {
+      return this.users();
+    }
+    
+    return this.users().filter(user => {
+      const nameMatch = user.name?.toLowerCase().includes(search);
+      const emailMatch = user.email?.toLowerCase().includes(search);
+      const rolesMatch = user.roles?.some(role => 
+        role.toLowerCase().includes(search)
+      );
+      
+      return nameMatch || emailMatch || rolesMatch;
+    });
+  });
 
   ngOnInit() {
     // Component initialization
+  }
+  
+  onSearchChange(value: string): void {
+    this.searchTerm.set(value);
+  }
+  
+  clearSearch(): void {
+    this.searchTerm.set('');
   }
 
   getRoleColor(role: string): string {

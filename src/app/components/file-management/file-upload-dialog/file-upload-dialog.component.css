@@ -3,15 +3,137 @@
   margin-bottom: 16px;
 }
 
+.storage-path-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border-left: 4px solid #1976d2;
+}
+
+.storage-path-info.loading {
+  background-color: #f5f5f5;
+  border-left-color: #9e9e9e;
+  color: #666;
+}
+
+.storage-path-info.warning {
+  background-color: #fff3e0;
+  border-left-color: #ff9800;
+  color: #e65100;
+}
+
+.storage-path-info mat-icon {
+  color: #1976d2;
+  flex-shrink: 0;
+}
+
+.storage-path-info.loading mat-icon {
+  color: #9e9e9e;
+}
+
+.storage-path-info.warning mat-icon {
+  color: #ff9800;
+}
+
+.path-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.path-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.path-value {
+  font-size: 13px;
+  color: #333;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .file-info {
   padding: 16px;
   background-color: #f5f5f5;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-top: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.file-info-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.file-info-header mat-icon {
+  color: #1976d2;
+}
+
+.file-info-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.file-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-info-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.file-info-content strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.button-spinner {
+  display: inline-block;
+  margin-right: 8px;
 }
 
 mat-dialog-content {
-  min-width: 400px;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+}
+
+mat-dialog-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+::ng-deep .error-snackbar {
+  background-color: #c62828 !important;
+  color: white !important;
+}
+
+::ng-deep .success-snackbar {
+  background-color: #2e7d32 !important;
+  color: white !important;
 }
 
 

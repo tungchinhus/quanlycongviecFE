@@ -43,6 +43,7 @@ export class RoleManagementComponent implements OnInit {
 
   ngOnInit(): void {
     // Load roles từ DB - trả về tất cả roles, không filter theo enum
+    // Không hardcode, chỉ lấy từ DB
     this.rolesService.getUserRoles().subscribe({
       next: (roles) => {
         this.allRoles = roles;
@@ -51,9 +52,15 @@ export class RoleManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading roles from DB:', error);
-        // Fallback về roles mặc định nếu không load được từ DB
-        this.allRoles = ['Administrator', 'Manager', 'User', 'Guest'];
+        // Không hardcode fallback - hiển thị lỗi và để allRoles rỗng
+        this.allRoles = [];
         this.isLoadingRoles = false;
+        this.snackBar.open('Không thể tải danh sách quyền từ database. Vui lòng thử lại.', 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }

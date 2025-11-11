@@ -61,6 +61,12 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: [UserRole.Administrator] }
+  },
+  {
     path: '**',
     redirectTo: '/files'
   }

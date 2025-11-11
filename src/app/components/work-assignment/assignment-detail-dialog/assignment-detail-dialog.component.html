@@ -1,0 +1,162 @@
+<div class="assignment-detail-dialog">
+  <h2 mat-dialog-title>{{ assignment?.machineName || 'Chi tiết Giao Việc' }}</h2>
+  <mat-dialog-content>
+    <div *ngIf="isLoading" class="loading">
+      <p>Đang tải...</p>
+    </div>
+    <div *ngIf="!isLoading && assignment" class="assignment-content">
+      <div class="info-section">
+        <div class="info-row">
+          <span class="label">Tên Máy:</span>
+          <span class="value">{{ assignment.machineName }}</span>
+        </div>
+        <mat-divider *ngIf="assignment.standardRequirement"></mat-divider>
+        <div class="info-row" *ngIf="assignment.standardRequirement">
+          <span class="label">Yêu Cầu Tiêu Chuẩn:</span>
+          <span class="value">{{ assignment.standardRequirement }}</span>
+        </div>
+        <mat-divider *ngIf="assignment.additionalRequest"></mat-divider>
+        <div class="info-row" *ngIf="assignment.additionalRequest">
+          <span class="label">Yêu Cầu Bổ Sung:</span>
+          <span class="value">{{ assignment.additionalRequest }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Người giao việc:</span>
+          <span class="value">{{ getDesignerName(assignment.designer) || '-' }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Trưởng đơn vị:</span>
+          <span class="value">{{ getTeamLeaderName(assignment.teamLeader) || '-' }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Ngày Giao:</span>
+          <span class="value">{{ assignment.deliveryDate ? (assignment.deliveryDate | date:'dd/MM/yyyy') : '-' }}</span>
+        </div>
+      </div>
+
+      <!-- Phần Công Việc -->
+      <div class="work-items-section" *ngIf="filteredWorkItems && filteredWorkItems.length > 0">
+        <div class="work-items-list">
+          <mat-card *ngFor="let item of filteredWorkItems" class="work-item-card">
+            <mat-card-content>
+              <h4>{{ getWorkTypeName(item.workType) || 'Công việc' }}</h4>
+              <p><strong>Người thực hiện:</strong> {{ getPersonName(item.personName) || '-' }}</p>
+              
+              <form [formGroup]="getWorkItemForm(item.workItemID)!" class="work-item-form">
+                <div class="date-fields">
+                  <mat-form-field appearance="outline" class="date-field">
+                    <mat-label>Ngày bắt đầu</mat-label>
+                    <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+                    <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #startPicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="date-field">
+                    <mat-label>Dự kiến hoàn thành</mat-label>
+                    <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish">
+                    <mat-datepicker-toggle matIconSuffix [for]="expectedPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #expectedPicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="date-field">
+                    <mat-label>Hoàn thành thực tế</mat-label>
+                    <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish">
+                    <mat-datepicker-toggle matIconSuffix [for]="actualPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #actualPicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+
+                <mat-form-field appearance="outline" class="notes-field">
+                  <mat-label>Ghi chú</mat-label>
+                  <textarea matInput formControlName="notes" rows="3" placeholder="Nhập ghi chú..."></textarea>
+                </mat-form-field>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+      <div *ngIf="!filteredWorkItems || filteredWorkItems.length === 0" class="no-data">
+        <p>Chưa có công việc nào được gán cho bạn</p>
+      </div>
+
+      <!-- Phần File Upload -->
+      <div class="files-section">
+        <h3 class="section-title">File đính kèm</h3>
+        
+        <!-- File Upload Area -->
+        <div class="file-upload-area">
+          <input 
+            type="file" 
+            id="fileInput" 
+            (change)="onFileSelected($event)" 
+            multiple
+            accept="*/*"
+            style="display: none;">
+          <label for="fileInput" class="file-upload-button">
+            <mat-icon>attach_file</mat-icon>
+            <span>Chọn file đính kèm</span>
+          </label>
+          <span class="file-upload-hint">(Có thể chọn nhiều file)</span>
+        </div>
+
+        <!-- Selected Files List -->
+        <div *ngIf="selectedFiles().length > 0" class="selected-files-list">
+          <div *ngFor="let file of selectedFiles(); let i = index" class="file-chip">
+            <mat-icon>insert_drive_file</mat-icon>
+            <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
+            <span class="file-size">({{ formatFileSize(file.size) }})</span>
+            <button mat-icon-button (click)="removeFile(i)" class="remove-button">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <button 
+            mat-raised-button 
+            color="primary" 
+            (click)="uploadFiles()" 
+            [disabled]="isUploading()"
+            class="upload-button">
+            <mat-spinner *ngIf="isUploading()" diameter="20" class="button-spinner"></mat-spinner>
+            <mat-icon *ngIf="!isUploading()">cloud_upload</mat-icon>
+            <span>{{ isUploading() ? 'Đang upload...' : 'Upload' }}</span>
+          </button>
+        </div>
+
+        <!-- Uploaded Files List -->
+        <div *ngIf="files.length > 0" class="uploaded-files-list">
+          <div *ngFor="let file of files" class="file-item">
+            <mat-icon>insert_drive_file</mat-icon>
+            <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+            <span class="file-size">({{ formatFileSize(file.fileSize) }})</span>
+            <span class="file-date">{{ file.uploadDate ? (file.uploadDate | date:'dd/MM/yyyy') : '-' }}</span>
+            <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'" class="action-button">
+              <mat-icon>download</mat-icon>
+            </button>
+            <button mat-icon-button (click)="deleteFile(file)" [matTooltip]="'Xóa'" color="warn" class="action-button">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div *ngIf="files.length === 0 && selectedFiles().length === 0" class="no-files">
+          <p>Chưa có file nào</p>
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onClose()">Đóng</button>
+    <button 
+      *ngIf="filteredWorkItems && filteredWorkItems.length > 0"
+      mat-raised-button 
+      color="primary" 
+      (click)="saveAllWorkItems()" 
+      [disabled]="isSaving()">
+      <mat-spinner *ngIf="isSaving()" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isSaving()">save</mat-icon>
+      <span>{{ isSaving() ? 'Đang lưu...' : 'Lưu' }}</span>
+    </button>
+  </mat-dialog-actions>
+</div>
+

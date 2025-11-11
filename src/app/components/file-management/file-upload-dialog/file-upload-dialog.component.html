@@ -1,28 +1,72 @@
 <h2 mat-dialog-title>Upload File</h2>
 <mat-dialog-content>
   <form [formGroup]="uploadForm">
+    <!-- Thông tin đường dẫn lưu file -->
+    @if (isLoadingPath()) {
+      <div class="storage-path-info loading">
+        <mat-icon>hourglass_empty</mat-icon>
+        <span>Đang tải thông tin đường dẫn lưu file...</span>
+      </div>
+    } @else if (currentStoragePath()) {
+      <div class="storage-path-info">
+        <mat-icon>folder</mat-icon>
+        <div class="path-details">
+          <span class="path-label">Đường dẫn lưu file:</span>
+          <span class="path-value" [matTooltip]="currentStoragePath()">{{ currentStoragePath() }}</span>
+        </div>
+      </div>
+    } @else {
+      <div class="storage-path-info warning">
+        <mat-icon>warning</mat-icon>
+        <span>Chưa cấu hình đường dẫn lưu file. Vui lòng liên hệ Administrator.</span>
+      </div>
+    }
+
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Chọn file</mat-label>
       <input type="file" (change)="onFileSelected($event)" accept="*/*" required>
+      <mat-icon matPrefix>attach_file</mat-icon>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Mô tả</mat-label>
-      <textarea matInput formControlName="description" rows="3"></textarea>
+      <textarea matInput formControlName="description" rows="3" placeholder="Nhập mô tả cho file (tùy chọn)"></textarea>
+      <mat-icon matPrefix>description</mat-icon>
     </mat-form-field>
 
-    <div *ngIf="selectedFile" class="file-info">
-      <p><strong>File đã chọn:</strong> {{ selectedFile.name }}</p>
-      <p><strong>Kích thước:</strong> {{ formatFileSize(selectedFile.size) }}</p>
-    </div>
+    @if (selectedFile) {
+      <div class="file-info">
+        <div class="file-info-header">
+          <mat-icon>insert_drive_file</mat-icon>
+          <span class="file-info-title">Thông tin file</span>
+        </div>
+        <div class="file-info-content">
+          <p><strong>Tên file:</strong> {{ selectedFile.name }}</p>
+          <p><strong>Kích thước:</strong> {{ formatFileSize(selectedFile.size) }}</p>
+          <p><strong>Loại file:</strong> {{ selectedFile.type || 'Không xác định' }}</p>
+        </div>
+      </div>
+    }
   </form>
-  </mat-dialog-content>
+</mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Hủy</button>
-  <button mat-raised-button color="primary" (click)="onUpload()" [disabled]="!selectedFile || uploadForm.invalid">
-    Upload
+  <button mat-button (click)="onCancel()" [disabled]="isUploading()">
+    <mat-icon>close</mat-icon>
+    Hủy
   </button>
-  </mat-dialog-actions>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onUpload()" 
+    [disabled]="!selectedFile || uploadForm.invalid || isUploading() || !currentStoragePath()">
+    @if (isUploading()) {
+      <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+    } @else {
+      <mat-icon>cloud_upload</mat-icon>
+    }
+    {{ isUploading() ? 'Đang upload...' : 'Upload' }}
+  </button>
+</mat-dialog-actions>
 
 
 

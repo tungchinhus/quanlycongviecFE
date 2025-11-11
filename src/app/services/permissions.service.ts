@@ -30,7 +30,9 @@ export class PermissionsService {
   readonly permissions = this.permissionsSignal.asReadonly();
 
   /**
-   * Lấy danh sách tất cả permissions
+   * Lấy danh sách tất cả permissions từ DB (PostgreSQL database)
+   * API GET /api/permissions chỉ trả về permissions có trong database
+   * Không hardcode, không mock data
    */
   getPermissions(): Observable<Permission[]> {
     return this.http.get<Permission[]>(`${environment.apiUrl}/permissions`).pipe(

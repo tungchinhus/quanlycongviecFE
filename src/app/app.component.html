@@ -137,6 +137,15 @@
               </div>
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
             </a>
+            <a routerLink="/settings" routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Cài đặt hệ thống' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>settings</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Cài đặt</span>
+            </a>
           }
           <div class="nav-spacer"></div>
         </div>

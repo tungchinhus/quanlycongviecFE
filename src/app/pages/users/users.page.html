@@ -9,10 +9,20 @@
         <p class="page-description">Quản lý người dùng và phân quyền trong hệ thống</p>
       </div>
       @if (isAdmin()) {
-        <button mat-raised-button color="primary" (click)="onCreateUser()">
-          <mat-icon>person_add</mat-icon>
-          Thêm người dùng
-        </button>
+        <div class="header-actions">
+          <button 
+            mat-icon-button 
+            color="primary" 
+            (click)="onRefresh()"
+            [disabled]="isLoading()"
+            matTooltip="Làm mới danh sách người dùng từ cơ sở dữ liệu">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          <button mat-raised-button color="primary" (click)="onCreateUser()">
+            <mat-icon>person_add</mat-icon>
+            Thêm người dùng
+          </button>
+        </div>
       }
     </div>
   </div>

@@ -1,55 +1,65 @@
 <h2 mat-dialog-title>Tạo Giao Việc Mới</h2>
 <mat-dialog-content>
   <form [formGroup]="assignmentForm">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Tên Máy *</mat-label>
-      <input matInput formControlName="machineName" required>
-      <mat-error *ngIf="assignmentForm.get('machineName')?.hasError('required')">
-        Tên máy là bắt buộc
-      </mat-error>
-    </mat-form-field>
+    <!-- Row 1: Tên Máy và ĐĐH/Giấy đề nghị -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>Tên Máy *</mat-label>
+        <input matInput formControlName="machineName" required>
+        <mat-error *ngIf="assignmentForm.get('machineName')?.hasError('required')">
+          Tên máy là bắt buộc
+        </mat-error>
+      </mat-form-field>
 
-    <div class="row">
-      <mat-form-field appearance="outline" class="half-width">
-        <mat-label>Yêu Cầu Tiêu Chuẩn</mat-label>
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>ĐĐH/Giấy đề nghị</mat-label>
+        <input matInput formControlName="requestDocument" placeholder="Nhập ĐĐH/Giấy đề nghị">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 2: Yêu Cầu SP và Yêu Cầu khác -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>Yêu Cầu SP(Tiêu Chuẩn)</mat-label>
         <textarea matInput formControlName="standardRequirement" rows="2"></textarea>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="half-width">
-        <mat-label>Yêu Cầu Bổ Sung</mat-label>
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>Yêu Cầu khác</mat-label>
         <textarea matInput formControlName="additionalRequest" rows="2"></textarea>
       </mat-form-field>
     </div>
 
-    <div class="row">
-      <mat-form-field appearance="outline" class="half-width">
+    <!-- Row 3: Ngày Giao, Người Giao việc, Trưởng Đ.vị -->
+    <div class="form-row form-row-three">
+      <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Ngày Giao</mat-label>
         <input matInput [matDatepicker]="picker" formControlName="deliveryDate">
         <mat-datepicker-toggle matIconSuffix [for]="picker" type="button"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="half-width">
+      <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Người Giao việc</mat-label>
         <input matInput [value]="currentUser?.name || currentUser?.userName || ''" readonly>
       </mat-form-field>
-    </div>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Trưởng Đ.vị</mat-label>
-      <mat-select formControlName="teamLeader">
-        <mat-option value="">-- Chọn --</mat-option>
-        @for (manager of managers; track manager.id) {
-          <mat-option [value]="manager.id">{{ manager.name || manager.userName }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>Trưởng Đ.vị</mat-label>
+        <mat-select formControlName="teamLeader">
+          <mat-option value="">-- Chọn --</mat-option>
+          @for (manager of managers; track manager.id) {
+            <mat-option [value]="manager.id">{{ manager.name || manager.userName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
 
     <!-- Danh mục công việc -->
     <div class="work-categories">
       <h3>Người thực hiện</h3>
-      <div class="row">
-        <mat-form-field appearance="outline" class="half-width">
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>T.kể ruột</mat-label>
           <mat-select formControlName="coreDesignUser">
             <mat-option value="">-- Chọn --</mat-option>
@@ -59,7 +69,7 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="half-width">
+        <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>K.soat ruột</mat-label>
           <mat-select formControlName="coreReviewUser">
             <mat-option value="">-- Chọn --</mat-option>
@@ -70,8 +80,8 @@
         </mat-form-field>
       </div>
 
-      <div class="row">
-        <mat-form-field appearance="outline" class="half-width">
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>T.ke vỏ</mat-label>
           <mat-select formControlName="casingDesignUser">
             <mat-option value="">-- Chọn --</mat-option>
@@ -81,7 +91,7 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="half-width">
+        <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>K.soát vỏ</mat-label>
           <mat-select formControlName="casingReviewUser">
             <mat-option value="">-- Chọn --</mat-option>
@@ -92,21 +102,81 @@
         </mat-form-field>
       </div>
 
+      <div class="form-row form-row-single">
+        <mat-form-field appearance="outline" class="form-field-flex">
+          <mat-label>Đ. mức vật tư</mat-label>
+          <mat-select formControlName="materialLevelingUser">
+            <mat-option value="">-- Chọn --</mat-option>
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Các hạng mục thay đổi -->
+    <div class="work-changes-section">
+      <h3>Các hạng mục thay đổi (nếu có)</h3>
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Đ. mức vật tư</mat-label>
-        <mat-select formControlName="materialLevelingUser">
-          <mat-option value="">-- Chọn --</mat-option>
-          @for (user of users; track user.id) {
-            <mat-option [value]="user.id">{{ user.name || user.userName }}</mat-option>
-          }
-        </mat-select>
+        <mat-label>Nhập các hạng mục thay đổi</mat-label>
+        <textarea matInput formControlName="workChanges" rows="2" placeholder="Ví dụ: Thay đổi theo phiếu đăng ký sửa đổi bản vẽ TBKT số: ..."></textarea>
       </mat-form-field>
+    </div>
+
+    <!-- File Upload Section -->
+    <div class="file-upload-section">
+      <h3>File đính kèm</h3>
+      <div class="file-upload-area">
+        <input 
+          type="file" 
+          id="fileInput" 
+          (change)="onFileSelected($event)" 
+          multiple
+          accept="*/*"
+          style="display: none;">
+        <label for="fileInput" class="file-upload-button">
+          <mat-icon>attach_file</mat-icon>
+          <span>Chọn file đính kèm</span>
+        </label>
+        <span class="file-upload-hint">(Có thể chọn nhiều file)</span>
+      </div>
+
+      @if (selectedFiles().length > 0) {
+        <div class="selected-files-list">
+          @for (file of selectedFiles(); track $index) {
+            <mat-chip-row (removed)="removeFile($index)" class="file-chip">
+              <mat-icon matChipAvatar>insert_drive_file</mat-icon>
+              <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
+              <span class="file-size">({{ formatFileSize(file.size) }})</span>
+              <button matChipRemove [attr.aria-label]="'remove ' + file.name">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip-row>
+          }
+        </div>
+      }
     </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Hủy</button>
-  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="assignmentForm.invalid">
-    Lưu
+  <button mat-button (click)="onCancel()" [disabled]="isUploading()">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()" 
+    [disabled]="assignmentForm.invalid || isUploading()">
+    @if (isUploading()) {
+      <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+      <span>Đang lưu...</span>
+    } @else {
+      <ng-container>
+        <mat-icon>save</mat-icon>
+        <span>Lưu</span>
+      </ng-container>
+    }
   </button>
 </mat-dialog-actions>

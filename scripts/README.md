@@ -387,3 +387,183 @@ node scripts/set-user-role.js user@example.com Admin
   await authService.refreshUserClaims();
   ```
 
+---
+
+## Script: get-custom-claims.js
+
+Script lấy Custom Claims từ Firebase Authentication.
+
+### Yêu cầu
+
+1. Node.js đã được cài đặt
+2. Dependencies (đã có sẵn):
+   ```bash
+   npm install firebase-admin
+   ```
+
+### Cách sử dụng
+
+#### Lấy custom claims theo email
+
+```bash
+node scripts/get-custom-claims.js get-by-email <email>
+```
+
+**Example:**
+```bash
+node scripts/get-custom-claims.js get-by-email chinhdvt@gmail.com
+```
+
+#### Lấy custom claims theo UID
+
+```bash
+node scripts/get-custom-claims.js get-by-uid <uid>
+```
+
+**Example:**
+```bash
+node scripts/get-custom-claims.js get-by-uid abc123xyz
+```
+
+#### Lấy custom claims của tất cả users
+
+```bash
+node scripts/get-custom-claims.js get-all
+```
+
+#### Lấy và export ra file JSON
+
+```bash
+node scripts/get-custom-claims.js get-all --export <filename>
+```
+
+**Example:**
+```bash
+node scripts/get-custom-claims.js get-all --export claims-backup.json
+```
+
+### Chức năng
+
+- ✅ Lấy custom claims của một user cụ thể (theo email hoặc UID)
+- ✅ Lấy custom claims của tất cả users
+- ✅ Hiển thị thông tin chi tiết về custom claims (roles, name, etc.)
+- ✅ Export custom claims ra file JSON (backup)
+- ✅ Thống kê số lượng users có/không có custom claims
+- ✅ Hiển thị danh sách users có/không có claims
+
+### Kết quả mẫu
+
+#### Lấy theo email:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 CUSTOM CLAIMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 User Information:
+   Email: user@example.com
+   UID: abc123...
+   Display Name: User Name
+   Email Verified: Yes
+   Created: 2024-01-01T00:00:00.000Z
+   Last Sign In: 2024-01-02T00:00:00.000Z
+
+🎭 Custom Claims:
+{
+  "roles": ["Administrator", "Manager"],
+  "name": "User Name"
+}
+
+📌 Roles: Administrator, Manager
+📌 Name: User Name
+```
+
+#### Lấy tất cả users:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 TỔNG KẾT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 Tổng số users: 10
+✅ Users có custom claims: 7
+⚠️  Users không có custom claims: 3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 USERS CÓ CUSTOM CLAIMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. user1@example.com
+   UID: abc123...
+   Name: User One
+   Roles: Administrator, Manager
+   Custom Claims: {"roles":["Administrator","Manager"],"name":"User One"}
+```
+
+### Sử dụng khi nào?
+
+- ✅ Kiểm tra custom claims của một user cụ thể
+- ✅ Debug vấn đề về roles/permissions
+- ✅ Backup custom claims của tất cả users
+- ✅ Kiểm tra users nào chưa có custom claims
+- ✅ So sánh custom claims giữa các users
+- ✅ Audit roles trong hệ thống
+
+### Export File Format
+
+File JSON export sẽ có format:
+
+```json
+{
+  "exportedAt": "2024-01-01T00:00:00.000Z",
+  "totalUsers": 10,
+  "usersWithClaims": 7,
+  "usersWithoutClaims": 3,
+  "users": [
+    {
+      "uid": "abc123...",
+      "email": "user@example.com",
+      "displayName": "User Name",
+      "customClaims": {
+        "roles": ["Administrator"],
+        "name": "User Name"
+      }
+    }
+  ]
+}
+```
+
+### Examples
+
+```bash
+# Lấy custom claims của một user
+node scripts/get-custom-claims.js get-by-email user@example.com
+
+# Lấy custom claims theo UID
+node scripts/get-custom-claims.js get-by-uid abc123xyz
+
+# Lấy tất cả custom claims
+node scripts/get-custom-claims.js get-all
+
+# Export ra file backup
+node scripts/get-custom-claims.js get-all --export claims-backup-2024-01-01.json
+```
+
+### Troubleshooting
+
+**Lỗi: User không tồn tại**
+- Kiểm tra lại email hoặc UID
+- Sử dụng `check-firebase-user.js` để kiểm tra user
+
+**Lỗi: Không có custom claims**
+- User chưa được set custom claims
+- Set custom claims: `node scripts/set-user-role.js <email> <roles>`
+
+**Lỗi: Cannot initialize Firebase**
+- Kiểm tra file `service-account-key.json` có tồn tại không
+- Kiểm tra file JSON có hợp lệ không
+
+**File export không tạo được**
+- Kiểm tra quyền ghi file trong thư mục hiện tại
+- Kiểm tra đường dẫn file có hợp lệ không
+

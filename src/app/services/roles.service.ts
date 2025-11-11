@@ -33,58 +33,90 @@ export class RolesService {
   readonly userRoles = this.userRolesSignal.asReadonly();
 
   /**
-   * Lấy danh sách tất cả roles
+   * Lấy danh sách tất cả roles từ DB (PostgreSQL database)
+   * Luôn fetch mới từ API, không dùng cache, không hardcode
+   * API GET /api/roles chỉ trả về roles có trong database
+   * Thêm cache-busting để đảm bảo luôn lấy data mới nhất
    */
   getRoles(): Observable<Role[]> {
-    return this.http.get<any>(`${environment.apiUrl}/roles`).pipe(
+    // Thêm timestamp để bypass browser cache và đảm bảo luôn fetch mới
+    const timestamp = new Date().getTime();
+    const url = `${environment.apiUrl}/roles?t=${timestamp}`;
+    console.log('🔍 Fetching roles from API:', url);
+    console.log('⏰ Timestamp for cache-busting:', timestamp);
+    
+    return this.http.get<any>(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    }).pipe(
       map(response => {
+        console.log('📥 Raw API response:', response);
         // Handle both direct array response and wrapped response
         let roles: Role[] = [];
         if (Array.isArray(response)) {
           roles = response;
+          console.log('✅ Response is array, count:', roles.length);
         } else if (response && Array.isArray(response.data)) {
           roles = response.data;
+          console.log('✅ Response has data array, count:', roles.length);
         } else if (response && response.data) {
           roles = [response.data];
+          console.log('✅ Response has single data object');
         } else {
-          console.warn('Unexpected roles response format:', response);
+          console.warn('⚠️ Unexpected roles response format:', response);
           roles = [];
         }
+        console.log('📋 Parsed roles from API response, count:', roles.length);
+        roles.forEach((role, index) => {
+          console.log(`  ${index + 1}. ${role.roleName} (ID: ${role.roleId}) - ${role.description || 'No description'}`);
+        });
         return roles;
       }),
       tap(roles => {
-        console.log('Loaded roles from DB:', roles);
+        console.log('🔧 Setting roles signal with data from DB. Count:', roles.length);
+        console.log('📊 Roles details:', roles.map(r => ({ id: r.roleId, name: r.roleName, desc: r.description })));
+        
+        // ⚠️ KIỂM TRA: So sánh với DB
+        console.log('🔍 DEBUG: Checking for discrepancies...');
+        const roleNames = roles.map(r => r.roleName);
+        const hasGuest = roleNames.includes('Guest');
+        if (hasGuest) {
+          console.warn('⚠️ WARNING: Guest role found in API response but NOT in DB!');
+          console.warn('   This means backend is adding Guest role. Check backend API.');
+        }
+        console.log('📋 All role names from API:', roleNames);
+        console.log('📋 Role IDs from API:', roles.map(r => r.roleId));
+        
+        // Luôn update signal với data mới từ DB
         this.rolesSignal.set(roles);
         // Cập nhật userRolesSignal với các roles đã normalize (cho backward compatibility)
         const userRoles = roles
           .map(role => normalizeRoleName(role.roleName))
           .filter((role): role is UserRole => role !== null);
         this.userRolesSignal.set(userRoles);
+        console.log('✅ Roles signal updated. Current signal value count:', this.rolesSignal().length);
       })
     );
   }
 
   /**
-   * Lấy danh sách roles dạng string[] từ DB
-   * Load tất cả roles từ DB, không filter theo enum
+   * Lấy danh sách roles dạng string[] từ DB (PostgreSQL database)
+   * Load tất cả roles từ DB, không filter theo enum, không hardcode
    * Để hỗ trợ các roles mới như ManagerL1, ManagerL2, ManagerL3
+   * 
+   * Note: Luôn fetch từ DB để đảm bảo data mới nhất, không có fallback hardcode
    */
   getUserRoles(): Observable<string[]> {
-    // Nếu đã có roles trong signal, lấy roleName từ đó
-    const cachedRoles = this.rolesSignal();
-    if (cachedRoles.length > 0) {
-      return new Observable(observer => {
-        const roleNames = cachedRoles.map(role => role.roleName);
-        observer.next(roleNames);
-        observer.complete();
-      });
-    }
-
-    // Nếu chưa có, load từ DB
+    // Luôn load từ DB để đảm bảo data mới nhất, không dùng cache
     return this.getRoles().pipe(
       map(roles => {
         // Trả về tất cả roleName từ DB, không filter
-        return roles.map(role => role.roleName);
+        const roleNames = roles.map(role => role.roleName);
+        console.log('getUserRoles: Returning role names from DB:', roleNames);
+        return roleNames;
       })
     );
   }

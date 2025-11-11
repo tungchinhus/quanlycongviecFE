@@ -57,8 +57,27 @@ export class UsersService {
   /**
    * Map UserDto từ backend sang AuthUser
    * Đảm bảo roles luôn là array, không null/undefined
+   * Xử lý các trường hợp edge case khi dữ liệu không đầy đủ
    */
-  private mapUserDtoToAuthUser(dto: UserDto): AuthUser {
+  private mapUserDtoToAuthUser(dto: UserDto | any): AuthUser {
+    // Validate dto
+    if (!dto) {
+      console.error('[UsersService] mapUserDtoToAuthUser: dto is null or undefined');
+      throw new Error('UserDto is null or undefined');
+    }
+
+    // Validate userId - có thể là undefined hoặc null
+    if (dto.userId === undefined || dto.userId === null) {
+      console.error('[UsersService] mapUserDtoToAuthUser: userId is missing', dto);
+      // Nếu không có userId, thử dùng firebaseUID hoặc tạo id tạm
+      if (dto.firebaseUID) {
+        console.warn('[UsersService] Using firebaseUID as id fallback');
+        dto.userId = dto.firebaseUID; // Tạm thời dùng firebaseUID
+      } else {
+        throw new Error('UserDto missing userId and firebaseUID');
+      }
+    }
+
     // Normalize roles - đảm bảo luôn là array
     let roles: UserRole[] = [];
     if (dto.roles) {
@@ -87,24 +106,31 @@ export class UsersService {
       }
     }
     
+    // Xử lý userId - đảm bảo có thể convert sang string
+    const userId = dto.userId !== undefined && dto.userId !== null 
+      ? (typeof dto.userId === 'number' ? dto.userId.toString() : String(dto.userId))
+      : (dto.firebaseUID || 'unknown');
+    
     return {
-      id: dto.userId.toString(),
-      userId: dto.userId,
-      firebaseUid: dto.firebaseUID || '',
-      userName: dto.userName,
-      name: dto.fullName || dto.userName || '',
+      id: userId,
+      userId: typeof dto.userId === 'number' ? dto.userId : undefined,
+      firebaseUid: dto.firebaseUID || dto.firebaseUid || '',
+      userName: dto.userName || '',
+      name: dto.fullName || dto.name || dto.userName || '',
       email: dto.email || '',
       roles: roles, // Luôn là array, có thể rỗng
-      isActive: dto.isActive,
-      createdAt: dto.createdAt
+      isActive: dto.isActive !== undefined ? dto.isActive : true,
+      createdAt: dto.createdAt || ''
     };
   }
 
   /**
-   * Load users từ API và enrich với Firebase Custom Claims
-   * Firebase Custom Claims là source of truth cho roles
+   * Load users từ API (PostgreSQL database)
+   * API GET /api/users chỉ trả về users có trong PostgreSQL database
+   * Không còn lấy từ Firebase custom claims, không hardcode, không tự động tạo user
+   * @param forceRefresh - Nếu true, thêm timestamp để bypass cache
    */
-  loadUsers(page: number = 1, pageSize: number = 100, search?: string): Observable<AuthUser[]> {
+  loadUsers(page: number = 1, pageSize: number = 100, search?: string, forceRefresh: boolean = false): Observable<AuthUser[]> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
@@ -113,7 +139,15 @@ export class UsersService {
       params = params.set('search', search);
     }
 
+    // Thêm cache-busting parameter nếu forceRefresh = true
+    if (forceRefresh) {
+      params = params.set('_t', Date.now().toString());
+    }
+
     return this.http.get<UsersResponse>(`${environment.apiUrl}/users`, { params }).pipe(
+      tap(response => {
+        console.log(`[UsersService] Loaded page ${response.page}/${response.totalPages}, total: ${response.totalCount}, current page: ${response.data.length} users`);
+      }),
       map(response => {
         // Map UserDto sang AuthUser và normalize roles
         return response.data.map(dto => this.mapUserDtoToAuthUser(dto));
@@ -126,8 +160,74 @@ export class UsersService {
         }));
       }),
       tap(users => {
+        console.log(`[UsersService] Mapped ${users.length} users, updating signal`);
         // Update signal với users đã normalize
         this.usersSignal.set(users);
+      })
+    );
+  }
+
+  /**
+   * Load tất cả users từ DB (load nhiều pages nếu cần)
+   * Đảm bảo đồng bộ với DB bằng cách load tất cả users
+   */
+  loadAllUsers(forceRefresh: boolean = false): Observable<AuthUser[]> {
+    const pageSize = 100;
+    
+    // Load page đầu tiên để biết tổng số pages
+    let params = new HttpParams()
+      .set('page', '1')
+      .set('pageSize', pageSize.toString());
+    
+    if (forceRefresh) {
+      params = params.set('_t', Date.now().toString());
+    }
+
+    return this.http.get<UsersResponse>(`${environment.apiUrl}/users`, { params }).pipe(
+      switchMap(response => {
+        const totalPages = response.totalPages;
+        const totalCount = response.totalCount;
+        console.log(`[UsersService] Total pages: ${totalPages}, total users: ${totalCount}`);
+        
+        // Map users từ page đầu tiên
+        let allUsers = response.data.map(dto => this.mapUserDtoToAuthUser(dto));
+        
+        // Nếu chỉ có 1 page, trả về luôn
+        if (totalPages <= 1) {
+          console.log(`[UsersService] Only 1 page, returning ${allUsers.length} users`);
+          return of(allUsers);
+        }
+
+        // Load các pages còn lại
+        const pageRequests: Observable<AuthUser[]>[] = [];
+        for (let page = 2; page <= totalPages; page++) {
+          pageRequests.push(
+            this.loadUsers(page, pageSize, undefined, forceRefresh)
+          );
+        }
+
+        // Load tất cả pages song song
+        return forkJoin(pageRequests).pipe(
+          map(usersArrays => {
+            // Gộp tất cả users lại
+            const allUsersFromPages = usersArrays.flat();
+            allUsers = [...allUsers, ...allUsersFromPages];
+            console.log(`[UsersService] Loaded all ${allUsers.length} users from ${totalPages} pages`);
+            return allUsers;
+          })
+        );
+      }),
+      map(users => {
+        // Ensure roles array is always present
+        return users.map(user => ({
+          ...user,
+          roles: Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : []
+        }));
+      }),
+      tap(users => {
+        // Update signal với tất cả users
+        this.usersSignal.set(users);
+        console.log(`[UsersService] Updated signal with ${users.length} users`);
       })
     );
   }
@@ -137,7 +237,23 @@ export class UsersService {
    */
   getUserById(id: string): Observable<AuthUser> {
     return this.http.get<UserDto>(`${environment.apiUrl}/users/${id}`).pipe(
-      map(dto => this.mapUserDtoToAuthUser(dto))
+      tap(dto => {
+        if (!dto) {
+          console.error(`[UsersService] getUserById: Empty response for id ${id}`);
+        }
+      }),
+      map(dto => {
+        try {
+          return this.mapUserDtoToAuthUser(dto);
+        } catch (error) {
+          console.error(`[UsersService] Error mapping user with id ${id}:`, error);
+          throw error;
+        }
+      }),
+      catchError(error => {
+        console.error(`[UsersService] Error getting user by id ${id}:`, error);
+        throw error;
+      })
     );
   }
 
@@ -230,18 +346,36 @@ export class UsersService {
    * Method này yêu cầu backend có endpoint để lấy Custom Claims từ Firebase
    */
   refreshUserRolesFromFirebase(firebaseUid: string): Observable<AuthUser> {
+    console.log(`[UsersService] Refreshing roles from Firebase for UID: ${firebaseUid}`);
+    
     // Backend endpoint sẽ verify Firebase ID token và lấy Custom Claims
     // Tạm thời sử dụng endpoint get user by firebaseUID
     return this.http.get<UserDto>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`).pipe(
-      map(dto => this.mapUserDtoToAuthUser(dto)),
+      tap(dto => {
+        if (!dto) {
+          console.error(`[UsersService] refreshUserRolesFromFirebase: Empty response for UID ${firebaseUid}`);
+        }
+      }),
+      map(dto => {
+        try {
+          return this.mapUserDtoToAuthUser(dto);
+        } catch (error) {
+          console.error(`[UsersService] Error mapping user with UID ${firebaseUid}:`, error);
+          throw error;
+        }
+      }),
       tap(updatedUser => {
+        console.log(`[UsersService] Successfully refreshed user:`, updatedUser);
         // Update local signal
         this.usersSignal.update(list =>
           list.map(u => u.firebaseUid === firebaseUid ? updatedUser : u)
         );
       }),
       catchError(error => {
-        console.error('Error refreshing user roles from Firebase:', error);
+        console.error(`[UsersService] Error refreshing user roles from Firebase for UID ${firebaseUid}:`, error);
+        if (error.error) {
+          console.error('[UsersService] Error details:', error.error);
+        }
         throw error;
       })
     );
@@ -252,17 +386,45 @@ export class UsersService {
    * Backend sẽ lấy Custom Claims từ Firebase và cập nhật vào DB
    */
   syncUserRolesFromFirebase(firebaseUid: string): Observable<AuthUser> {
+    console.log(`[UsersService] Syncing roles from Firebase for UID: ${firebaseUid}`);
+    
     // Gọi backend endpoint để sync roles từ Firebase Custom Claims
     return this.http.post<UserDto>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}/sync-roles`, {}).pipe(
-      map(dto => this.mapUserDtoToAuthUser(dto)),
+      tap(response => {
+        console.log(`[UsersService] Sync response:`, response);
+        // Validate response
+        if (!response) {
+          console.error('[UsersService] Empty response from sync-roles endpoint');
+          throw new Error('Empty response from backend');
+        }
+        if (response.userId === undefined || response.userId === null) {
+          console.warn('[UsersService] Response missing userId, will use fallback');
+        }
+      }),
+      map(dto => {
+        try {
+          return this.mapUserDtoToAuthUser(dto);
+        } catch (error) {
+          console.error('[UsersService] Error mapping UserDto to AuthUser:', error);
+          console.error('[UsersService] DTO data:', dto);
+          throw error;
+        }
+      }),
       tap(updatedUser => {
+        console.log(`[UsersService] Successfully synced user:`, updatedUser);
         // Update local signal
         this.usersSignal.update(list =>
           list.map(u => u.firebaseUid === firebaseUid ? updatedUser : u)
         );
       }),
       catchError(error => {
-        console.error('Error syncing user roles from Firebase:', error);
+        console.error('[UsersService] Error syncing user roles from Firebase:', error);
+        if (error.error) {
+          console.error('[UsersService] Error details:', error.error);
+        }
+        if (error.message) {
+          console.error('[UsersService] Error message:', error.message);
+        }
         throw error;
       })
     );

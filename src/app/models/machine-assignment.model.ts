@@ -2,6 +2,7 @@ export interface MachineAssignment {
   assignmentID: number;
   tbkt_ID: number;
   machineName: string;
+  requestDocument?: string; // ĐĐH/Giấy đề nghị
   standardRequirement?: string;
   additionalRequest?: string;
   deliveryDate?: Date;

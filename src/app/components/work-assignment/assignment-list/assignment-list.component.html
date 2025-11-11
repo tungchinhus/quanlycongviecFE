@@ -4,26 +4,16 @@
   </mat-card-header>
   <mat-card-content>
     <div class="toolbar">
-      <button mat-raised-button color="primary" (click)="openAssignmentDialog()">
+      <button *ngIf="!isUserRole" mat-raised-button color="primary" (click)="openAssignmentDialog()">
         <mat-icon>add</mat-icon>
         Tạo Giao Việc Mới
       </button>
     </div>
 
-    <table mat-table [dataSource]="assignments" class="assignment-table">
+    <table mat-table [dataSource]="filteredAssignments" class="assignment-table">
       <ng-container matColumnDef="machineName">
         <th mat-header-cell *matHeaderCellDef>Tên Máy</th>
         <td mat-cell *matCellDef="let assignment">{{ assignment.machineName }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="designer">
-        <th mat-header-cell *matHeaderCellDef>Người Thiết Kế</th>
-        <td mat-cell *matCellDef="let assignment">{{ assignment.designer || '-' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="teamLeader">
-        <th mat-header-cell *matHeaderCellDef>Trưởng Nhóm</th>
-        <td mat-cell *matCellDef="let assignment">{{ assignment.teamLeader || '-' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="deliveryDate">
@@ -33,7 +23,7 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="workItems">
+      <ng-container matColumnDef="workItems" *ngIf="!isUserRole">
         <th mat-header-cell *matHeaderCellDef>Công Việc</th>
         <td mat-cell *matCellDef="let assignment">
           <mat-chip [matBadge]="assignment.workItems?.length || 0" matBadgeColor="primary">
@@ -42,7 +32,7 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="approvals">
+      <ng-container matColumnDef="approvals" *ngIf="!isUserRole">
         <th mat-header-cell *matHeaderCellDef>Ký Duyệt</th>
         <td mat-cell *matCellDef="let assignment">
           <mat-chip [matBadge]="assignment.approvals?.length || 0" matBadgeColor="accent">
@@ -54,10 +44,10 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Thao tác</th>
         <td mat-cell *matCellDef="let assignment">
-          <button mat-icon-button [matTooltip]="'Chi tiết'" [routerLink]="['/assignments', assignment.assignmentID]">
-            <mat-icon>visibility</mat-icon>
+          <button mat-icon-button [matTooltip]="'Cập nhật'" (click)="viewAssignment(assignment)">
+            <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button [matTooltip]="'Xóa'" (click)="deleteAssignment(assignment)" color="warn">
+          <button *ngIf="!isUserRole" mat-icon-button [matTooltip]="'Xóa'" (click)="deleteAssignment(assignment)" color="warn">
             <mat-icon>delete</mat-icon>
           </button>
         </td>
@@ -67,9 +57,9 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
 
-    <div *ngIf="assignments.length === 0" class="no-data">
+    <div *ngIf="filteredAssignments.length === 0" class="no-data">
       <mat-icon>assignment</mat-icon>
-      <p>Chưa có gán công việc nào</p>
+      <p>{{ searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có gán công việc nào' }}</p>
     </div>
   </mat-card-content>
 </mat-card>

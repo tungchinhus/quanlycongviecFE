@@ -18,13 +18,13 @@
             </div>
             <mat-divider></mat-divider>
             <div class="info-row">
-              <span class="label">Người Thiết Kế:</span>
-              <span>{{ assignment.designer || '-' }}</span>
+              <span class="label">Người giao việc:</span>
+              <span>{{ getDesignerName(assignment.designer) || '-' }}</span>
             </div>
             <mat-divider></mat-divider>
             <div class="info-row">
-              <span class="label">Trưởng Nhóm:</span>
-              <span>{{ assignment.teamLeader || '-' }}</span>
+              <span class="label">Trưởng đơn vị:</span>
+              <span>{{ getTeamLeaderName(assignment.teamLeader) || '-' }}</span>
             </div>
             <mat-divider></mat-divider>
             <div class="info-row">
@@ -41,6 +41,25 @@
               <span class="label">Yêu Cầu Bổ Sung:</span>
               <span>{{ assignment.additionalRequest }}</span>
             </div>
+          </div>
+
+          <!-- Phần Công Việc -->
+          <div class="work-items-section" *ngIf="assignment.workItems && assignment.workItems.length > 0">
+            <div class="work-items-list">
+              <mat-card *ngFor="let item of assignment.workItems" class="work-item-card">
+                <mat-card-content>
+                  <h4>{{ getWorkTypeName(item.workType) || 'Công việc' }}</h4>
+                  <p><strong>Người thực hiện:</strong> {{ getPersonName(item.personName) || '-' }}</p>
+                  <p><strong>Ngày bắt đầu:</strong> {{ item.startDate ? (item.startDate | date:'dd/MM/yyyy') : '-' }}</p>
+                  <p><strong>Dự kiến hoàn thành:</strong> {{ item.expectedFinish ? (item.expectedFinish | date:'dd/MM/yyyy') : '-' }}</p>
+                  <p><strong>Hoàn thành thực tế:</strong> {{ item.actualFinish ? (item.actualFinish | date:'dd/MM/yyyy') : '-' }}</p>
+                  <p *ngIf="item.notes"><strong>Ghi chú:</strong> {{ item.notes }}</p>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+          <div *ngIf="!assignment.workItems || assignment.workItems.length === 0" class="no-data">
+            <p>Chưa có công việc nào</p>
           </div>
         </mat-tab>
 
@@ -73,39 +92,6 @@
           </div>
         </mat-tab>
 
-        <mat-tab label="Công Việc ({{ assignment.workItems?.length || 0 }})">
-          <div class="work-items-list" *ngIf="assignment.workItems && assignment.workItems.length > 0">
-            <mat-card *ngFor="let item of assignment.workItems" class="work-item-card">
-              <mat-card-content>
-                <h4>{{ item.workType || 'Công việc' }}</h4>
-                <p><strong>Người thực hiện:</strong> {{ item.personName || '-' }}</p>
-                <p><strong>Ngày bắt đầu:</strong> {{ item.startDate ? (item.startDate | date:'dd/MM/yyyy') : '-' }}</p>
-                <p><strong>Dự kiến hoàn thành:</strong> {{ item.expectedFinish ? (item.expectedFinish | date:'dd/MM/yyyy') : '-' }}</p>
-                <p><strong>Hoàn thành thực tế:</strong> {{ item.actualFinish ? (item.actualFinish | date:'dd/MM/yyyy') : '-' }}</p>
-                <p *ngIf="item.notes"><strong>Ghi chú:</strong> {{ item.notes }}</p>
-              </mat-card-content>
-            </mat-card>
-          </div>
-          <div *ngIf="!assignment.workItems || assignment.workItems.length === 0" class="no-data">
-            <p>Chưa có công việc nào</p>
-          </div>
-        </mat-tab>
-
-        <mat-tab label="Ký Duyệt ({{ assignment.approvals?.length || 0 }})">
-          <div class="approvals-list" *ngIf="assignment.approvals && assignment.approvals.length > 0">
-            <mat-card *ngFor="let approval of assignment.approvals" class="approval-card">
-              <mat-card-content>
-                <h4>{{ approval.approverRole || 'Người ký duyệt' }}</h4>
-                <p><strong>Người ký:</strong> {{ approval.approverName || '-' }}</p>
-                <p><strong>Ngày ký:</strong> {{ approval.approvalDate ? (approval.approvalDate | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
-                <p *ngIf="approval.notes"><strong>Ghi chú:</strong> {{ approval.notes }}</p>
-              </mat-card-content>
-            </mat-card>
-          </div>
-          <div *ngIf="!assignment.approvals || assignment.approvals.length === 0" class="no-data">
-            <p>Chưa có ký duyệt nào</p>
-          </div>
-        </mat-tab>
       </mat-tab-group>
     </mat-card-content>
   </mat-card>

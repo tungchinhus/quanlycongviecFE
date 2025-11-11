@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { MachineAssignment, TechnicalSheet } from '../models/machine-assignment.model';
+import { MachineAssignment, TechnicalSheet, WorkItem, WorkChange } from '../models/machine-assignment.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AssignmentService {
-  private apiUrl = 'api/assignments'; // Adjust to your API endpoint
+  private apiUrl = `${environment.apiUrl}/assignments`;
 
   constructor(private http: HttpClient) {}
 
@@ -32,11 +33,21 @@ export class AssignmentService {
   }
 
   getTechnicalSheet(tbktId: number): Observable<TechnicalSheet> {
-    return this.http.get<TechnicalSheet>(`api/technical-sheets/${tbktId}`);
+    return this.http.get<TechnicalSheet>(`${environment.apiUrl}/technical-sheets/${tbktId}`);
   }
 
   createTechnicalSheet(sheet: Partial<TechnicalSheet>): Observable<TechnicalSheet> {
-    return this.http.post<TechnicalSheet>('api/technical-sheets', sheet);
+    return this.http.post<TechnicalSheet>(`${environment.apiUrl}/technical-sheets`, sheet);
+  }
+
+  // Work Items methods
+  createWorkItem(assignmentId: number, workItem: Partial<WorkItem>): Observable<WorkItem> {
+    return this.http.post<WorkItem>(`${this.apiUrl}/${assignmentId}/work-items`, workItem);
+  }
+
+  // Work Changes methods
+  createWorkChange(assignmentId: number, workChange: Partial<WorkChange>): Observable<WorkChange> {
+    return this.http.post<WorkChange>(`${this.apiUrl}/${assignmentId}/work-changes`, workChange);
   }
 }
 

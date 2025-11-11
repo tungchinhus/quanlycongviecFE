@@ -23,11 +23,24 @@
   color: var(--thibidi-text-secondary);
 }
 
+.work-items-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--thibidi-text-primary);
+}
+
 .work-items-list, .approvals-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  padding: 16px 0;
 }
 
 .work-item-card, .approval-card {

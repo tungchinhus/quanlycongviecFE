@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AssignmentApproval } from '../models/machine-assignment.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApprovalService {
-  private apiUrl = 'api/approvals'; // Adjust to your API endpoint
+  private apiUrl = `${environment.apiUrl}/approvals`;
 
   constructor(private http: HttpClient) {}
 

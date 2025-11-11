@@ -73,16 +73,23 @@ export class UsersPage implements OnInit, AfterViewInit {
     });
   }
 
-  loadUsers(): void {
+  loadUsers(forceRefresh: boolean = false): void {
     this.isLoading.set(true);
-    this.usersService.loadUsers().subscribe({
+    this.usersService.loadAllUsers(forceRefresh).subscribe({
       next: (users) => {
         this.isLoading.set(false);
-        console.log('Loaded users from DB:', users.length, users);
+        console.log(`[UsersPage] Loaded ${users.length} users from DB (forceRefresh: ${forceRefresh})`, users);
+        if (forceRefresh) {
+          this.snackBar.open(`Đã tải lại ${users.length} người dùng từ cơ sở dữ liệu.`, 'Đóng', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
+        }
       },
       error: (error) => {
         this.isLoading.set(false);
-        console.error('Error loading users:', error);
+        console.error('[UsersPage] Error loading users:', error);
         this.snackBar.open('Không thể tải danh sách người dùng. Vui lòng thử lại.', 'Đóng', {
           duration: 5000,
           horizontalPosition: 'center',
@@ -91,6 +98,11 @@ export class UsersPage implements OnInit, AfterViewInit {
         });
       }
     });
+  }
+
+  onRefresh(): void {
+    console.log('[UsersPage] Refreshing users from DB...');
+    this.loadUsers(true);
   }
 
   onUserSelected(user: AuthUser): void {
@@ -109,11 +121,11 @@ export class UsersPage implements OnInit, AfterViewInit {
   }
 
   onUsersReload(): void {
-    this.loadUsers();
+    this.loadUsers(true); // Force refresh khi reload
   }
 
   onRoleUpdated(): void {
-    this.loadUsers();
+    this.loadUsers(true); // Force refresh sau khi update role
   }
 
   onCreateUser(): void {
@@ -135,7 +147,7 @@ export class UsersPage implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'success') {
         // Thêm delay và retry để đảm bảo backend có thời gian sync vào DB
-        this.loadUsersWithRetry(3, 500);
+        this.loadUsersWithRetry(3, 500, true);
       }
     });
   }
@@ -143,19 +155,19 @@ export class UsersPage implements OnInit, AfterViewInit {
   /**
    * Load users với retry logic để đảm bảo user mới tạo đã được sync vào DB
    */
-  private loadUsersWithRetry(maxRetries: number = 3, delayMs: number = 500): void {
+  private loadUsersWithRetry(maxRetries: number = 3, delayMs: number = 500, forceRefresh: boolean = false): void {
     let retryCount = 0;
     
     const attemptLoad = () => {
       this.isLoading.set(true);
-      this.usersService.loadUsers().subscribe({
+      this.usersService.loadAllUsers(forceRefresh).subscribe({
         next: (users) => {
           this.isLoading.set(false);
-          console.log(`Load users attempt ${retryCount + 1}: Found ${users.length} users`);
+          console.log(`[UsersPage] Load users attempt ${retryCount + 1}: Found ${users.length} users`);
           
           // Chỉ log thông tin, không warning nếu retry thành công
           if (retryCount > 0) {
-            console.log('Users loaded successfully after retry');
+            console.log('[UsersPage] Users loaded successfully after retry');
           }
         },
         error: (error) => {
@@ -163,10 +175,10 @@ export class UsersPage implements OnInit, AfterViewInit {
           retryCount++;
           
           if (retryCount < maxRetries) {
-            console.log(`Retry loading users (attempt ${retryCount + 1}/${maxRetries})...`);
+            console.log(`[UsersPage] Retry loading users (attempt ${retryCount + 1}/${maxRetries})...`);
             setTimeout(attemptLoad, delayMs * retryCount); // Exponential backoff
           } else {
-            console.error('Error loading users after retries:', error);
+            console.error('[UsersPage] Error loading users after retries:', error);
             this.snackBar.open('Không thể tải danh sách người dùng. Vui lòng refresh trang.', 'Đóng', {
               duration: 5000,
               horizontalPosition: 'center',
