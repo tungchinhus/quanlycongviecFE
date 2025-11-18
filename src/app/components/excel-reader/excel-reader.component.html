@@ -1,0 +1,238 @@
+<div class="excel-reader-container" *ngIf="isManager()">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Đọc File Excel</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="toolbar">
+        <input 
+          type="file" 
+          id="excelFileInput" 
+          (change)="onFileSelected($event)" 
+          accept=".xlsx,.xls,.csv"
+          style="display: none;">
+        <label for="excelFileInput" class="file-upload-button">
+          <button mat-raised-button color="primary" type="button">
+            <mat-icon>upload_file</mat-icon>
+            Chọn File Excel
+          </button>
+        </label>
+        
+        <button 
+          mat-raised-button 
+          color="accent" 
+          type="button"
+          (click)="saveToDatabase()"
+          [disabled]="excelData().length === 0 || isSaving() || isLoading()"
+          [matTooltip]="excelData().length === 0 ? 'Vui lòng chọn file Excel trước' : 'Lưu dữ liệu vào database'">
+          <mat-icon *ngIf="!isSaving()">save</mat-icon>
+          <mat-spinner *ngIf="isSaving()" diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+          {{ isSaving() ? 'Đang lưu...' : 'Lưu vào Database' }}
+        </button>
+        
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Tìm kiếm</mat-label>
+          <input 
+            matInput 
+            [value]="searchTerm()" 
+            (input)="onSearchChange($any($event.target).value)"
+            placeholder="Tìm kiếm trong dữ liệu hiển thị...">
+          <mat-icon matPrefix>search</mat-icon>
+          <button 
+            *ngIf="searchTerm()"
+            mat-icon-button 
+            matSuffix 
+            (click)="onSearchChange('')"
+            [attr.aria-label]="'Xóa tìm kiếm'">
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-form-field>
+        
+        <mat-menu #columnMenu="matMenu" class="column-menu">
+          <button mat-menu-item (click)="showAllColumns()">
+            <mat-icon>check_box</mat-icon>
+            <span>Hiển thị tất cả</span>
+          </button>
+          <button mat-menu-item (click)="hideAllColumns()">
+            <mat-icon>check_box_outline_blank</mat-icon>
+            <span>Ẩn tất cả</span>
+          </button>
+          <mat-divider></mat-divider>
+          <div *ngFor="let column of allColumns()" class="column-menu-item">
+            <mat-checkbox
+              [checked]="columnVisibility()[column]"
+              (change)="toggleColumnVisibility(column)"
+              (click)="$event.stopPropagation()">
+              {{ getColumnLabel(column) }}
+            </mat-checkbox>
+          </div>
+        </mat-menu>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div *ngIf="isLoading()" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Đang đọc file Excel...</p>
+      </div>
+
+      <!-- Data Table - Hiển thị ngay cả khi không có data -->
+      <div *ngIf="!isLoading()" class="table-section">
+        <!-- Table Wrapper for horizontal scroll -->
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dataSource" class="excel-table">
+          <!-- Công suất Column -->
+          <ng-container matColumnDef="CongSuat">
+            <th mat-header-cell *matHeaderCellDef>Công suất</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['CongSuat']) }}</td>
+          </ng-container>
+
+          <!-- Số máy Column -->
+          <ng-container matColumnDef="SoMay">
+            <th mat-header-cell *matHeaderCellDef>Số máy</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['SoMay']) }}</td>
+          </ng-container>
+
+          <!-- SBB Column -->
+          <ng-container matColumnDef="SBB">
+            <th mat-header-cell *matHeaderCellDef>SBB</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['SBB']) }}</td>
+          </ng-container>
+
+          <!-- LSX Column -->
+          <ng-container matColumnDef="LSX">
+            <th mat-header-cell *matHeaderCellDef>LSX</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['LSX']) }}</td>
+          </ng-container>
+
+          <!-- T.Chuẩn LSX Column -->
+          <ng-container matColumnDef="TChuanLSX">
+            <th mat-header-cell *matHeaderCellDef>T.Chuẩn LSX</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['TChuanLSX']) }}</td>
+          </ng-container>
+
+          <!-- TBKT Column -->
+          <ng-container matColumnDef="TBKT">
+            <th mat-header-cell *matHeaderCellDef>TBKT</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['TBKT']) }}</td>
+          </ng-container>
+
+          <!-- Po Column -->
+          <ng-container matColumnDef="Po">
+            <th mat-header-cell *matHeaderCellDef>Po</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Po']) }}</td>
+          </ng-container>
+
+          <!-- Io Column -->
+          <ng-container matColumnDef="Io">
+            <th mat-header-cell *matHeaderCellDef>Io</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Io']) }}</td>
+          </ng-container>
+
+          <!-- Pk75(H1) Column -->
+          <ng-container matColumnDef="Pk75H1">
+            <th mat-header-cell *matHeaderCellDef>Pk75(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Pk75H1']) }}</td>
+          </ng-container>
+
+          <!-- Pk75(H2) Column -->
+          <ng-container matColumnDef="Pk75H2">
+            <th mat-header-cell *matHeaderCellDef>Pk75(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Pk75H2']) }}</td>
+          </ng-container>
+
+          <!-- Uk75(H1) Column -->
+          <ng-container matColumnDef="Uk75H1">
+            <th mat-header-cell *matHeaderCellDef>Uk75(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Uk75H1']) }}</td>
+          </ng-container>
+
+          <!-- Uk75(H2) Column -->
+          <ng-container matColumnDef="Uk75H2">
+            <th mat-header-cell *matHeaderCellDef>Uk75(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['Uk75H2']) }}</td>
+          </ng-container>
+
+          <!-- Uđm HV(H1) Column -->
+          <ng-container matColumnDef="UdmHVH1">
+            <th mat-header-cell *matHeaderCellDef>Uđm HV(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['UdmHVH1']) }}</td>
+          </ng-container>
+
+          <!-- Uđm HV(H2) Column -->
+          <ng-container matColumnDef="UdmHVH2">
+            <th mat-header-cell *matHeaderCellDef>Uđm HV(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['UdmHVH2']) }}</td>
+          </ng-container>
+
+          <!-- Uđm LV Column -->
+          <ng-container matColumnDef="UdmLV">
+            <th mat-header-cell *matHeaderCellDef>Uđm LV</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row['UdmLV']) }}</td>
+          </ng-container>
+
+          <!-- Column Settings Column -->
+          <ng-container matColumnDef="columnSettings">
+            <th mat-header-cell *matHeaderCellDef class="column-settings-header">
+              <button 
+                mat-icon-button 
+                [matMenuTriggerFor]="columnMenu"
+                class="column-settings-icon-button"
+                matTooltip="Cột hiển thị">
+                <mat-icon>view_column</mat-icon>
+              </button>
+            </th>
+            <td mat-cell *matCellDef="let row"></td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsWithSettings()"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsWithSettings();"></tr>
+          
+          <!-- No data row -->
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell" [attr.colspan]="displayedColumnsWithSettings().length">
+              <div class="no-data-in-table">
+                <mat-icon>assignment</mat-icon>
+                <span>Chưa có dữ liệu</span>
+              </div>
+            </td>
+          </tr>
+        </table>
+        </div>
+
+        <!-- Paginator -->
+        <mat-paginator
+          #paginator
+          [length]="filteredData().length"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="pageSizeOptions()"
+          [showFirstLastButtons]="true"
+          (page)="onPageChange($event)">
+        </mat-paginator>
+
+        <!-- Data Info -->
+        <div class="data-info" *ngIf="excelData().length > 0">
+          <span>Tổng số: {{ excelData().length }} dòng</span>
+          <span *ngIf="searchTerm()" class="search-info">
+            | Tìm thấy: {{ filteredData().length }} dòng (Đang tìm kiếm: "{{ searchTerm() }}")
+          </span>
+          <span *ngIf="!searchTerm() && filteredData().length > 0" class="page-info">
+            | Hiển thị: {{ pageInfo() }} / {{ filteredData().length }}
+          </span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="!isManager()" class="access-denied">
+  <mat-card>
+    <mat-card-content>
+      <div class="access-denied-content">
+        <mat-icon>lock</mat-icon>
+        <h2>Không có quyền truy cập</h2>
+        <p>Chỉ Manager mới có thể truy cập tính năng đọc file Excel.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+

@@ -8,6 +8,53 @@
         <mat-icon>add</mat-icon>
         Tạo Giao Việc Mới
       </button>
+      
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Tìm kiếm</mat-label>
+        <input 
+          matInput 
+          [value]="searchTerm()" 
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Tìm kiếm trong dữ liệu hiển thị...">
+        <mat-icon matPrefix>search</mat-icon>
+        <button 
+          *ngIf="searchTerm()"
+          mat-icon-button 
+          matSuffix 
+          (click)="onSearchChange('')"
+          [attr.aria-label]="'Xóa tìm kiếm'">
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <!-- Column Visibility Menu -->
+      <button 
+        mat-raised-button 
+        [matMenuTriggerFor]="columnMenu"
+        class="column-settings-button">
+        <mat-icon>view_column</mat-icon>
+        <span>Cột hiển thị ({{ displayedColumns().length }}/{{ allColumns().length }})</span>
+      </button>
+      
+      <mat-menu #columnMenu="matMenu" class="column-menu">
+        <button mat-menu-item (click)="showAllColumns()">
+          <mat-icon>check_box</mat-icon>
+          <span>Hiển thị tất cả</span>
+        </button>
+        <button mat-menu-item (click)="hideAllColumns()">
+          <mat-icon>check_box_outline_blank</mat-icon>
+          <span>Ẩn tất cả</span>
+        </button>
+        <mat-divider></mat-divider>
+        <div *ngFor="let column of allColumns()" class="column-menu-item">
+          <mat-checkbox
+            [checked]="columnVisibility()[column]"
+            (change)="toggleColumnVisibility(column)"
+            (click)="$event.stopPropagation()">
+            {{ getColumnLabel(column) }}
+          </mat-checkbox>
+        </div>
+      </mat-menu>
     </div>
 
     <table mat-table [dataSource]="filteredAssignments" class="assignment-table">
@@ -47,19 +94,32 @@
           <button mat-icon-button [matTooltip]="'Cập nhật'" (click)="viewAssignment(assignment)">
             <mat-icon>edit</mat-icon>
           </button>
-          <button *ngIf="!isUserRole" mat-icon-button [matTooltip]="'Xóa'" (click)="deleteAssignment(assignment)" color="warn">
+          <button 
+            *ngIf="!isUserRole" 
+            mat-icon-button 
+            [matTooltip]="getDeleteTooltip(assignment)" 
+            [disabled]="!canDeleteAssignment(assignment)"
+            (click)="deleteAssignment(assignment)" 
+            color="warn">
             <mat-icon>delete</mat-icon>
           </button>
         </td>
       </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
     </table>
+
+    <div class="data-info" *ngIf="assignments.length > 0">
+      <span>Hiển thị {{ filteredAssignments.length }} / {{ assignments.length }} gán công việc</span>
+      <span *ngIf="searchTerm()" class="search-info">
+        (Đang tìm kiếm: "{{ searchTerm() }}")
+      </span>
+    </div>
 
     <div *ngIf="filteredAssignments.length === 0" class="no-data">
       <mat-icon>assignment</mat-icon>
-      <p>{{ searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có gán công việc nào' }}</p>
+      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có gán công việc nào' }}</p>
     </div>
   </mat-card-content>
 </mat-card>

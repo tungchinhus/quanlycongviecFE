@@ -156,6 +156,10 @@ export class AssignmentFormDialogComponent implements OnInit {
         teamLeader: formValue.teamLeader ? formValue.teamLeader.toString() : ''
       };
 
+      // TODO: Thêm filePaths vào payload khi backend đã hỗ trợ column này trong database
+      // Hiện tại tạm thời không gửi filePaths để tránh lỗi "Invalid column name 'FilePath'"
+      // Files sẽ được upload sau khi tạo assignment thành công
+
       // Tạo assignment chính
       this.assignmentService.createAssignment(assignmentData).subscribe({
         next: (assignment) => {
@@ -319,9 +323,14 @@ export class AssignmentFormDialogComponent implements OnInit {
   }
 
   uploadFiles(assignmentID: number, files: File[]) {
-    // Upload tất cả files
+    // Upload tất cả files với assignmentId để nhận diện theo từng máy
+    // Backend sẽ tự động cập nhật MachineAssignment.FilePath
     const uploadObservables = files.map(file => 
-      this.fileService.uploadFile(file, `File đính kèm cho gán công việc #${assignmentID}`, assignmentID).pipe(
+      this.fileService.uploadFile(
+        file, 
+        assignmentID, 
+        `File đính kèm cho gán công việc #${assignmentID}`
+      ).pipe(
         catchError(error => {
           console.error(`Error uploading file ${file.name}:`, error);
           // Trả về null nếu upload thất bại, không block các file khác
@@ -332,9 +341,14 @@ export class AssignmentFormDialogComponent implements OnInit {
 
     forkJoin(uploadObservables).subscribe({
       next: (results) => {
-        this.isUploading.set(false);
-        const successCount = results.filter(r => r !== null).length;
+        const successFiles = results.filter(r => r !== null) as any[];
+        const successCount = successFiles.length;
         const failCount = results.length - successCount;
+
+        // Backend tự động cập nhật MachineAssignment.FilePath khi upload file
+        // Không cần cập nhật thủ công nữa
+
+        this.isUploading.set(false);
 
         if (failCount === 0) {
           this.snackBar.open(`Tạo gán công việc và upload ${successCount} file thành công!`, 'Đóng', {

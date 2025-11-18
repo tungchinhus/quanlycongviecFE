@@ -72,8 +72,8 @@ export class UserRoleAssignmentComponent implements OnInit {
   }
 
   hasRole(role: string): boolean {
-    // user().roles có type UserRole[] nhưng có thể chứa string values
-    return this.user().roles.includes(role as any);
+    // user().roles là string[] chứa tên role từ DB
+    return this.user().roles.includes(role);
   }
 
   onToggleRole(role: string, checked: boolean): void {

@@ -96,8 +96,16 @@ export class AppComponent {
   hasAdminRole(): boolean {
     const user = this.authService.user();
     if (!user || !user.roles || user.roles.length === 0) return false;
-    // Roles đã được normalize trong AuthService ("Admin" -> "Administrator")
-    return user.roles.includes(UserRole.Administrator);
+    // Kiểm tra role Administrator (có thể là string "Administrator" hoặc enum)
+    return user.roles.includes(UserRole.Administrator) || user.roles.includes('Administrator') || user.roles.includes('Admin');
+  }
+
+  hasManagerRole(): boolean {
+    return this.authService.hasAnyRole([UserRole.Manager, 'ManagerL1', 'ManagerL2', 'Manager']);
+  }
+
+  hasManagerL1OrAdminRole(): boolean {
+    return this.authService.hasAnyRole(['ManagerL1', UserRole.Administrator, 'Administrator', 'Admin']);
   }
 
   logout(): void {

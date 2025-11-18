@@ -94,6 +94,11 @@ export class AssignmentDetailDialogComponent implements OnInit {
     this.isLoading = true;
     this.assignmentService.getAssignmentById(id).subscribe({
       next: (assignment) => {
+        // Normalize API response: map assignmentApprovals to approvals for backward compatibility
+        if (assignment.assignmentApprovals && !assignment.approvals) {
+          assignment.approvals = assignment.assignmentApprovals;
+        }
+        
         this.assignment = assignment;
         // Lọc work items theo current user
         this.filterWorkItems();
@@ -308,8 +313,16 @@ export class AssignmentDetailDialogComponent implements OnInit {
     if (files.length === 0 || !this.assignment) return;
 
     this.isUploading.set(true);
+    const assignmentID = this.assignment.assignmentID;
+    
+    // Upload tất cả files với assignmentId để nhận diện theo từng máy
+    // Backend sẽ tự động cập nhật MachineAssignment.FilePath
     const uploadObservables = files.map(file => 
-      this.fileService.uploadFile(file, `File đính kèm cho gán công việc #${this.assignment!.assignmentID}`, this.assignment!.assignmentID).pipe(
+      this.fileService.uploadFile(
+        file, 
+        assignmentID, 
+        `File đính kèm cho gán công việc #${assignmentID}`
+      ).pipe(
         catchError(error => {
           console.error(`Error uploading file ${file.name}:`, error);
           return of(null);
@@ -319,9 +332,14 @@ export class AssignmentDetailDialogComponent implements OnInit {
 
     forkJoin(uploadObservables).subscribe({
       next: (results) => {
-        this.isUploading.set(false);
-        const successCount = results.filter(r => r !== null).length;
+        const successFiles = results.filter(r => r !== null) as any[];
+        const successCount = successFiles.length;
         const failCount = results.length - successCount;
+
+        // Backend tự động cập nhật MachineAssignment.FilePath khi upload file
+        // Không cần cập nhật thủ công nữa
+
+        this.isUploading.set(false);
 
         if (failCount === 0) {
           this.snackBar.open(`Upload ${successCount} file thành công!`, 'Đóng', {
@@ -364,8 +382,22 @@ export class AssignmentDetailDialogComponent implements OnInit {
 
   deleteFile(file: FileDocument) {
     if (confirm(`Bạn có chắc muốn xóa file "${file.fileName}"?`)) {
-      this.fileService.deleteFile(file.fileID).subscribe({
+      // Sử dụng id hoặc fileID (tương thích)
+      const fileId = file.id || file.fileID;
+      if (!fileId) {
+        this.snackBar.open('Không tìm thấy ID file', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+        return;
+      }
+
+      this.fileService.deleteFile(fileId).subscribe({
         next: () => {
+          // Backend tự động cập nhật MachineAssignment.FilePath khi xóa file
+          // Không cần cập nhật thủ công nữa
+          
           this.snackBar.open('Xóa file thành công!', 'Đóng', {
             duration: 3000,
             horizontalPosition: 'center',
@@ -388,7 +420,18 @@ export class AssignmentDetailDialogComponent implements OnInit {
   }
 
   downloadFile(file: FileDocument) {
-    this.fileService.downloadFile(file.fileID).subscribe({
+    // Sử dụng id hoặc fileID (tương thích)
+    const fileId = file.id || file.fileID;
+    if (!fileId) {
+      this.snackBar.open('Không tìm thấy ID file', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+      return;
+    }
+    
+    this.fileService.downloadFile(fileId).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');

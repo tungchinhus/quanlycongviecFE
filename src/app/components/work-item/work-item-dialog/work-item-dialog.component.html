@@ -1,52 +1,48 @@
-<h2 mat-dialog-title>Tạo Công Việc Mới</h2>
+<h2 mat-dialog-title>{{ getTitle() }}</h2>
 <mat-dialog-content>
+  <!-- Hiển thị thông tin Assignment (read-only) -->
+  <div *ngIf="workItem?.assignment" class="assignment-info-section">
+    <h3>Thông tin Gán Công Việc</h3>
+    <div class="info-row">
+      <strong>Tên máy:</strong> {{ workItem?.assignment?.machineName }}
+    </div>
+    <div class="info-row" *ngIf="workItem?.assignment?.tbkt_ID">
+      <strong>TBKT:</strong> {{ workItem?.assignment?.tbkt_ID }}
+    </div>
+    <div class="info-row" *ngIf="workItem?.assignment?.deliveryDate">
+      <strong>Ngày giao:</strong> {{ workItem?.assignment?.deliveryDate | date:'dd/MM/yyyy' }}
+    </div>
+  </div>
+
   <form [formGroup]="workItemForm">
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Gán Công Việc *</mat-label>
-      <mat-select formControlName="assignmentID" required>
-        <mat-option *ngFor="let assignment of assignments" [value]="assignment.assignmentID">
-          {{ assignment.machineName }} (ID: {{ assignment.assignmentID }})
-        </mat-option>
-      </mat-select>
-      <mat-error *ngIf="workItemForm.get('assignmentID')?.hasError('required')">
-        Vui lòng chọn gán công việc
-      </mat-error>
+      <mat-label>Loại Công Việc</mat-label>
+      <input matInput formControlName="workType" [readonly]="true">
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Loại Công Việc *</mat-label>
-      <input matInput formControlName="workType" required>
-      <mat-error *ngIf="workItemForm.get('workType')?.hasError('required')">
-        Loại công việc là bắt buộc
-      </mat-error>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Người Thực Hiện *</mat-label>
-      <input matInput formControlName="personName" required>
-      <mat-error *ngIf="workItemForm.get('personName')?.hasError('required')">
-        Người thực hiện là bắt buộc
-      </mat-error>
+      <mat-label>Người Thực Hiện</mat-label>
+      <input matInput [value]="currentUserName || workItem?.personName || '-'" [disabled]="true">
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Ngày Bắt Đầu</mat-label>
       <input matInput [matDatepicker]="startPicker" formControlName="startDate">
-      <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker-toggle matIconSuffix [for]="startPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
       <mat-datepicker #startPicker></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Dự Kiến Hoàn Thành</mat-label>
       <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish">
-      <mat-datepicker-toggle matIconSuffix [for]="expectedPicker"></mat-datepicker-toggle>
+      <mat-datepicker-toggle matIconSuffix [for]="expectedPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
       <mat-datepicker #expectedPicker></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Hoàn Thành Thực Tế</mat-label>
       <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish">
-      <mat-datepicker-toggle matIconSuffix [for]="actualPicker"></mat-datepicker-toggle>
+      <mat-datepicker-toggle matIconSuffix [for]="actualPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
       <mat-datepicker #actualPicker></mat-datepicker>
     </mat-form-field>
 
@@ -59,13 +55,89 @@
       <textarea matInput formControlName="notes" rows="3"></textarea>
     </mat-form-field>
   </form>
-  </mat-dialog-content>
+
+  <!-- File Upload Section -->
+  <div class="files-section" *ngIf="workItem?.assignmentID">
+    <h3 class="section-title">File đính kèm</h3>
+    
+    <!-- File Upload Area -->
+    <div class="file-upload-area" *ngIf="!isViewMode()">
+      <input 
+        type="file" 
+        id="fileInput" 
+        (change)="onFileSelected($event)" 
+        multiple
+        accept="*/*"
+        style="display: none;">
+      <label for="fileInput" class="file-upload-button">
+        <mat-icon>attach_file</mat-icon>
+        <span>Chọn file đính kèm</span>
+      </label>
+      <span class="file-upload-hint">(Có thể chọn nhiều file)</span>
+    </div>
+
+    <!-- Selected Files List -->
+    <div *ngIf="selectedFiles().length > 0 && !isViewMode()" class="selected-files-list">
+      <div *ngFor="let file of selectedFiles(); let i = index" class="file-chip">
+        <mat-icon>insert_drive_file</mat-icon>
+        <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
+        <span class="file-size">({{ formatFileSize(file.size) }})</span>
+        <button mat-icon-button (click)="removeFile(i)" class="remove-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="uploadFiles()" 
+        [disabled]="isUploading()"
+        class="upload-button">
+        <mat-spinner *ngIf="isUploading()" diameter="20" class="button-spinner"></mat-spinner>
+        <mat-icon *ngIf="!isUploading()">cloud_upload</mat-icon>
+        <span>{{ isUploading() ? 'Đang upload...' : 'Upload' }}</span>
+      </button>
+    </div>
+
+    <!-- Uploaded Files List -->
+    <div *ngIf="files.length > 0" class="uploaded-files-list">
+      <div *ngFor="let file of files" class="file-item">
+        <mat-icon>insert_drive_file</mat-icon>
+        <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+        <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
+        <div class="file-actions">
+          <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
+            <mat-icon>download</mat-icon>
+          </button>
+          <button 
+            *ngIf="!isViewMode()" 
+            mat-icon-button 
+            (click)="deleteFile(file)" 
+            color="warn"
+            [matTooltip]="'Xóa'">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="files.length === 0 && selectedFiles().length === 0" class="no-files">
+      <p>Chưa có file nào được đính kèm</p>
+    </div>
+  </div>
+</mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Hủy</button>
-  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="workItemForm.invalid">
+  <button mat-button (click)="onCancel()">
+    {{ isViewMode() ? 'Đóng' : 'Hủy' }}
+  </button>
+  <button 
+    *ngIf="!isViewMode()" 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()" 
+    [disabled]="workItemForm.invalid">
     Lưu
   </button>
-  </mat-dialog-actions>
+</mat-dialog-actions>
 
 
 

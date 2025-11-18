@@ -16,7 +16,7 @@ export interface AuthUser {
   userName?: string; // userName từ backend
   name: string; // fullName từ backend
   email: string;
-  roles: UserRole[];
+  roles: string[]; // Lưu tên role thực từ DB (có thể là ManagerL1, ManagerL2, etc.)
   isActive?: boolean;
   createdAt?: string;
 }
@@ -28,7 +28,7 @@ export class AuthService {
   private readonly currentUserSignal = signal<AuthUser | null>(null);
 
   constructor() {
-    // Khôi phục user session từ localStorage khi app khởi động
+        // Khôi phục user session từ localStorage khi app khởi động
     this.restoreUserSession();
     
     // Theo dõi trạng thái đăng nhập Firebase
@@ -40,14 +40,14 @@ export class AuthService {
           return; // Đã có user session, không cần reload
         }
         
-        // Nếu chưa có user session, load từ Firebase custom claims hoặc local DB
-        this.loadUserFromFirebase(firebaseUser).subscribe({
+        // Nếu chưa có user session, load từ local DB để lấy roles chính xác từ DB
+        this.loadUserFromLocalDB(firebaseUser.uid).subscribe({
           error: (error) => {
-            console.error('Error loading user from Firebase on auth state change:', error);
-            // Fallback: load từ local DB nếu không có custom claims
-            this.loadUserFromLocalDB(firebaseUser.uid).subscribe({
+            console.error('Error loading user from local DB on auth state change:', error);
+            // Fallback: load từ Firebase custom claims nếu không load được từ DB
+            this.loadUserFromFirebase(firebaseUser).subscribe({
               error: (err) => {
-                console.error('Error loading user from local DB on auth state change:', err);
+                console.error('Error loading user from Firebase on auth state change:', err);
               }
             });
           }
@@ -64,9 +64,14 @@ export class AuthService {
   /**
    * Normalize roles: map "Admin" -> "Administrator" để đảm bảo consistency
    * Sử dụng enum để đảm bảo đồng nhất giữa frontend, backend và Firebase
+   * Lưu ý: Chỉ normalize các role có trong enum, giữ nguyên các role khác (như ManagerL1, ManagerL2)
    */
-  private normalizeRoles(roles: string[]): UserRole[] {
-    return normalizeRolesEnum(roles);
+  private normalizeRoles(roles: string[]): string[] {
+    return roles.map(role => {
+      const normalized = normalizeRoleName(role);
+      // Nếu role có trong enum, dùng giá trị normalized, nếu không giữ nguyên
+      return normalized || role;
+    });
   }
 
   /**
@@ -79,15 +84,19 @@ export class AuthService {
     if (userSession && token) {
       try {
         const user = JSON.parse(userSession) as AuthUser;
-        // Normalize roles khi restore từ localStorage
-        user.roles = this.normalizeRoles(user.roles || []);
+        // Đảm bảo roles là string[] và không rỗng
+        user.roles = Array.isArray(user.roles) && user.roles.length > 0 
+          ? user.roles.map(r => String(r).trim()).filter(r => r.length > 0)
+          : ['User'];
         this.currentUserSignal.set(user);
-        // Cập nhật lại localStorage với roles đã normalize
+        // Cập nhật lại localStorage với roles đã chuẩn hóa
         localStorage.setItem('user_session', JSON.stringify(user));
-        // Đồng bộ ngầm thông tin user và roles xuống local DB để nhất quán với danh sách Users
-        this.syncUserToLocalDB(user, true).subscribe({
-          error: (err) => console.warn('Silent sync on restore failed:', err)
-        });
+        // Load lại từ DB để đảm bảo roles chính xác
+        if (user.firebaseUid) {
+          this.loadUserFromLocalDB(user.firebaseUid).subscribe({
+            error: (err) => console.warn('Silent refresh from DB on restore failed:', err)
+          });
+        }
       } catch (error) {
         console.error('Error restoring user session:', error);
         localStorage.removeItem('user_session');
@@ -107,18 +116,18 @@ export class AuthService {
     return user !== null && token !== null;
   }
 
-  hasRole(required: UserRole | UserRole[]): boolean {
+  hasRole(required: UserRole | UserRole[] | string | string[]): boolean {
     const user = this.currentUserSignal();
     if (!user) return false;
     const requiredArray = Array.isArray(required) ? required : [required];
-    return requiredArray.every(r => user.roles.includes(r));
+    return requiredArray.every(r => user.roles.includes(String(r)));
   }
 
-  hasAnyRole(candidates: UserRole | UserRole[]): boolean {
+  hasAnyRole(candidates: UserRole | UserRole[] | string | string[]): boolean {
     const user = this.currentUserSignal();
     if (!user) return false;
     const list = Array.isArray(candidates) ? candidates : [candidates];
-    return list.some(r => user.roles.includes(r));
+    return list.some(r => user.roles.includes(String(r)));
   }
 
   /**
@@ -182,7 +191,7 @@ export class AuthService {
                   switchMap((tokenResult) => {
                     // Lấy roles từ custom claims
                     const claims = tokenResult.claims;
-                    let roles: UserRole[] = [];
+                    let roles: string[] = [];
                     
                     if (claims['roles']) {
                       if (Array.isArray(claims['roles'])) {
@@ -192,7 +201,7 @@ export class AuthService {
                       }
                     } else {
                       // Nếu không có custom claims, mặc định là User
-                      roles = [UserRole.User];
+                      roles = ['User'];
                     }
                     
                     // Bước 4: Gửi ID Token lên backend để verify và lấy JWT token
@@ -215,7 +224,12 @@ export class AuthService {
                         localStorage.setItem('token', response.token);
                         
                         // Bước 6: Map user từ backend response sang AuthUser
-                        // QUAN TRỌNG: Sử dụng roles từ Firebase Custom Claims, không từ backend response
+                        // QUAN TRỌNG: Ưu tiên roles từ backend response (DB) vì DB là source of truth cho role names
+                        // Backend response.roles chứa tên role chính xác từ DB (có thể là ManagerL1, ManagerL2, etc.)
+                        const dbRoles = Array.isArray(response.user.roles) && response.user.roles.length > 0
+                          ? response.user.roles.map(r => String(r).trim()).filter(r => r.length > 0)
+                          : roles; // Fallback về Firebase Custom Claims nếu backend không có roles
+                        
                         const authUser: AuthUser = {
                           id: response.user.userId.toString(),
                           userId: response.user.userId,
@@ -223,7 +237,7 @@ export class AuthService {
                           userName: response.user.userName,
                           name: response.user.fullName,
                           email: response.user.email,
-                          roles: roles, // Lấy từ Firebase Custom Claims, không từ backend
+                          roles: dbRoles, // Ưu tiên roles từ DB (backend response)
                           isActive: true
                         };
                         
@@ -338,7 +352,7 @@ export class AuthService {
       map((tokenResult) => {
         // Lấy roles từ custom claims - đây là source of truth
         const claims = tokenResult.claims;
-        let roles: UserRole[] = [];
+        let roles: string[] = [];
         
         if (claims['roles']) {
           if (Array.isArray(claims['roles'])) {
@@ -349,7 +363,7 @@ export class AuthService {
           }
         } else {
           // Nếu không có custom claims, mặc định là User
-          roles = [UserRole.User];
+          roles = ['User'];
         }
 
         // Tạo AuthUser từ Firebase user và custom claims
@@ -449,6 +463,29 @@ export class AuthService {
       return dto as AuthUser;
     }
     
+    // Lấy roles từ dto - giữ nguyên tên role từ DB, không filter
+    let roles: string[] = [];
+    if (dto.roles) {
+      if (Array.isArray(dto.roles)) {
+        roles = dto.roles.map((r: any) => String(r).trim()).filter((r: string) => r.length > 0);
+      } else if (typeof dto.roles === 'string') {
+        // Nếu roles là string, parse nếu là JSON, hoặc split bằng comma
+        try {
+          const parsed = JSON.parse(dto.roles);
+          if (Array.isArray(parsed)) {
+            roles = parsed.map((r: any) => String(r).trim()).filter((r: string) => r.length > 0);
+          } else {
+            roles = [String(dto.roles).trim()].filter((r: string) => r.length > 0);
+          }
+        } catch {
+          // Nếu không phải JSON, split bằng comma
+          roles = dto.roles.split(',').map((r: string) => r.trim()).filter((r: string) => r.length > 0);
+        }
+      } else {
+        roles = [String(dto.roles).trim()].filter((r: string) => r.length > 0);
+      }
+    }
+    
     // Map từ UserDto format
     return {
       id: dto.userId?.toString() || dto.id || '',
@@ -457,67 +494,24 @@ export class AuthService {
       userName: dto.userName,
       name: dto.fullName || dto.name || dto.userName || '',
       email: dto.email || '',
-      roles: this.normalizeRoles(dto.roles || []),
+      roles: roles.length > 0 ? roles : ['User'], // Giữ nguyên tên role từ DB
       isActive: dto.isActive,
       createdAt: dto.createdAt
     };
   }
 
   /**
-   * Lấy thông tin user từ local DB dựa trên Firebase UID (fallback)
-   * Chỉ dùng khi không thể lấy từ Firebase Custom Claims
-   * Roles vẫn được lấy từ Firebase Custom Claims nếu có thể
+   * Lấy thông tin user từ local DB dựa trên Firebase UID
+   * Ưu tiên roles từ DB vì DB là source of truth cho role names (ManagerL1, ManagerL2, etc.)
    */
   private loadUserFromLocalDB(firebaseUid: string): Observable<AuthUser> {
-    const firebaseUser = this.auth.currentUser;
-    
     return this.http.get<any>(`${environment.apiUrl}/users/by-firebase-uid/${firebaseUid}`).pipe(
-      switchMap((dto) => {
-        // Cố gắng lấy roles từ Firebase Custom Claims trước
-        if (firebaseUser && firebaseUser.uid === firebaseUid) {
-          return from(getIdTokenResult(firebaseUser, false)).pipe(
-            map((tokenResult) => {
-              const claims = tokenResult.claims;
-              let roles: UserRole[] = [];
-              
-              if (claims['roles']) {
-                if (Array.isArray(claims['roles'])) {
-                  roles = this.normalizeRoles(claims['roles'] as string[]);
-                } else {
-                  roles = this.normalizeRoles([claims['roles'] as string]);
-                }
-              } else {
-                // Fallback về roles từ DB nếu không có Custom Claims
-                const dbUser = this.mapUserDtoToAuthUser(dto);
-                roles = dbUser.roles.length > 0 ? dbUser.roles : [UserRoleEnum.User];
-              }
-              
-              // Map từ DB nhưng dùng roles từ Firebase Custom Claims
-              const dbUser = this.mapUserDtoToAuthUser(dto);
-              const user: AuthUser = {
-                ...dbUser,
-                roles: roles // Ưu tiên roles từ Firebase Custom Claims
-              };
-              
-              this.currentUserSignal.set(user);
-              localStorage.setItem('user_session', JSON.stringify(user));
-              return user;
-            }),
-            catchError(() => {
-              // Nếu không lấy được từ Firebase, dùng roles từ DB
-              const user = this.mapUserDtoToAuthUser(dto);
-              this.currentUserSignal.set(user);
-              localStorage.setItem('user_session', JSON.stringify(user));
-              return of(user);
-            })
-          );
-        } else {
-          // Nếu không có Firebase user, dùng roles từ DB
-          const user = this.mapUserDtoToAuthUser(dto);
-          this.currentUserSignal.set(user);
-          localStorage.setItem('user_session', JSON.stringify(user));
-          return of(user);
-        }
+      map((dto) => {
+        // Map từ DB - roles từ DB là source of truth
+        const user = this.mapUserDtoToAuthUser(dto);
+        this.currentUserSignal.set(user);
+        localStorage.setItem('user_session', JSON.stringify(user));
+        return user;
       }),
       catchError((error) => {
         console.error('Error loading user from local DB:', error);
@@ -546,7 +540,7 @@ export class AuthService {
             const defaultUser = {
               name: user.displayName || user.email?.split('@')[0] || 'User',
               email: user.email || '',
-              roles: [UserRoleEnum.User]
+              roles: ['User']
             };
 
             // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)
@@ -570,7 +564,7 @@ export class AuthService {
     const defaultUser = {
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
       email: firebaseUser.email || '',
-      roles: [UserRoleEnum.User]
+      roles: ['User']
     };
 
     // Đồng bộ user lên local DB (API sẽ tự động tạo nếu chưa có)

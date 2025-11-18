@@ -20,15 +20,20 @@ export class FileService {
     return this.http.get<FileDocument>(`${this.apiUrl}/${id}`);
   }
 
-  uploadFile(file: File, description?: string, assignmentID?: number): Observable<FileDocument> {
+  uploadFile(file: File, assignmentId: number, description?: string): Observable<FileDocument> {
+    // assignmentId là bắt buộc theo API spec
+    if (!assignmentId || assignmentId <= 0) {
+      throw new Error('assignmentId is required and must be greater than 0');
+    }
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('assignmentId', assignmentId.toString()); // API dùng camelCase 'assignmentId'
     if (description) {
       formData.append('description', description);
     }
-    if (assignmentID) {
-      formData.append('assignmentID', assignmentID.toString());
-    }
+    
+    // Không set Content-Type header, browser sẽ tự động set multipart/form-data với boundary
     return this.http.post<FileDocument>(`${this.apiUrl}/upload`, formData);
   }
 
@@ -44,8 +49,9 @@ export class FileService {
     return this.http.get(`${this.apiUrl}/${id}/download`, { responseType: 'blob' });
   }
 
-  getFilesByAssignment(assignmentID: number): Observable<FileDocument[]> {
-    return this.http.get<FileDocument[]>(`${this.apiUrl}?assignmentID=${assignmentID}`);
+  getFilesByAssignment(assignmentId: number): Observable<FileDocument[]> {
+    // Sử dụng endpoint mới theo API spec: /api/files/byAssignment/{assignmentId}
+    return this.http.get<FileDocument[]>(`${this.apiUrl}/byAssignment/${assignmentId}`);
   }
 }
 

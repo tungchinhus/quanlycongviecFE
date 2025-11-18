@@ -96,7 +96,14 @@ export class FileListComponent implements OnInit {
   }
 
   downloadFile(file: FileDocument) {
-    this.fileService.downloadFile(file.fileID).subscribe({
+    // Sử dụng id hoặc fileID (tương thích)
+    const fileId = file.id || file.fileID;
+    if (!fileId) {
+      console.error('File ID not found');
+      return;
+    }
+    
+    this.fileService.downloadFile(fileId).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -111,7 +118,14 @@ export class FileListComponent implements OnInit {
 
   deleteFile(file: FileDocument) {
     if (confirm(`Bạn có chắc muốn xóa file "${file.fileName}"?`)) {
-      this.fileService.deleteFile(file.fileID).subscribe({
+      // Sử dụng id hoặc fileID (tương thích)
+      const fileId = file.id || file.fileID;
+      if (!fileId) {
+        console.error('File ID not found');
+        return;
+      }
+      
+      this.fileService.deleteFile(fileId).subscribe({
         next: () => this.loadFiles(),
         error: (err) => console.error('Error deleting file:', err)
       });

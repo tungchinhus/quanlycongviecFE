@@ -96,32 +96,19 @@ export class FileUploadDialogComponent implements OnInit {
       return;
     }
 
-    this.isUploading.set(true);
-    const description = this.uploadForm.get('description')?.value;
-    
-    this.fileService.uploadFile(this.selectedFile, description).subscribe({
-      next: (result) => {
-        this.isUploading.set(false);
-        this.snackBar.open('Upload file thành công!', 'Đóng', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar']
-        });
-        this.dialogRef.close(true);
-      },
-      error: (err) => {
-        this.isUploading.set(false);
-        console.error('Error uploading file:', err);
-        const errorMessage = err.error?.message || 'Lỗi khi upload file. Vui lòng thử lại.';
-        this.snackBar.open(errorMessage, 'Đóng', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
+    // TODO: File upload dialog này cần assignmentId để upload file
+    // Theo API spec, assignmentId là bắt buộc
+    // Component này có thể cần refactor để nhận assignmentId từ input hoặc chỉ dùng trong context có assignmentId
+    this.snackBar.open(
+      'Vui lòng upload file từ form gán công việc. File upload dialog này cần assignmentId để hoạt động.',
+      'Đóng',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
       }
-    });
+    );
   }
 
   onCancel() {

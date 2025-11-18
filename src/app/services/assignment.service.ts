@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { MachineAssignment, TechnicalSheet, WorkItem, WorkChange } from '../models/machine-assignment.model';
+import { MachineAssignment, TechnicalSheet, WorkItem, WorkChange, WorkItemWithAssignment } from '../models/machine-assignment.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AssignmentService {
-  private apiUrl = `${environment.apiUrl}/assignments`;
+  private apiUrl = `${environment.apiUrl}/Assignments`;
 
   constructor(private http: HttpClient) {}
 
@@ -24,8 +24,8 @@ export class AssignmentService {
     return this.http.post<MachineAssignment>(this.apiUrl, assignment);
   }
 
-  updateAssignment(id: number, assignment: Partial<MachineAssignment>): Observable<MachineAssignment> {
-    return this.http.put<MachineAssignment>(`${this.apiUrl}/${id}`, assignment);
+  updateAssignment(id: number, assignment: Partial<MachineAssignment>): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${id}`, assignment);
   }
 
   deleteAssignment(id: number): Observable<void> {
@@ -48,6 +48,11 @@ export class AssignmentService {
   // Work Changes methods
   createWorkChange(assignmentId: number, workChange: Partial<WorkChange>): Observable<WorkChange> {
     return this.http.post<WorkChange>(`${this.apiUrl}/${assignmentId}/work-changes`, workChange);
+  }
+
+  // Get work items của user đăng nhập
+  getMyWorkItems(): Observable<WorkItemWithAssignment[]> {
+    return this.http.get<WorkItemWithAssignment[]>(`${this.apiUrl}/my-work-items`);
   }
 }
 

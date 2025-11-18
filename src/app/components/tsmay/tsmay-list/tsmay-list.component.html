@@ -1,0 +1,173 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Thông Số Máy</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Tìm kiếm</mat-label>
+        <input 
+          matInput 
+          [value]="searchTerm()" 
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Tìm kiếm theo số máy, SBB, LSX, TBKT, công suất...">
+        <mat-icon matPrefix>search</mat-icon>
+        <button 
+          *ngIf="searchTerm()"
+          mat-icon-button 
+          matSuffix 
+          (click)="onSearchChange('')"
+          [attr.aria-label]="'Xóa tìm kiếm'">
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+      
+      <button 
+        mat-raised-button 
+        color="primary"
+        (click)="loadData()"
+        [disabled]="isLoading()">
+        <mat-icon>refresh</mat-icon>
+        Làm mới
+      </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading()" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+
+    <!-- Data Table -->
+    <div *ngIf="!isLoading()" class="table-section">
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" class="tsmay-table">
+          <!-- Công suất Column -->
+          <ng-container matColumnDef="congSuat">
+            <th mat-header-cell *matHeaderCellDef>Công suất</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.congSuat) }}</td>
+          </ng-container>
+
+          <!-- Số máy Column -->
+          <ng-container matColumnDef="soMay">
+            <th mat-header-cell *matHeaderCellDef>Số máy</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.soMay) }}</td>
+          </ng-container>
+
+          <!-- SBB Column -->
+          <ng-container matColumnDef="sbb">
+            <th mat-header-cell *matHeaderCellDef>SBB</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.sbb) }}</td>
+          </ng-container>
+
+          <!-- LSX Column -->
+          <ng-container matColumnDef="lsx">
+            <th mat-header-cell *matHeaderCellDef>LSX</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.lsx) }}</td>
+          </ng-container>
+
+          <!-- T.Chuẩn LSX Column -->
+          <ng-container matColumnDef="tChuanLSX">
+            <th mat-header-cell *matHeaderCellDef>T.Chuẩn LSX</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.tChuanLSX) }}</td>
+          </ng-container>
+
+          <!-- TBKT Column -->
+          <ng-container matColumnDef="tbkt">
+            <th mat-header-cell *matHeaderCellDef>TBKT</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.tbkt) }}</td>
+          </ng-container>
+
+          <!-- Po Column -->
+          <ng-container matColumnDef="po">
+            <th mat-header-cell *matHeaderCellDef>Po</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.po) }}</td>
+          </ng-container>
+
+          <!-- Io Column -->
+          <ng-container matColumnDef="io">
+            <th mat-header-cell *matHeaderCellDef>Io</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.io) }}</td>
+          </ng-container>
+
+          <!-- Pk75(H1) Column -->
+          <ng-container matColumnDef="pk75H1">
+            <th mat-header-cell *matHeaderCellDef>Pk75(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.pk75H1) }}</td>
+          </ng-container>
+
+          <!-- Pk75(H2) Column -->
+          <ng-container matColumnDef="pk75H2">
+            <th mat-header-cell *matHeaderCellDef>Pk75(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.pk75H2) }}</td>
+          </ng-container>
+
+          <!-- Uk75(H1) Column -->
+          <ng-container matColumnDef="uk75H1">
+            <th mat-header-cell *matHeaderCellDef>Uk75(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.uk75H1) }}</td>
+          </ng-container>
+
+          <!-- Uk75(H2) Column -->
+          <ng-container matColumnDef="uk75H2">
+            <th mat-header-cell *matHeaderCellDef>Uk75(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.uk75H2) }}</td>
+          </ng-container>
+
+          <!-- Uđm HV(H1) Column -->
+          <ng-container matColumnDef="udmHVH1">
+            <th mat-header-cell *matHeaderCellDef>Uđm HV(H1)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmHVH1) }}</td>
+          </ng-container>
+
+          <!-- Uđm HV(H2) Column -->
+          <ng-container matColumnDef="udmHVH2">
+            <th mat-header-cell *matHeaderCellDef>Uđm HV(H2)</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmHVH2) }}</td>
+          </ng-container>
+
+          <!-- Uđm LV Column -->
+          <ng-container matColumnDef="udmLV">
+            <th mat-header-cell *matHeaderCellDef>Uđm LV</th>
+            <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmLV) }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
+          
+          <!-- No data row -->
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell" [attr.colspan]="displayedColumns().length">
+              <div class="no-data-in-table">
+                <mat-icon>info</mat-icon>
+                <span>{{ searchTerm() ? 'Không tìm thấy dữ liệu phù hợp' : 'Chưa có dữ liệu' }}</span>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Paginator -->
+      <mat-paginator
+        #paginator
+        [length]="filteredData().length"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="pageSizeOptions()"
+        [showFirstLastButtons]="true"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+
+      <!-- Data Info -->
+      <div class="data-info" *ngIf="data().length > 0">
+        <span>Tổng số: {{ data().length }} dòng</span>
+        <span *ngIf="searchTerm()" class="search-info">
+          | Tìm thấy: {{ filteredData().length }} dòng (Đang tìm kiếm: "{{ searchTerm() }}")
+        </span>
+        <span *ngIf="!searchTerm() && filteredData().length > 0" class="page-info">
+          | Hiển thị: {{ pageInfo() }} / {{ filteredData().length }}
+        </span>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
+
