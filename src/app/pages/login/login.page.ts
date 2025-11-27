@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../services/auth.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-login-page',
@@ -29,11 +30,12 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './login.page.html',
   styleUrl: './login.page.css'
 })
-export class LoginPage {
+export class LoginPage implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroy$ = new Subject<void>();
 
   loginForm: FormGroup;
   hidePassword = true;
@@ -53,7 +55,17 @@ export class LoginPage {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   onSubmit() {
+    // Prevent multiple simultaneous login attempts
+    if (this.isLoading) {
+      return;
+    }
+
     if (this.loginForm.valid) {
       this.isLoading = true;
       this.errorMessage = '';
@@ -63,7 +75,9 @@ export class LoginPage {
       // Hỗ trợ cả username và email:
       // - Nếu là email format → dùng trực tiếp
       // - Nếu là username → query từ backend để lấy email, sau đó đăng nhập Firebase
-      this.authService.loginWithEmailAndPassword(usernameOrEmail, password).subscribe({
+      this.authService.loginWithEmailAndPassword(usernameOrEmail, password)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
         next: (user) => {
           this.isLoading = false;
           this.snackBar.open('Đăng nhập thành công!', 'Đóng', {

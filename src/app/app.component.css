@@ -275,6 +275,29 @@
   font-weight: 500;
 }
 
+.nav-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-item.disabled:hover {
+  background-color: transparent;
+  color: #3c4043;
+  transform: none;
+}
+
+.nav-item.disabled:hover .nav-icon .mat-icon {
+  color: #5f6368;
+}
+
+.nav-item.disabled .nav-icon .mat-icon {
+  color: #9aa0a6;
+}
+
+.nav-item.disabled .nav-text {
+  color: #9aa0a6;
+}
+
 .nav-text.hidden {
   display: none;
 }

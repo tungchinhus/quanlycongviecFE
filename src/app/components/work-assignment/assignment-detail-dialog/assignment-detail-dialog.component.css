@@ -62,14 +62,24 @@
   margin-bottom: 16px;
 }
 
-.work-item-card h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 500;
+.work-type-person-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 8px 0;
 }
 
-.work-item-card p {
-  margin: 8px 0;
+.work-type,
+.person-name {
+  font-size: 14px;
+}
+
+.work-type strong,
+.person-name strong {
+  font-weight: 500;
+  color: var(--thibidi-text-secondary);
+  margin-right: 4px;
 }
 
 .work-item-form {
@@ -89,7 +99,6 @@
 
 .notes-field {
   width: 100%;
-  margin-top: 16px;
 }
 
 .no-data {
@@ -201,6 +210,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 300px;
+}
+
+.file-name-link {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+  color: #1976d2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+.file-name-link:hover {
+  color: #1565c0;
+  text-decoration: underline;
 }
 
 .file-date {

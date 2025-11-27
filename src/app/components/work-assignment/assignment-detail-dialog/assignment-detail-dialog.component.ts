@@ -23,6 +23,7 @@ import { FileService } from '../../../services/file.service';
 import { FileDocument } from '../../../models/file.model';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-assignment-detail-dialog',
@@ -286,6 +287,18 @@ export class AssignmentDetailDialogComponent implements OnInit {
     return workTypeMap[workType] || workType;
   }
 
+  isCurrentUserAssigner(): boolean {
+    if (!this.assignment || !this.currentUser) return false;
+    const designerId = this.assignment.designer;
+    if (!designerId) return false;
+    
+    return (
+      designerId === this.currentUser.id ||
+      designerId === this.currentUser.id?.toString() ||
+      designerId === this.currentUser.userId?.toString()
+    );
+  }
+
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -426,29 +439,171 @@ export class AssignmentDetailDialogComponent implements OnInit {
       this.snackBar.open('Không tìm thấy ID file', 'Đóng', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'top'
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
       });
       return;
     }
     
     this.fileService.downloadFile(fileId).subscribe({
       next: (blob) => {
+        // Kiểm tra nếu response là lỗi (thường là JSON error message trong blob)
+        if (blob.type === 'application/json' || blob.size < 100) {
+          // Đọc blob như text để lấy error message
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errorText = reader.result as string;
+              const errorObj = JSON.parse(errorText);
+              this.snackBar.open(
+                errorObj.message || errorObj.error || 'Lỗi khi tải file',
+                'Đóng',
+                {
+                  duration: 5000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'top',
+                  panelClass: ['error-snackbar']
+                }
+              );
+            } catch (e) {
+              this.snackBar.open('Lỗi khi tải file', 'Đóng', {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                panelClass: ['error-snackbar']
+              });
+            }
+          };
+          reader.readAsText(blob);
+          return;
+        }
+
+        // Tạo URL và download file
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = file.fileName;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       },
       error: (err) => {
         console.error('Error downloading file:', err);
-        this.snackBar.open('Lỗi khi tải file', 'Đóng', {
-          duration: 3000,
+        const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi khi tải file';
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
           horizontalPosition: 'center',
-          verticalPosition: 'top'
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
         });
       }
     });
+  }
+
+  viewFile(file: FileDocument) {
+    // Sử dụng id hoặc fileID (tương thích)
+    const fileId = file.id || file.fileID;
+    if (!fileId) {
+      this.snackBar.open('Không tìm thấy ID file', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    
+    // Tải file qua API (có authentication) rồi mở trong tab mới
+    this.fileService.downloadFile(fileId).subscribe({
+      next: (blob) => {
+        // Kiểm tra nếu response là lỗi
+        if (blob.type === 'application/json' || blob.size < 100) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errorText = reader.result as string;
+              const errorObj = JSON.parse(errorText);
+              this.snackBar.open(
+                errorObj.message || errorObj.error || 'Lỗi khi xem file',
+                'Đóng',
+                {
+                  duration: 5000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'top',
+                  panelClass: ['error-snackbar']
+                }
+              );
+            } catch (e) {
+              this.snackBar.open('Lỗi khi xem file', 'Đóng', {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                panelClass: ['error-snackbar']
+              });
+            }
+          };
+          reader.readAsText(blob);
+          return;
+        }
+
+        // Tạo URL từ blob và mở trong tab mới
+        const url = window.URL.createObjectURL(blob);
+        const newWindow = window.open(url, '_blank');
+        
+        // Nếu browser chặn popup, fallback về download
+        if (!newWindow) {
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        
+        // Cleanup URL sau khi mở (sau một khoảng thời gian)
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      },
+      error: (err) => {
+        console.error('Error viewing file:', err);
+        const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi khi xem file';
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  canDeleteFile(file: FileDocument): boolean {
+    // Kiểm tra user đang đăng nhập
+    if (!this.currentUser) {
+      return false;
+    }
+    
+    // Lấy thông tin uploadedBy của file
+    const uploadedBy = file.uploadedBy || file.uploadBy;
+    if (!uploadedBy) {
+      // Nếu không có thông tin uploadedBy, không cho phép xóa (an toàn)
+      return false;
+    }
+    
+    // Backend trả về uploadedBy là userName (từ ClaimTypes.Name = user.UserName)
+    // So sánh uploadedBy với thông tin user đang đăng nhập
+    // Nếu khác thì không hiển thị icon delete
+    const isOwner = (
+      uploadedBy === this.currentUser.userName ||
+      uploadedBy === this.currentUser.id ||
+      uploadedBy === this.currentUser.id?.toString() ||
+      uploadedBy === this.currentUser.userId?.toString() ||
+      uploadedBy === this.currentUser.email
+    );
+    
+    return isOwner;
   }
 
   onClose() {

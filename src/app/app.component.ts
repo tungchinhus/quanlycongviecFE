@@ -108,6 +108,13 @@ export class AppComponent {
     return this.authService.hasAnyRole(['ManagerL1', UserRole.Administrator, 'Administrator', 'Admin']);
   }
 
+  handleNavClick(event: Event): void {
+    if (!this.hasAdminRole()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
   logout(): void {
     // Đăng xuất từ Firebase và xóa session
     this.authService.logout().subscribe({
@@ -136,5 +143,6 @@ export class AppComponent {
       }
     });
   }
+
 }
 

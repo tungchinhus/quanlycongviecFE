@@ -22,6 +22,22 @@
         </button>
       </mat-form-field>
       
+      <div class="phase-filter">
+        <mat-checkbox 
+          [checked]="selectedPhase === '1'"
+          (change)="onPhaseChange('1', $event.checked)"
+          class="phase-checkbox">
+          1 pha
+        </mat-checkbox>
+        
+        <mat-checkbox 
+          [checked]="selectedPhase === '3'"
+          (change)="onPhaseChange('3', $event.checked)"
+          class="phase-checkbox">
+          3 pha
+        </mat-checkbox>
+      </div>
+      
       <button 
         mat-raised-button 
         color="primary"
@@ -31,6 +47,27 @@
         Làm mới
       </button>
     </div>
+
+    <!-- Column Visibility Menu -->
+    <mat-menu #columnMenu="matMenu" class="column-menu">
+      <button mat-menu-item (click)="showAllColumns()">
+        <mat-icon>check_box</mat-icon>
+        <span>Hiển thị tất cả</span>
+      </button>
+      <button mat-menu-item (click)="hideAllColumns()">
+        <mat-icon>check_box_outline_blank</mat-icon>
+        <span>Ẩn tất cả</span>
+      </button>
+      <mat-divider></mat-divider>
+      <div *ngFor="let column of allColumns" class="column-menu-item">
+        <mat-checkbox
+          [checked]="columnVisibility()[column]"
+          (change)="toggleColumnVisibility(column)"
+          (click)="$event.stopPropagation()">
+          {{ getColumnLabel(column) }}
+        </mat-checkbox>
+      </div>
+    </mat-menu>
 
     <!-- Loading Spinner -->
     <div *ngIf="isLoading()" class="loading-container">
@@ -132,12 +169,55 @@
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmLV) }}</td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header">Thao tác</th>
+            <td mat-cell *matCellDef="let row" class="actions-cell">
+              <button 
+                mat-icon-button 
+                [matMenuTriggerFor]="actionMenu"
+                [matTooltip]="'Tùy chọn'"
+                class="action-menu-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item (click)="viewTSMay(row)">
+                  <mat-icon>visibility</mat-icon>
+                  <span>Xem</span>
+                </button>
+                <button mat-menu-item (click)="editTSMay(row)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Chỉnh sửa</span>
+                </button>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="deleteTSMay(row)" class="delete-action">
+                  <mat-icon>delete</mat-icon>
+                  <span>Xóa</span>
+                </button>
+              </mat-menu>
+            </td>
+          </ng-container>
+
+          <!-- Column Settings Column -->
+          <ng-container matColumnDef="columnSettings">
+            <th mat-header-cell *matHeaderCellDef class="column-settings-header">
+              <button 
+                mat-icon-button 
+                [matMenuTriggerFor]="columnMenu"
+                class="column-settings-icon-button"
+                matTooltip="Cột hiển thị">
+                <mat-icon>view_column</mat-icon>
+              </button>
+            </th>
+            <td mat-cell *matCellDef="let row"></td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsWithSettings()"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsWithSettings();"></tr>
           
           <!-- No data row -->
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" [attr.colspan]="displayedColumns().length">
+            <td class="mat-cell" [attr.colspan]="displayedColumnsWithSettings().length">
               <div class="no-data-in-table">
                 <mat-icon>info</mat-icon>
                 <span>{{ searchTerm() ? 'Không tìm thấy dữ liệu phù hợp' : 'Chưa có dữ liệu' }}</span>
@@ -150,21 +230,23 @@
       <!-- Paginator -->
       <mat-paginator
         #paginator
-        [length]="filteredData().length"
+        [length]="total()"
         [pageSize]="pageSize()"
         [pageSizeOptions]="pageSizeOptions()"
+        [pageIndex]="pageIndex()"
         [showFirstLastButtons]="true"
+        [disabled]="isLoading()"
         (page)="onPageChange($event)">
       </mat-paginator>
 
       <!-- Data Info -->
-      <div class="data-info" *ngIf="data().length > 0">
-        <span>Tổng số: {{ data().length }} dòng</span>
+      <div class="data-info" *ngIf="total() > 0">
+        <span>Tổng số: {{ total() }} dòng</span>
         <span *ngIf="searchTerm()" class="search-info">
-          | Tìm thấy: {{ filteredData().length }} dòng (Đang tìm kiếm: "{{ searchTerm() }}")
+          | Đang tìm kiếm: "{{ searchTerm() }}"
         </span>
-        <span *ngIf="!searchTerm() && filteredData().length > 0" class="page-info">
-          | Hiển thị: {{ pageInfo() }} / {{ filteredData().length }}
+        <span *ngIf="total() > 0" class="page-info">
+          | Hiển thị: {{ pageInfo() }} / {{ total() }}
         </span>
       </div>
     </div>

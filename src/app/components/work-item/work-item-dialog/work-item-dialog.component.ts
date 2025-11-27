@@ -7,7 +7,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
+import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,7 +45,11 @@ import { FileDocument } from '../../../models/file.model';
     MatProgressSpinnerModule,
     MatTooltipModule
   ],
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
+    { provide: DateAdapter, useClass: CustomDateAdapter },
+    { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
+  ],
   templateUrl: './work-item-dialog.component.html',
   styleUrls: ['./work-item-dialog.component.css']
 })
@@ -52,6 +58,7 @@ export class WorkItemDialogComponent implements OnInit {
   mode: 'view' | 'edit' | 'create' = 'create';
   workItem: WorkItemWithAssignment | null = null;
   currentUserName: string = '';
+  currentUser: any = null;
   readonly selectedFiles = signal<File[]>([]);
   readonly isUploading = signal<boolean>(false);
   files: FileDocument[] = [];
@@ -81,9 +88,9 @@ export class WorkItemDialogComponent implements OnInit {
     this.mode = data.mode || 'create';
     this.workItem = data.workItem || null;
     
-    // Lấy tên user đang login
-    const currentUser = this.authService.user();
-    this.currentUserName = currentUser?.name || currentUser?.userName || '';
+    // Lấy thông tin user đang login
+    this.currentUser = this.authService.user();
+    this.currentUserName = this.currentUser?.name || this.currentUser?.userName || '';
 
     // Loại công việc luôn disabled (chỉ hiển thị)
     this.workItemForm = this.fb.group({
@@ -119,6 +126,18 @@ export class WorkItemDialogComponent implements OnInit {
     return this.workTypeMap[workType] || workType;
   }
 
+  // Convert từ tiếng Việt về tiếng Anh (reverse mapping)
+  getWorkTypeEnglish(displayName: string): string {
+    const reverseMap: { [key: string]: string } = {
+      'Thiết kế ruột': 'Core Design',
+      'Kiểm soát ruột': 'Core Review',
+      'Thiết kế vỏ': 'Casing Design',
+      'Kiểm soát vỏ': 'Casing Review',
+      'Định mức vật tư': 'Material Leveling'
+    };
+    return reverseMap[displayName] || displayName;
+  }
+
   loadFiles() {
     if (!this.workItem?.assignmentID) return;
     
@@ -139,6 +158,7 @@ export class WorkItemDialogComponent implements OnInit {
       this.selectedFiles.set([...this.selectedFiles(), ...newFiles]);
       // Reset input để có thể chọn lại file giống nhau
       input.value = '';
+      // Không tự động upload, chỉ upload khi bấm Lưu
     }
   }
 
@@ -156,9 +176,11 @@ export class WorkItemDialogComponent implements OnInit {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
-  uploadFiles() {
+  uploadFiles(): Promise<boolean> {
     const files = this.selectedFiles();
-    if (files.length === 0 || !this.workItem?.assignmentID) return;
+    if (files.length === 0 || !this.workItem?.assignmentID) {
+      return Promise.resolve(true);
+    }
 
     this.isUploading.set(true);
     const assignmentID = this.workItem.assignmentID;
@@ -171,52 +193,45 @@ export class WorkItemDialogComponent implements OnInit {
       ).pipe(
         catchError(error => {
           console.error(`Error uploading file ${file.name}:`, error);
-          return of(null);
+          // Trả về object chứa thông tin lỗi thay vì null
+          return of({ error: true, fileName: file.name, errorMessage: error.error?.message || error.message || 'Lỗi không xác định' });
         })
       )
     );
 
-    forkJoin(uploadObservables).subscribe({
-      next: (results) => {
-        const successFiles = results.filter(r => r !== null) as FileDocument[];
-        const successCount = successFiles.length;
-        const failCount = results.length - successCount;
+    return new Promise((resolve) => {
+      forkJoin(uploadObservables).subscribe({
+        next: (results) => {
+          const successFiles = results.filter(r => r !== null && !(r as any).error) as FileDocument[];
+          const failedFiles = results.filter(r => r !== null && (r as any).error) as any[];
+          const successCount = successFiles.length;
+          const failCount = failedFiles.length;
 
-        this.isUploading.set(false);
-        this.selectedFiles.set([]);
+          this.isUploading.set(false);
+          this.selectedFiles.set([]);
 
-        // Reload files list
-        this.loadFiles();
+          // Reload files list
+          this.loadFiles();
 
-        if (failCount === 0) {
-          this.snackBar.open(`Upload ${successCount} file thành công!`, 'Đóng', {
-            duration: 3000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top'
-          });
-        } else {
-          this.snackBar.open(
-            `Upload ${successCount}/${results.length} file thành công.`,
-            'Đóng',
-            {
-              duration: 5000,
-              horizontalPosition: 'center',
-              verticalPosition: 'top',
-              panelClass: ['warning-snackbar']
-            }
-          );
+          if (failCount === 0) {
+            // Không hiển thị snackbar ở đây vì đã có thông báo ở onSave
+            resolve(true);
+          } else {
+            // Log chi tiết lỗi
+            failedFiles.forEach(f => {
+              console.error(`Failed to upload ${f.fileName}: ${f.errorMessage}`);
+            });
+            // Trả về false để onSave có thể hiển thị cảnh báo
+            resolve(false);
+          }
+        },
+        error: (err) => {
+          this.isUploading.set(false);
+          console.error('Error uploading files:', err);
+          // Không hiển thị snackbar ở đây, để onSave xử lý
+          resolve(false);
         }
-      },
-      error: (err) => {
-        this.isUploading.set(false);
-        console.error('Error uploading files:', err);
-        this.snackBar.open('Lỗi khi upload file. Vui lòng thử lại.', 'Đóng', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
-      }
+      });
     });
   }
 
@@ -272,44 +287,130 @@ export class WorkItemDialogComponent implements OnInit {
     });
   }
 
-  onSave() {
+  async onSave() {
     if (this.mode === 'view') {
       this.dialogRef.close();
       return;
     }
 
-    if (this.workItemForm.valid && this.workItem) {
-      const formValue = this.workItemForm.getRawValue();
-      const updateData: any = {
-        workType: formValue.workType,
-        startDate: formValue.startDate ? new Date(formValue.startDate).toISOString() : null,
-        expectedFinish: formValue.expectedFinish ? new Date(formValue.expectedFinish).toISOString() : null,
-        actualFinish: formValue.actualFinish ? new Date(formValue.actualFinish).toISOString() : null,
-        personConfirmation: formValue.personConfirmation,
-        notes: formValue.notes
-      };
+    if (!this.workItemForm.valid || !this.workItem) {
+      this.snackBar.open('Vui lòng điền đầy đủ thông tin', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
 
-      this.workItemService.updateWorkItem(this.workItem.workItemID, updateData).subscribe({
-        next: () => {
+    // Kiểm tra workItemID có tồn tại
+    if (!this.workItem.workItemID || this.workItem.workItemID <= 0) {
+      this.snackBar.open('Không tìm thấy công việc cần cập nhật', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const formValue = this.workItemForm.getRawValue();
+    
+    // Lấy workType từ workItem gốc (tiếng Anh) thay vì từ form (tiếng Việt)
+    // Hoặc convert từ tiếng Việt về tiếng Anh nếu cần
+    const workTypeEnglish = this.workItem?.workType || this.getWorkTypeEnglish(formValue.workType);
+    
+    // Xây dựng updateData object - chỉ gửi các field có giá trị
+    const updateData: any = {};
+    
+    // WorkType: lấy từ workItem gốc (tiếng Anh) hoặc convert từ tiếng Việt
+    if (workTypeEnglish) {
+      updateData.workType = workTypeEnglish;
+    }
+    
+    // Dates: chỉ gửi nếu có giá trị
+    if (formValue.startDate) {
+      updateData.startDate = new Date(formValue.startDate).toISOString();
+    }
+    if (formValue.expectedFinish) {
+      updateData.expectedFinish = new Date(formValue.expectedFinish).toISOString();
+    }
+    if (formValue.actualFinish) {
+      updateData.actualFinish = new Date(formValue.actualFinish).toISOString();
+    }
+    
+    // PersonConfirmation: gửi cả false
+    if (formValue.personConfirmation !== undefined && formValue.personConfirmation !== null) {
+      updateData.personConfirmation = formValue.personConfirmation;
+    }
+    
+    // Notes: chỉ gửi nếu có giá trị
+    if (formValue.notes) {
+      updateData.notes = formValue.notes;
+    }
+
+    // Log để debug
+    console.log('Updating work item:', this.workItem.workItemID);
+    console.log('Update data:', updateData);
+    console.log('Original workItem.workType:', this.workItem?.workType);
+
+    // Cập nhật work item TRƯỚC, chỉ upload file khi update thành công
+    this.workItemService.updateWorkItem(this.workItem.workItemID, updateData).subscribe({
+      next: async () => {
+        // Chỉ upload files sau khi work item đã được cập nhật thành công
+        if (this.selectedFiles().length > 0) {
+          const uploadSuccess = await this.uploadFiles();
+          if (!uploadSuccess) {
+            // Nếu upload file thất bại, vẫn hiển thị thông báo thành công cho work item
+            // nhưng cảnh báo về file
+            this.snackBar.open('Cập nhật công việc thành công, nhưng có lỗi khi upload file', 'Đóng', {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['warning-snackbar']
+            });
+          } else {
+            this.snackBar.open('Cập nhật công việc và upload file thành công!', 'Đóng', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top'
+            });
+          }
+        } else {
           this.snackBar.open('Cập nhật công việc thành công!', 'Đóng', {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'top'
           });
-          this.dialogRef.close(true);
-        },
-        error: (err) => {
-          console.error('Error updating work item:', err);
-          const errorMessage = err.error?.message || 'Lỗi khi cập nhật công việc';
-          this.snackBar.open(errorMessage, 'Đóng', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
         }
-      });
-    }
+        this.dialogRef.close(true);
+      },
+      error: (err) => {
+        console.error('Error updating work item:', err);
+        
+        // Xử lý các loại lỗi khác nhau
+        let errorMessage = 'Lỗi khi cập nhật công việc';
+        
+        if (err.status === 404) {
+          errorMessage = 'Không tìm thấy công việc cần cập nhật. Vui lòng làm mới trang và thử lại.';
+        } else if (err.status === 400) {
+          errorMessage = err.error?.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
+        } else if (err.status === 500) {
+          errorMessage = err.error?.message || 'Lỗi server. Vui lòng thử lại sau.';
+        } else if (err.error?.message) {
+          errorMessage = err.error.message;
+        } else if (err.error?.error) {
+          errorMessage = err.error.error;
+        }
+        
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   onCancel() {
@@ -327,6 +428,48 @@ export class WorkItemDialogComponent implements OnInit {
 
   isViewMode(): boolean {
     return this.mode === 'view';
+  }
+
+  canSave(): boolean {
+    const formValue = this.workItemForm.getRawValue();
+    // Nút Lưu chỉ sáng khi có đủ:
+    // 1. Ngày bắt đầu
+    // 2. Ngày dự kiến
+    // 3. Hoàn thành thực tế
+    // 4. File upload mới
+    return !!(
+      formValue.startDate &&
+      formValue.expectedFinish &&
+      formValue.actualFinish &&
+      this.selectedFiles().length > 0
+    );
+  }
+
+  canDeleteFile(file: FileDocument): boolean {
+    // Kiểm tra user đang đăng nhập
+    if (!this.currentUser) {
+      return false;
+    }
+    
+    // Lấy thông tin uploadedBy của file
+    const uploadedBy = file.uploadedBy || file.uploadBy;
+    if (!uploadedBy) {
+      // Nếu không có thông tin uploadedBy, không cho phép xóa (an toàn)
+      return false;
+    }
+    
+    // Backend trả về uploadedBy là userName (từ ClaimTypes.Name = user.UserName)
+    // So sánh uploadedBy với thông tin user đang đăng nhập
+    // Nếu khác thì không hiển thị icon delete
+    const isOwner = (
+      uploadedBy === this.currentUser.userName ||
+      uploadedBy === this.currentUser.id ||
+      uploadedBy === this.currentUser.id?.toString() ||
+      uploadedBy === this.currentUser.userId?.toString() ||
+      uploadedBy === this.currentUser.email
+    );
+    
+    return isOwner;
   }
 }
 

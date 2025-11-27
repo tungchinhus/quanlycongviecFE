@@ -71,6 +71,7 @@ export class AssignmentFormDialogComponent implements OnInit {
     this.assignmentForm = this.fb.group({
       machineName: ['', Validators.required],
       requestDocument: [''], // ĐĐH/Giấy đề nghị
+      tbktId: [''], // TBKT_ID để map với TechnicalSheet
       standardRequirement: [''],
       additionalRequest: [''],
       deliveryDate: [null],
@@ -147,8 +148,9 @@ export class AssignmentFormDialogComponent implements OnInit {
       
       // Map form data đúng format API
       const assignmentData: any = {
-        tbkt_ID: formValue.requestDocument || '',
+        tbkt_ID: formValue.tbktId || '',
         machineName: formValue.machineName,
+        requestDocument: formValue.requestDocument || '',
         standardRequirement: formValue.standardRequirement || '',
         additionalRequest: formValue.additionalRequest || '',
         deliveryDate: formValue.deliveryDate ? new Date(formValue.deliveryDate).toISOString() : null,

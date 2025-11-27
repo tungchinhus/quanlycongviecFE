@@ -1,8 +1,15 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TSMay, CreateTSMayRequest, BulkCreateTSMayRequest, BulkCreateTSMayResponse } from '../models/tsmay.model';
 import { environment } from '../../environments/environment';
+
+export interface TSMaySearchResponse {
+  data: TSMay[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -62,15 +69,47 @@ export class TSMayService {
     sbb?: string;
     lsx?: string;
     congSuat?: number;
+    phase?: string;
   }): Observable<TSMay[]> {
     const params = new URLSearchParams();
     if (criteria.soMay) params.append('soMay', criteria.soMay);
     if (criteria.sbb) params.append('sbb', criteria.sbb);
     if (criteria.lsx) params.append('lsx', criteria.lsx);
     if (criteria.congSuat) params.append('congSuat', criteria.congSuat.toString());
+    if (criteria.phase) params.append('phase', criteria.phase);
     
     const queryString = params.toString();
     return this.http.get<TSMay[]>(`${this.apiUrl}/search${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Tìm kiếm TSMay với pagination và search text
+   * Backend có thể trả về:
+   * - TSMaySearchResponse { data, total, page, pageSize } nếu hỗ trợ pagination
+   * - TSMay[] nếu chưa hỗ trợ pagination (fallback)
+   */
+  searchWithPagination(params: {
+    search?: string;
+    phase?: string;
+    page?: number;
+    pageSize?: number;
+  }): Observable<TSMaySearchResponse | TSMay[]> {
+    let httpParams = new HttpParams();
+    
+    if (params.search) {
+      httpParams = httpParams.set('search', params.search);
+    }
+    if (params.phase) {
+      httpParams = httpParams.set('phase', params.phase);
+    }
+    if (params.page !== undefined) {
+      httpParams = httpParams.set('page', params.page.toString());
+    }
+    if (params.pageSize !== undefined) {
+      httpParams = httpParams.set('pageSize', params.pageSize.toString());
+    }
+    
+    return this.http.get<TSMaySearchResponse | TSMay[]>(`${this.apiUrl}/search`, { params: httpParams });
   }
 }
 

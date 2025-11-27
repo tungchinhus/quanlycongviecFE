@@ -1,8 +1,8 @@
 <h2 mat-dialog-title>Tạo Giao Việc Mới</h2>
 <mat-dialog-content>
   <form [formGroup]="assignmentForm">
-    <!-- Row 1: Tên Máy và ĐĐH/Giấy đề nghị -->
-    <div class="form-row">
+    <!-- Row 1: Tên Máy, ĐĐH/Giấy đề nghị và TBKT -->
+    <div class="form-row form-row-three">
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Tên Máy *</mat-label>
         <input matInput formControlName="machineName" required>
@@ -14,6 +14,11 @@
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>ĐĐH/Giấy đề nghị</mat-label>
         <input matInput formControlName="requestDocument" placeholder="Nhập ĐĐH/Giấy đề nghị">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="form-field-flex">
+        <mat-label>TBKT</mat-label>
+        <input matInput formControlName="tbktId" placeholder="Nhập mã TBKT (ví dụ: TC: 96/QĐ-HDTV)">
       </mat-form-field>
     </div>
 

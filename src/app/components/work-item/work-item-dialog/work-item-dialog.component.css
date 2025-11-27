@@ -3,12 +3,61 @@
   margin-bottom: 16px;
 }
 
+/* Form Layout - Grid 2 columns */
+.form-row-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row-single {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row-full {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-field-flex {
+  width: 100%;
+  min-width: 0;
+}
+
 mat-checkbox {
   margin-bottom: 16px;
 }
 
 mat-dialog-content {
   min-width: 500px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-row-two,
+  .form-row-grid,
+  .form-row-single,
+  .form-row-full {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  mat-dialog-content {
+    min-width: auto;
+  }
 }
 
 .assignment-info-section {
@@ -42,6 +91,12 @@ mat-dialog-content {
 
 .delete-action mat-icon {
   color: #c62828;
+}
+
+.files-reference-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
 }
 
 .files-section {

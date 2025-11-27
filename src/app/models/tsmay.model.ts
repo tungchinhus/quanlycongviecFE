@@ -15,6 +15,7 @@ export interface TSMay {
   udmHVH1?: string | null;
   udmHVH2?: string | null;
   udmLV?: string | null;
+  phase?: string | null; // '1' cho 1 pha, '3' cho 3 pha
 }
 
 export interface CreateTSMayRequest {
@@ -33,6 +34,7 @@ export interface CreateTSMayRequest {
   udmHVH1?: string | null;
   udmHVH2?: string | null;
   udmLV?: string | null;
+  phase?: string | null; // '1' cho 1 pha, '3' cho 3 pha
 }
 
 export interface BulkCreateTSMayRequest {

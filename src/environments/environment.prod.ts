@@ -9,6 +9,6 @@ export const environment = {
     appId: "1:373646706069:web:70f0cf79c1031471b6e29c",
     measurementId: "G-GJTTZC70Y2"
   },
-  apiUrl: 'https://your-api-domain.com/api' // Cập nhật URL API production của bạn
+  apiUrl: 'http://172.20.115.40:8080/api' // Cập nhật URL API production của bạn
 };
 

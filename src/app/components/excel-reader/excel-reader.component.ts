@@ -9,6 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -43,6 +44,7 @@ interface ColumnVisibility {
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
+    MatRadioModule,
     MatMenuModule,
     MatDividerModule,
     MatTooltipModule,
@@ -61,6 +63,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   readonly columnVisibility = signal<ColumnVisibility>({});
   readonly isLoading = signal<boolean>(false);
   readonly isSaving = signal<boolean>(false);
+  selectedPhase: '1' | '3' = '3'; // '1' cho 1 pha, '3' cho 3 pha (mặc định 3 pha)
   
   // Các cột cố định
   readonly fixedColumns = ['CongSuat', 'SoMay', 'SBB', 'LSX', 'TChuanLSX', 'TBKT', 'Po', 'Io', 'Pk75H1', 'Pk75H2', 'Uk75H1', 'Uk75H2', 'UdmHVH1', 'UdmHVH2', 'UdmLV'];
@@ -779,7 +782,8 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       uk75H2: getStringOrNull(data['Uk75H2']),
       udmHVH1: getStringOrNull(data['UdmHVH1']),
       udmHVH2: getStringOrNull(data['UdmHVH2']),
-      udmLV: getStringOrNull(data['UdmLV'])
+      udmLV: getStringOrNull(data['UdmLV']),
+      phase: this.selectedPhase // '1' cho 1 pha, '3' cho 3 pha
     };
   }
 
@@ -800,7 +804,8 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
     }
 
     // Xác nhận trước khi lưu
-    const confirmed = confirm(`Bạn có chắc chắn muốn lưu ${data.length} dòng dữ liệu vào database?`);
+    const phaseLabel = this.selectedPhase === '1' ? '1 pha' : '3 pha';
+    const confirmed = confirm(`Bạn có chắc chắn muốn lưu ${data.length} dòng dữ liệu vào database (${phaseLabel})?`);
     if (!confirmed) {
       return;
     }

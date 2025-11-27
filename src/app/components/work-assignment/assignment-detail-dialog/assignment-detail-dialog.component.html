@@ -42,8 +42,14 @@
         <div class="work-items-list">
           <mat-card *ngFor="let item of filteredWorkItems" class="work-item-card">
             <mat-card-content>
-              <h4>{{ getWorkTypeName(item.workType) || 'Công việc' }}</h4>
-              <p><strong>Người thực hiện:</strong> {{ getPersonName(item.personName) || '-' }}</p>
+              <div class="work-type-person-row">
+                <div class="work-type">
+                  <strong>Loại công việc:</strong> {{ getWorkTypeName(item.workType) || 'Công việc' }}
+                </div>
+                <div class="person-name">
+                  <strong>Người thực hiện:</strong> {{ getPersonName(item.personName) || '-' }}
+                </div>
+              </div>
               
               <form [formGroup]="getWorkItemForm(item.workItemID)!" class="work-item-form">
                 <div class="date-fields">
@@ -67,18 +73,18 @@
                     <mat-datepicker-toggle matIconSuffix [for]="actualPicker"></mat-datepicker-toggle>
                     <mat-datepicker #actualPicker></mat-datepicker>
                   </mat-form-field>
-                </div>
 
-                <mat-form-field appearance="outline" class="notes-field">
-                  <mat-label>Ghi chú</mat-label>
-                  <textarea matInput formControlName="notes" rows="3" placeholder="Nhập ghi chú..."></textarea>
-                </mat-form-field>
+                  <mat-form-field appearance="outline" class="date-field notes-field">
+                    <mat-label>Ghi chú</mat-label>
+                    <textarea matInput formControlName="notes" rows="3" placeholder="Nhập ghi chú..."></textarea>
+                  </mat-form-field>
+                </div>
               </form>
             </mat-card-content>
           </mat-card>
         </div>
       </div>
-      <div *ngIf="!filteredWorkItems || filteredWorkItems.length === 0" class="no-data">
+      <div *ngIf="(!filteredWorkItems || filteredWorkItems.length === 0) && !isCurrentUserAssigner()" class="no-data">
         <p>Chưa có công việc nào được gán cho bạn</p>
       </div>
 
@@ -86,8 +92,8 @@
       <div class="files-section">
         <h3 class="section-title">File đính kèm</h3>
         
-        <!-- File Upload Area -->
-        <div class="file-upload-area">
+        <!-- File Upload Area - Chỉ hiển thị khi user không phải là người giao việc -->
+        <div class="file-upload-area" *ngIf="!isCurrentUserAssigner()">
           <input 
             type="file" 
             id="fileInput" 
@@ -102,8 +108,8 @@
           <span class="file-upload-hint">(Có thể chọn nhiều file)</span>
         </div>
 
-        <!-- Selected Files List -->
-        <div *ngIf="selectedFiles().length > 0" class="selected-files-list">
+        <!-- Selected Files List - Chỉ hiển thị khi user không phải là người giao việc -->
+        <div *ngIf="selectedFiles().length > 0 && !isCurrentUserAssigner()" class="selected-files-list">
           <div *ngFor="let file of selectedFiles(); let i = index" class="file-chip">
             <mat-icon>insert_drive_file</mat-icon>
             <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
@@ -128,13 +134,26 @@
         <div *ngIf="files.length > 0" class="uploaded-files-list">
           <div *ngFor="let file of files" class="file-item">
             <mat-icon>insert_drive_file</mat-icon>
-            <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+            <a 
+              class="file-name-link" 
+              (click)="viewFile(file); $event.preventDefault()" 
+              [matTooltip]="'Click để xem file trong tab mới'"
+              title="Click để xem file"
+              href="javascript:void(0)">
+              {{ file.fileName }}
+            </a>
             <span class="file-size">({{ formatFileSize(file.fileSize) }})</span>
             <span class="file-date">{{ file.uploadDate ? (file.uploadDate | date:'dd/MM/yyyy') : '-' }}</span>
             <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'" class="action-button">
               <mat-icon>download</mat-icon>
             </button>
-            <button mat-icon-button (click)="deleteFile(file)" [matTooltip]="'Xóa'" color="warn" class="action-button">
+            <button 
+              *ngIf="canDeleteFile(file)" 
+              mat-icon-button 
+              (click)="deleteFile(file)" 
+              [matTooltip]="'Xóa'" 
+              color="warn" 
+              class="action-button">
               <mat-icon>delete</mat-icon>
             </button>
           </div>

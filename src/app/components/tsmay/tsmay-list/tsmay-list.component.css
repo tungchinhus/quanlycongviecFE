@@ -15,6 +15,32 @@ mat-card {
   min-width: 200px;
 }
 
+.phase-filter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+.phase-checkbox {
+  margin: 0;
+}
+
+.column-menu {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.column-menu-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.column-menu-item mat-checkbox {
+  width: 100%;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -57,6 +83,64 @@ mat-card {
   z-index: 1;
   padding: 12px 16px;
   white-space: nowrap;
+}
+
+.column-settings-header {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.column-settings-icon-button {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+}
+
+.column-settings-icon-button mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.actions-header {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  text-align: center;
+  padding: 12px 8px !important;
+}
+
+.actions-cell {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  padding: 8px !important;
+  text-align: center;
+}
+
+.action-menu-button {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+}
+
+.action-menu-button mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.delete-action {
+  color: #f44336 !important;
+}
+
+.delete-action mat-icon {
+  color: #f44336 !important;
 }
 
 .tsmay-table td {

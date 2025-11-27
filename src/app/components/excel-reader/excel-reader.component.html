@@ -18,6 +18,17 @@
           </button>
         </label>
         
+        <div class="phase-selection">
+          <mat-radio-group [(ngModel)]="selectedPhase" class="phase-radio-group">
+            <mat-radio-button value="3" class="phase-radio-button">
+              3 pha
+            </mat-radio-button>
+            <mat-radio-button value="1" class="phase-radio-button">
+              1 pha
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+        
         <button 
           mat-raised-button 
           color="accent" 

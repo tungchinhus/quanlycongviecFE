@@ -24,22 +24,44 @@ const path = require('path');
 // ============================================
 const DEFAULT_API_URL = 'http://localhost:5000/api';
 const ENVIRONMENT_FILE = path.resolve('./src/environments/environment.ts');
+const ENVIRONMENT_PROD_FILE = path.resolve('./src/environments/environment.prod.ts');
 
 // ============================================
 // ĐỌC ENVIRONMENT.TS
 // ============================================
 function readEnvironmentApiUrl() {
+  const results = {
+    dev: null,
+    prod: null
+  };
+  
+  // Đọc environment.ts (development)
   try {
-    const content = fs.readFileSync(ENVIRONMENT_FILE, 'utf8');
-    const match = content.match(/apiUrl:\s*['"]([^'"]+)['"]/);
-    if (match) {
-      return match[1];
+    if (fs.existsSync(ENVIRONMENT_FILE)) {
+      const content = fs.readFileSync(ENVIRONMENT_FILE, 'utf8');
+      const match = content.match(/apiUrl:\s*['"]([^'"]+)['"]/);
+      if (match) {
+        results.dev = match[1];
+      }
     }
-    return null;
   } catch (error) {
     console.log('⚠️  Không thể đọc file environment.ts:', error.message);
-    return null;
   }
+  
+  // Đọc environment.prod.ts (production)
+  try {
+    if (fs.existsSync(ENVIRONMENT_PROD_FILE)) {
+      const content = fs.readFileSync(ENVIRONMENT_PROD_FILE, 'utf8');
+      const match = content.match(/apiUrl:\s*['"]([^'"]+)['"]/);
+      if (match) {
+        results.prod = match[1];
+      }
+    }
+  } catch (error) {
+    console.log('⚠️  Không thể đọc file environment.prod.ts:', error.message);
+  }
+  
+  return results;
 }
 
 // ============================================
@@ -208,18 +230,30 @@ async function checkApiConnection(apiUrl) {
   console.log('📋 CẤU HÌNH');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
-  console.log('📝 Environment.ts:');
-  if (envApiUrl) {
-    console.log(`   ${envApiUrl}`);
+  console.log('📝 Environment Files:');
+  if (envApiUrl.dev) {
+    console.log(`   Development (environment.ts): ${envApiUrl.dev}`);
   } else {
-    console.log('   ⚠️  Không tìm thấy apiUrl trong environment.ts');
+    console.log('   Development: ⚠️  Không tìm thấy');
+  }
+  
+  if (envApiUrl.prod) {
+    console.log(`   Production (environment.prod.ts): ${envApiUrl.prod}`);
+  } else {
+    console.log('   Production: ⚠️  Không tìm thấy');
   }
   
   console.log(`\n🔧 URL được kiểm tra: ${apiUrl}\n`);
   
-  if (envApiUrl && envApiUrl !== apiUrl) {
+  // So sánh với cả dev và prod
+  if (envApiUrl.prod && envApiUrl.prod !== apiUrl) {
+    console.log('⚠️  WARNING: URL khác với environment.prod.ts!');
+    console.log(`   Production config: ${envApiUrl.prod}`);
+    console.log(`   Testing: ${apiUrl}`);
+    console.log('   💡 Nếu đang test production, cần rebuild với: ng build --configuration production\n');
+  } else if (envApiUrl.dev && envApiUrl.dev !== apiUrl && !envApiUrl.prod) {
     console.log('⚠️  WARNING: URL khác với environment.ts!');
-    console.log(`   Environment: ${envApiUrl}`);
+    console.log(`   Development config: ${envApiUrl.dev}`);
     console.log(`   Testing: ${apiUrl}\n`);
   }
   
