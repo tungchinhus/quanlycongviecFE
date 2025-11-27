@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, ViewChild, AfterViewInit, effect } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, AfterViewInit, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -15,12 +15,11 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import * as XLSX from 'xlsx';
 import { AuthService } from '../../services/auth.service';
 import { UserRole } from '../../constants/enums';
-import { TSMayService } from '../../services/tsmay.service';
-import { CreateTSMayRequest } from '../../models/tsmay.model';
+import { ColumnSelectionDialogComponent, ColumnSelectionData } from './column-selection-dialog.component';
 
 interface ExcelData {
   [key: string]: any;
@@ -44,7 +43,6 @@ interface ColumnVisibility {
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
-    MatRadioModule,
     MatMenuModule,
     MatDividerModule,
     MatTooltipModule,
@@ -62,8 +60,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   readonly searchTerm = signal<string>('');
   readonly columnVisibility = signal<ColumnVisibility>({});
   readonly isLoading = signal<boolean>(false);
-  readonly isSaving = signal<boolean>(false);
-  selectedPhase: '1' | '3' = '3'; // '1' cho 1 pha, '3' cho 3 pha (mặc định 3 pha)
   
   // Các cột cố định
   readonly fixedColumns = ['CongSuat', 'SoMay', 'SBB', 'LSX', 'TChuanLSX', 'TBKT', 'Po', 'Io', 'Pk75H1', 'Pk75H2', 'Uk75H1', 'Uk75H2', 'UdmHVH1', 'UdmHVH2', 'UdmLV'];
@@ -90,11 +86,16 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   
   readonly displayedColumns = signal<string[]>(this.defaultVisibleColumns);
   readonly allColumns = signal<string[]>(this.fixedColumns);
+  readonly dynamicColumns = signal<string[]>([]); // Các cột động từ file Excel
   
-  // Computed để thêm cột settings vào cuối
+  // Computed để thêm cột actions và settings vào cuối (actions trước settings)
   readonly displayedColumnsWithSettings = computed(() => {
-    return [...this.displayedColumns(), 'columnSettings'];
+    return [...this.displayedColumns(), 'actions', 'columnSettings'];
   });
+
+  // Selected row for actions
+  selectedRow: ExcelData | null = null;
+  selectedRowIndex: number = -1;
   
   dataSource = new MatTableDataSource<ExcelData>([]);
   readonly pageSize = signal<number>(10);
@@ -133,14 +134,15 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   });
   
   readonly isManager = computed(() => {
-    // Chỉ Administrator mới thấy Excel Reader
-    return this.authService.hasRole(UserRole.Administrator);
+    // Cho phép tất cả user đã login truy cập
+    return this.authService.isAuthenticated();
   });
 
   constructor(
     private authService: AuthService,
     private snackBar: MatSnackBar,
-    private tsMayService: TSMayService
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {
     // Khởi tạo column visibility - chỉ 6 cột đầu hiển thị mặc định
     const visibility: ColumnVisibility = {};
@@ -279,23 +281,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
           throw new Error('Không thể đọc dữ liệu từ sheet');
         }
         
-        // Đọc dữ liệu dạng array of arrays
-        // Cột A (index 0): Công suất
-        // Cột B (index 1): Số Máy
-        // Cột C (index 2): SBB
-        // Cột D (index 3): LSX
-        // Cột E (index 4): T.Chuẩn LSX
-        // Cột F (index 5): TBKT
-        // Cột G (index 6): Po
-        // Cột H (index 7): Io
-        // Cột I (index 8): Pk75(H1)
-        // Cột J (index 9): Pk75(H2)
-        // Cột K (index 10): Uk75(H1)
-        // Cột L (index 11): Uk75(H2)
-        // Cột M (index 12): Uđm HV(H1)
-        // Cột N (index 13): Uđm HV(H2)
-        // Cột O (index 14): Uđm LV
-        // Dữ liệu bắt đầu từ row 4 (index 3)
+        // Đọc dữ liệu dạng array of arrays để lấy tất cả các cột
         const rawData = XLSX.utils.sheet_to_json(worksheet, { 
           raw: false,
           defval: '',
@@ -307,114 +293,96 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
           throw new Error('File Excel không có dữ liệu');
         }
         
-        console.log('Raw data rows:', rawData.length);
-        console.log('First few rows:', rawData.slice(0, 5));
+        // Tên cột nằm ở hàng 2 và 3 (index 1 và 2)
+        // Ưu tiên lấy từ hàng 2, nếu rỗng thì lấy từ hàng 3
+        const row2 = rawData.length > 1 ? rawData[1] : null; // Hàng 2 (index 1)
+        const row3 = rawData.length > 2 ? rawData[2] : null; // Hàng 3 (index 2)
         
-        // Bỏ qua 3 dòng đầu (row 1, 2, 3), bắt đầu từ row 4 (index 3)
-        const dataStartRow = 3; // Row 4 trong Excel = index 3 trong array
-        
-        // Map cột theo vị trí:
-        // Column A (index 0) -> CongSuat
-        // Column B (index 1) -> SoMay
-        // Column C (index 2) -> SBB
-        // Column D (index 3) -> LSX
-        // Column E (index 4) -> TChuanLSX
-        // Column F (index 5) -> TBKT
-        // Column G (index 6) -> Po
-        // Column H (index 7) -> Io
-        // Column I (index 8) -> Pk75H1
-        // Column J (index 9) -> Pk75H2
-        // Column K (index 10) -> Uk75H1
-        // Column L (index 11) -> Uk75H2
-        // Column M (index 12) -> UdmHVH1
-        // Column N (index 13) -> UdmHVH2
-        // Column O (index 14) -> UdmLV
-        const columnMapping: { [key: number]: string } = {
-          0: 'CongSuat',  // Column A
-          1: 'SoMay',     // Column B
-          2: 'SBB',       // Column C
-          3: 'LSX',       // Column D
-          4: 'TChuanLSX', // Column E
-          5: 'TBKT',      // Column F
-          6: 'Po',        // Column G
-          7: 'Io',        // Column H
-          8: 'Pk75H1',    // Column I
-          9: 'Pk75H2',    // Column J
-          10: 'Uk75H1',   // Column K
-          11: 'Uk75H2',   // Column L
-          12: 'UdmHVH1',  // Column M
-          13: 'UdmHVH2',  // Column N
-          14: 'UdmLV'     // Column O
-        };
-        
-        // Convert data rows thành objects (bắt đầu từ row 4)
-        const jsonData = rawData.slice(dataStartRow)
-          .filter(row => {
-            // Chỉ lấy row có ít nhất một cell có dữ liệu trong các cột A-O
-            if (!Array.isArray(row)) return false;
-            return row[0] !== '' && row[0] !== null && row[0] !== undefined ||
-                   row[1] !== '' && row[1] !== null && row[1] !== undefined ||
-                   row[2] !== '' && row[2] !== null && row[2] !== undefined ||
-                   row[3] !== '' && row[3] !== null && row[3] !== undefined ||
-                   row[4] !== '' && row[4] !== null && row[4] !== undefined ||
-                   row[5] !== '' && row[5] !== null && row[5] !== undefined ||
-                   row[6] !== '' && row[6] !== null && row[6] !== undefined ||
-                   row[7] !== '' && row[7] !== null && row[7] !== undefined ||
-                   row[8] !== '' && row[8] !== null && row[8] !== undefined ||
-                   row[9] !== '' && row[9] !== null && row[9] !== undefined ||
-                   row[10] !== '' && row[10] !== null && row[10] !== undefined ||
-                   row[11] !== '' && row[11] !== null && row[11] !== undefined ||
-                   row[12] !== '' && row[12] !== null && row[12] !== undefined ||
-                   row[13] !== '' && row[13] !== null && row[13] !== undefined ||
-                   row[14] !== '' && row[14] !== null && row[14] !== undefined;
-          })
-          .map((row: any[]) => {
-            const obj: ExcelData = {};
-            // Map các cột A-O vào fixed columns
-            Object.keys(columnMapping).forEach(colIndex => {
-              const fixedCol = columnMapping[parseInt(colIndex)];
-              const value = row[parseInt(colIndex)];
-              obj[fixedCol] = value !== undefined && value !== null && value !== '' ? String(value).trim() : '';
-            });
-            return obj;
-          }) as ExcelData[];
-        
-        console.log('Data start row:', dataStartRow);
-        console.log('Column mapping:', columnMapping);
-        console.log('Mapped data rows:', jsonData.length);
-        if (jsonData.length > 0) {
-          console.log('First mapped row:', jsonData[0]);
-        }
-        
-        if (jsonData.length === 0) {
-          this.snackBar.open('File Excel không có dữ liệu từ row 4 trở đi', 'Đóng', {
-            duration: 3000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top'
-          });
-          this.isLoading.set(false);
-          input.value = '';
-          return;
-        }
-        
-        // Dữ liệu đã được map trực tiếp từ cột B-F, không cần map lại
-        this.excelData.set(jsonData);
-        
-        // Effect sẽ tự động cập nhật dataSource
-        // Chỉ cần đảm bảo paginator được gán lại
-        setTimeout(() => {
-          if (this.paginator) {
-            this.dataSource.paginator = this.paginator;
+        // Xác định header row index (ưu tiên hàng 2, nếu không có thì dùng hàng 3)
+        let headerRowIndex = 1; // Mặc định là hàng 2
+        if (!row2 || !Array.isArray(row2) || !row2.some(cell => cell !== '' && cell !== null && cell !== undefined)) {
+          // Nếu hàng 2 rỗng, dùng hàng 3
+          if (row3 && Array.isArray(row3) && row3.some(cell => cell !== '' && cell !== null && cell !== undefined)) {
+            headerRowIndex = 2;
+          } else {
+            throw new Error('Không tìm thấy tên cột ở hàng 2 hoặc 3');
           }
-          this.updateDataSource();
-        }, 100);
+        }
         
-        this.snackBar.open(`Đã đọc ${jsonData.length} dòng dữ liệu từ file "${file.name}"`, 'Đóng', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar']
+        const headerRow = rawData[headerRowIndex];
+        if (!headerRow || !Array.isArray(headerRow)) {
+          throw new Error('Không tìm thấy dòng header');
+        }
+        
+        // Lấy tất cả các cột từ hàng header
+        // Nếu có cả hàng 2 và 3, có thể kết hợp hoặc ưu tiên hàng 2
+        const allColumns: string[] = [];
+        const row2Data = row2 && Array.isArray(row2) ? row2 : [];
+        const row3Data = row3 && Array.isArray(row3) ? row3 : [];
+        
+        // Tìm số cột tối đa
+        const maxCols = Math.max(
+          headerRow.length,
+          row2Data.length,
+          row3Data.length
+        );
+        
+        for (let index = 0; index < maxCols; index++) {
+          // Ưu tiên lấy từ hàng header (hàng 2 hoặc 3 đã được chọn)
+          let columnName = '';
+          const headerCell = headerRow[index];
+          
+          if (headerCell !== null && headerCell !== undefined && headerCell !== '') {
+            columnName = String(headerCell).trim();
+          } else {
+            // Nếu header cell rỗng, thử lấy từ hàng còn lại
+            if (headerRowIndex === 1 && row3Data[index] !== null && row3Data[index] !== undefined && row3Data[index] !== '') {
+              columnName = String(row3Data[index]).trim();
+            } else if (headerRowIndex === 2 && row2Data[index] !== null && row2Data[index] !== undefined && row2Data[index] !== '') {
+              columnName = String(row2Data[index]).trim();
+            }
+          }
+          
+          // Nếu vẫn không có tên, dùng tên mặc định
+          if (!columnName) {
+            columnName = `Cột ${String.fromCharCode(65 + index)}`; // A, B, C, ...
+          }
+          
+          allColumns.push(columnName);
+        }
+        
+        if (allColumns.length === 0) {
+          throw new Error('Không tìm thấy cột nào trong file');
+        }
+        
+        // Lưu danh sách cột
+        this.dynamicColumns.set(allColumns);
+        
+        // Đóng loading và mở dialog chọn cột
+        this.isLoading.set(false);
+        
+        // Mở dialog để chọn cột
+        const dialogRef = this.dialog.open(ColumnSelectionDialogComponent, {
+          width: '600px',
+          maxWidth: '90vw',
+          data: {
+            columns: allColumns,
+            selectedColumns: allColumns // Mặc định chọn tất cả
+          } as ColumnSelectionData
         });
+        
+        dialogRef.afterClosed().subscribe((selectedColumns: string[] | undefined) => {
+          if (!selectedColumns || selectedColumns.length === 0) {
+            // Người dùng hủy hoặc không chọn cột nào
+            input.value = '';
+            return;
+          }
+          
+          // Đọc dữ liệu chỉ từ các cột được chọn
+          this.readDataWithSelectedColumns(rawData, headerRowIndex, allColumns, selectedColumns, file.name);
+          input.value = '';
+        });
+        
       } catch (error) {
         console.error('Error reading Excel file:', error);
         const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
@@ -424,12 +392,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
           verticalPosition: 'top',
           panelClass: ['error-snackbar']
         });
-      } finally {
-        // Đảm bảo luôn set isLoading về false
-        setTimeout(() => {
-          this.isLoading.set(false);
-        }, 100);
-        // Reset input để có thể chọn lại file cùng tên
+        this.isLoading.set(false);
         input.value = '';
       }
     };
@@ -450,6 +413,136 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       reader.readAsText(file, 'UTF-8');
     } else {
       reader.readAsArrayBuffer(file);
+    }
+  }
+
+  /**
+   * Đọc dữ liệu từ Excel với các cột được chọn
+   */
+  private readDataWithSelectedColumns(
+    rawData: any[][],
+    headerRowIndex: number,
+    allColumns: string[],
+    selectedColumns: string[],
+    fileName: string
+  ) {
+    try {
+      this.isLoading.set(true);
+      
+      // Tạo mapping từ tên cột sang index
+      const columnIndexMap: { [key: string]: number } = {};
+      allColumns.forEach((colName, index) => {
+        columnIndexMap[colName] = index;
+      });
+      
+      // Lấy các index của các cột được chọn
+      const selectedColumnIndices = selectedColumns
+        .map(col => columnIndexMap[col])
+        .filter(index => index !== undefined);
+      
+      if (selectedColumnIndices.length === 0) {
+        throw new Error('Không có cột nào được chọn');
+      }
+      
+      // Đọc dữ liệu từ hàng 4 trở đi (sau hàng 2 và 3 chứa tên cột)
+      // Nếu header ở hàng 2 (index 1), data bắt đầu từ hàng 4 (index 3)
+      // Nếu header ở hàng 3 (index 2), data bắt đầu từ hàng 4 (index 3)
+      const dataStartRow = 3; // Luôn bắt đầu từ hàng 4 (index 3)
+      const jsonData = rawData.slice(dataStartRow)
+        .filter(row => {
+          // Chỉ lấy row có ít nhất một cell có dữ liệu trong các cột được chọn
+          if (!Array.isArray(row)) return false;
+          return selectedColumnIndices.some(index => {
+            const value = row[index];
+            return value !== '' && value !== null && value !== undefined;
+          });
+        })
+        .map((row: any[]) => {
+          const obj: ExcelData = {};
+          // Chỉ lấy các cột được chọn
+          selectedColumns.forEach(colName => {
+            const colIndex = columnIndexMap[colName];
+            if (colIndex !== undefined) {
+              const value = row[colIndex];
+              obj[colName] = value !== undefined && value !== null && value !== '' 
+                ? String(value).trim() 
+                : '';
+            }
+          });
+          return obj;
+        }) as ExcelData[];
+      
+      if (jsonData.length === 0) {
+        this.snackBar.open('File Excel không có dữ liệu sau dòng header', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+        this.isLoading.set(false);
+        return;
+      }
+      
+      // Cập nhật columnLabels trước
+      selectedColumns.forEach(col => {
+        if (!this.columnLabels[col]) {
+          this.columnLabels[col] = col;
+        }
+      });
+      
+      // Cập nhật column visibility
+      const visibility: ColumnVisibility = {};
+      selectedColumns.forEach(col => {
+        visibility[col] = true; // Mặc định hiển thị tất cả các cột được chọn
+      });
+      this.columnVisibility.set(visibility);
+      
+      // Cập nhật allColumns và displayedColumns - phải set trước khi set data
+      // Tạo một array mới để trigger change detection
+      this.allColumns.set([...selectedColumns]);
+      this.displayedColumns.set([...selectedColumns]);
+      
+      // Force change detection để Angular render các cột mới
+      this.cdr.detectChanges();
+      
+      // Đợi một chút để Angular render các cột mới
+      setTimeout(() => {
+        // Cập nhật dữ liệu - effect sẽ tự động cập nhật dataSource
+        this.excelData.set(jsonData);
+        
+        // Force change detection lại sau khi set data
+        this.cdr.detectChanges();
+        
+        // Đảm bảo paginator được cập nhật sau khi data thay đổi
+        setTimeout(() => {
+          if (this.paginator) {
+            this.dataSource.paginator = this.paginator;
+          }
+          this.pageIndex.set(0);
+          if (this.paginator) {
+            this.paginator.firstPage();
+          }
+          this.isLoading.set(false);
+          this.cdr.detectChanges();
+        }, 100);
+      }, 50);
+      
+      this.snackBar.open(`Đã đọc ${jsonData.length} dòng dữ liệu từ ${selectedColumns.length} cột trong file "${fileName}"`, 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['success-snackbar']
+      });
+      
+    } catch (error) {
+      console.error('Error reading data with selected columns:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      this.snackBar.open(`Lỗi khi đọc dữ liệu: ${errorMessage}`, 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      this.isLoading.set(false);
     }
   }
 
@@ -674,16 +767,18 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
 
   showAllColumns() {
     const visibility: ColumnVisibility = {};
-    this.fixedColumns.forEach(col => {
+    const allCols = this.allColumns();
+    allCols.forEach(col => {
       visibility[col] = true;
     });
     this.columnVisibility.set(visibility);
-    this.displayedColumns.set([...this.fixedColumns]);
+    this.displayedColumns.set([...allCols]);
   }
 
   hideAllColumns() {
     const visibility: ColumnVisibility = {};
-    this.fixedColumns.forEach(col => {
+    const allCols = this.allColumns();
+    allCols.forEach(col => {
       visibility[col] = false;
     });
     this.columnVisibility.set(visibility);
@@ -692,6 +787,92 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
 
   getColumnLabel(column: string): string {
     return this.columnLabels[column] || column;
+  }
+
+  trackByColumn(index: number, column: string): string {
+    return column;
+  }
+
+  setSelectedRow(row: ExcelData, rowIndex: number) {
+    this.selectedRow = row;
+    this.selectedRowIndex = rowIndex;
+  }
+
+  viewRow() {
+    if (!this.selectedRow) return;
+    
+    // Hiển thị thông tin chi tiết của dòng
+    const rowData = this.selectedRow;
+    const columns = this.allColumns();
+    let message = 'Thông tin chi tiết:\n\n';
+    
+    columns.forEach(col => {
+      const value = rowData[col];
+      const label = this.getColumnLabel(col);
+      message += `${label}: ${this.formatCellValue(value)}\n`;
+    });
+    
+    // Có thể mở dialog để hiển thị chi tiết
+    alert(message);
+    
+    // Hoặc có thể mở dialog component để hiển thị đẹp hơn
+    // this.dialog.open(RowDetailDialogComponent, { data: { row: this.selectedRow, columns: columns } });
+  }
+
+  editRow() {
+    if (!this.selectedRow) return;
+    
+    // Hiển thị thông báo hoặc mở dialog chỉnh sửa
+    this.snackBar.open('Chức năng chỉnh sửa đang được phát triển', 'Đóng', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top'
+    });
+    
+    // Có thể mở dialog để chỉnh sửa
+    // this.dialog.open(EditRowDialogComponent, { data: { row: this.selectedRow, columns: this.allColumns() } });
+  }
+
+  deleteRow() {
+    if (!this.selectedRow) return;
+    
+    // Xác nhận trước khi xóa
+    const confirmed = confirm('Bạn có chắc chắn muốn xóa dòng này?');
+    if (!confirmed) return;
+    
+    // Tìm index thực tế trong excelData (không phải trong filteredData)
+    const currentData = this.excelData();
+    const rowIndex = currentData.findIndex(row => {
+      // So sánh tất cả các giá trị để tìm đúng dòng
+      return Object.keys(this.selectedRow!).every(key => {
+        return row[key] === this.selectedRow![key];
+      });
+    });
+    
+    if (rowIndex === -1) {
+      this.snackBar.open('Không tìm thấy dòng cần xóa', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    
+    // Xóa dòng khỏi data
+    const filteredData = currentData.filter((_, index) => index !== rowIndex);
+    this.excelData.set(filteredData);
+    
+    // Reset selected row
+    this.selectedRow = null;
+    this.selectedRowIndex = -1;
+    
+    this.snackBar.open('Đã xóa dòng thành công', 'Đóng', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: ['success-snackbar']
+    });
   }
 
   onSearchChange(value: string) {
@@ -705,7 +886,9 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
 
   clearData() {
     this.excelData.set([]);
+    this.dynamicColumns.set([]);
     this.displayedColumns.set([...this.defaultVisibleColumns]);
+    this.allColumns.set([...this.fixedColumns]);
     // Reset visibility về mặc định (6 cột đầu)
     const visibility: ColumnVisibility = {};
     this.fixedColumns.forEach(col => {
@@ -749,131 +932,5 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
     return `${start} - ${end}`;
   });
 
-  /**
-   * Chuyển đổi ExcelData sang CreateTSMayRequest
-   */
-  private mapExcelDataToTSMayRequest(data: ExcelData): CreateTSMayRequest {
-    // Helper function để parse số hoặc trả về null
-    const parseNumber = (value: any): number | null => {
-      if (value === null || value === undefined || value === '') return null;
-      const parsed = parseInt(String(value));
-      return isNaN(parsed) ? null : parsed;
-    };
-
-    // Helper function để lấy string hoặc null
-    const getStringOrNull = (value: any): string | null => {
-      if (value === null || value === undefined || value === '') return null;
-      const str = String(value).trim();
-      return str === '' ? null : str;
-    };
-
-    return {
-      congSuat: parseNumber(data['CongSuat']),
-      soMay: getStringOrNull(data['SoMay']),
-      sbb: getStringOrNull(data['SBB']),
-      lsx: getStringOrNull(data['LSX']),
-      tChuanLSX: getStringOrNull(data['TChuanLSX']),
-      tbkt: getStringOrNull(data['TBKT']),
-      po: getStringOrNull(data['Po']),
-      io: getStringOrNull(data['Io']),
-      pk75H1: getStringOrNull(data['Pk75H1']),
-      pk75H2: getStringOrNull(data['Pk75H2']),
-      uk75H1: getStringOrNull(data['Uk75H1']),
-      uk75H2: getStringOrNull(data['Uk75H2']),
-      udmHVH1: getStringOrNull(data['UdmHVH1']),
-      udmHVH2: getStringOrNull(data['UdmHVH2']),
-      udmLV: getStringOrNull(data['UdmLV']),
-      phase: this.selectedPhase // '1' cho 1 pha, '3' cho 3 pha
-    };
-  }
-
-  /**
-   * Lưu dữ liệu vào database
-   */
-  async saveToDatabase() {
-    const data = this.excelData();
-    
-    if (data.length === 0) {
-      this.snackBar.open('Không có dữ liệu để lưu', 'Đóng', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'top',
-        panelClass: ['error-snackbar']
-      });
-      return;
-    }
-
-    // Xác nhận trước khi lưu
-    const phaseLabel = this.selectedPhase === '1' ? '1 pha' : '3 pha';
-    const confirmed = confirm(`Bạn có chắc chắn muốn lưu ${data.length} dòng dữ liệu vào database (${phaseLabel})?`);
-    if (!confirmed) {
-      return;
-    }
-
-    this.isSaving.set(true);
-
-    try {
-      // Map dữ liệu Excel sang format API
-      const items: CreateTSMayRequest[] = data.map(row => this.mapExcelDataToTSMayRequest(row));
-
-      // Gọi API bulk create
-      this.tsMayService.bulkCreate({ items }).subscribe({
-        next: (response) => {
-          this.isSaving.set(false);
-          
-          if (response.success) {
-            this.snackBar.open(
-              `Đã lưu thành công ${response.created}/${response.total} dòng vào database`,
-              'Đóng',
-              {
-                duration: 5000,
-                horizontalPosition: 'center',
-                verticalPosition: 'top',
-                panelClass: ['success-snackbar']
-              }
-            );
-          } else {
-            let message = `Đã lưu ${response.created}/${response.total} dòng. `;
-            if (response.failed > 0) {
-              message += `${response.failed} dòng thất bại.`;
-            }
-            
-            this.snackBar.open(message, 'Đóng', {
-              duration: 5000,
-              horizontalPosition: 'center',
-              verticalPosition: 'top',
-              panelClass: ['warning-snackbar']
-            });
-
-            // Log errors nếu có
-            if (response.errors && response.errors.length > 0) {
-              console.error('Lỗi khi lưu dữ liệu:', response.errors);
-            }
-          }
-        },
-        error: (error) => {
-          this.isSaving.set(false);
-          console.error('Error saving to database:', error);
-          
-          const errorMessage = error.error?.message || error.message || 'Lỗi không xác định';
-          this.snackBar.open(`Lỗi khi lưu dữ liệu: ${errorMessage}`, 'Đóng', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
-        }
-      });
-    } catch (error) {
-      this.isSaving.set(false);
-      console.error('Error preparing data:', error);
-      this.snackBar.open('Lỗi khi chuẩn bị dữ liệu', 'Đóng', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'top',
-        panelClass: ['error-snackbar']
-      });
-    }
-  }
 }
 

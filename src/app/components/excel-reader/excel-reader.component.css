@@ -5,6 +5,32 @@
   box-sizing: border-box;
 }
 
+/* Styling cho card header và title */
+.excel-reader-container mat-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.excel-reader-container mat-card-header {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  padding: 20px 24px;
+  margin: -16px -16px 24px -16px;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.excel-reader-container mat-card-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.excel-reader-container mat-card-content {
+  padding-top: 0;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -141,6 +167,51 @@
   width: 20px;
   height: 20px;
   color: #666;
+}
+
+.actions-header {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: visible;
+  padding: 12px 8px !important;
+}
+
+.actions-cell {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  text-align: center;
+  padding: 8px !important;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.actions-cell button {
+  color: #666;
+}
+
+.actions-cell button:hover {
+  color: #1976d2;
+}
+
+.action-menu {
+  min-width: 180px;
+}
+
+.action-menu button mat-icon {
+  margin-right: 8px;
+}
+
+.delete-action {
+  color: #f44336 !important;
+}
+
+.delete-action mat-icon {
+  color: #f44336 !important;
 }
 
 .excel-table tr:hover {

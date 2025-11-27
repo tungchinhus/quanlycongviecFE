@@ -133,7 +133,7 @@
           </a>
           <a [routerLink]="hasAdminRole() ? '/excel-reader' : null"
              [routerLinkActive]="hasAdminRole() ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Đọc File Excel' : ''"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Tra Cứu Thông Số MBA' : ''"
              matTooltipPosition="right"
              [class.disabled]="!hasAdminRole()"
              [class.nav-item]="true"
@@ -141,7 +141,7 @@
             <div class="nav-icon">
               <mat-icon>table_chart</mat-icon>
             </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Đọc Excel</span>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tra Cứu Thông Số MBA</span>
           </a>
           <a [routerLink]="hasAdminRole() ? '/users' : null"
              [routerLinkActive]="hasAdminRole() ? 'active' : ''"
