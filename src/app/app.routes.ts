@@ -69,8 +69,7 @@ export const routes: Routes = [
   {
     path: 'excel-reader',
     loadComponent: () => import('./components/excel-reader/excel-reader.component').then(m => m.ExcelReaderComponent),
-    canActivate: [authGuard, roleGuard],
-    data: { roles: [UserRole.Administrator] }
+    canActivate: [authGuard]
   },
   {
     path: 'tsmay',
