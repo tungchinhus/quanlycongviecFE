@@ -62,6 +62,10 @@ export class WorkItemDialogComponent implements OnInit {
   readonly selectedFiles = signal<File[]>([]);
   readonly isUploading = signal<boolean>(false);
   files: FileDocument[] = [];
+  
+  // Lưu giá trị ban đầu để so sánh thay đổi
+  private initialFormValues: any = null;
+  private hasChanges = signal<boolean>(false);
 
   // Mapping workType sang tiếng Việt
   private workTypeMap: { [key: string]: string } = {
@@ -106,20 +110,67 @@ export class WorkItemDialogComponent implements OnInit {
   ngOnInit() {
     if (this.workItem) {
       // Populate form với data từ workItem
-      this.workItemForm.patchValue({
+      const formValues = {
         workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
         startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
         expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
         actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
         personConfirmation: this.workItem.personConfirmation || false,
         notes: this.workItem.notes || ''
-      });
+      };
+      
+      this.workItemForm.patchValue(formValues);
+      
+      // Lưu giá trị ban đầu để so sánh thay đổi
+      this.initialFormValues = this.getFormValuesForComparison(formValues);
 
       // Load files nếu có assignmentID
       if (this.workItem.assignmentID) {
         this.loadFiles();
       }
     }
+    
+    // Subscribe vào form changes để detect thay đổi
+    this.workItemForm.valueChanges.subscribe(() => {
+      this.checkForChanges();
+    });
+  }
+  
+  // Helper method để normalize giá trị form để so sánh
+  private getFormValuesForComparison(values: any): any {
+    return {
+      startDate: values.startDate ? new Date(values.startDate).toISOString().split('T')[0] : null,
+      expectedFinish: values.expectedFinish ? new Date(values.expectedFinish).toISOString().split('T')[0] : null,
+      actualFinish: values.actualFinish ? new Date(values.actualFinish).toISOString().split('T')[0] : null,
+      personConfirmation: values.personConfirmation || false,
+      notes: (values.notes || '').trim()
+    };
+  }
+  
+  // Kiểm tra xem có thay đổi không
+  private checkForChanges(): void {
+    if (!this.initialFormValues) {
+      // Nếu chưa có initial values (create mode), enable nút nếu form valid
+      this.hasChanges.set(this.workItemForm.valid);
+      return;
+    }
+    
+    const currentValues = this.workItemForm.getRawValue();
+    const currentForComparison = this.getFormValuesForComparison(currentValues);
+    
+    // So sánh từng field
+    const hasFormChanges = 
+      currentForComparison.startDate !== this.initialFormValues.startDate ||
+      currentForComparison.expectedFinish !== this.initialFormValues.expectedFinish ||
+      currentForComparison.actualFinish !== this.initialFormValues.actualFinish ||
+      currentForComparison.personConfirmation !== this.initialFormValues.personConfirmation ||
+      currentForComparison.notes !== this.initialFormValues.notes;
+    
+    // Có file mới được chọn
+    const hasNewFiles = this.selectedFiles().length > 0;
+    
+    // Có thay đổi nếu form thay đổi hoặc có file mới
+    this.hasChanges.set(hasFormChanges || hasNewFiles);
   }
 
   getWorkTypeDisplayName(workType: string): string {
@@ -159,6 +210,8 @@ export class WorkItemDialogComponent implements OnInit {
       // Reset input để có thể chọn lại file giống nhau
       input.value = '';
       // Không tự động upload, chỉ upload khi bấm Lưu
+      // Check changes sau khi thêm file
+      this.checkForChanges();
     }
   }
 
@@ -166,6 +219,8 @@ export class WorkItemDialogComponent implements OnInit {
     const files = this.selectedFiles();
     files.splice(index, 1);
     this.selectedFiles.set([...files]);
+    // Check changes sau khi xóa file
+    this.checkForChanges();
   }
 
   formatFileSize(bytes: number): string {
@@ -431,18 +486,16 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   canSave(): boolean {
-    const formValue = this.workItemForm.getRawValue();
-    // Nút Lưu chỉ sáng khi có đủ:
-    // 1. Ngày bắt đầu
-    // 2. Ngày dự kiến
-    // 3. Hoàn thành thực tế
-    // 4. File upload mới
-    return !!(
-      formValue.startDate &&
-      formValue.expectedFinish &&
-      formValue.actualFinish &&
-      this.selectedFiles().length > 0
-    );
+    // Nếu là create mode, check form valid
+    if (this.mode === 'create') {
+      return this.workItemForm.valid;
+    }
+    
+    // Nếu là edit mode, check có thay đổi
+    // Nút Lưu sáng khi:
+    // 1. Form valid VÀ có thay đổi so với giá trị ban đầu
+    // 2. Hoặc có file mới được chọn
+    return this.workItemForm.valid && this.hasChanges();
   }
 
   canDeleteFile(file: FileDocument): boolean {

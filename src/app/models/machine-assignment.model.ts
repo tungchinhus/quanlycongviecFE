@@ -69,3 +69,28 @@ export interface WorkItemWithAssignment extends WorkItem {
   assignment?: MachineAssignment;
 }
 
+/**
+ * DTO để tạo Work Item mới cho Assignment
+ * Endpoint: POST /api/Assignments/{id}/work-items
+ * 
+ * @see https://api-docs/assignments/work-items
+ */
+export interface CreateWorkItemDto {
+  /** ID của Assignment (bắt buộc, phải khớp với {id} trong URL) */
+  assignmentID: number;
+  /** Loại công việc (ví dụ: "Core Design", "Core Review", "Casing Design", etc.) - Max 100 chars */
+  workType?: string | null;
+  /** Tên người thực hiện (có thể là UserID dạng string, FullName, hoặc UserName) - Max 100 chars */
+  personName?: string | null;
+  /** Ngày bắt đầu (ISO 8601 format) */
+  startDate?: string | Date | null;
+  /** Ngày dự kiến hoàn thành (ISO 8601 format) */
+  expectedFinish?: string | Date | null;
+  /** Ngày thực tế hoàn thành (ISO 8601 format) */
+  actualFinish?: string | Date | null;
+  /** Xác nhận của người thực hiện */
+  personConfirmation?: boolean | null;
+  /** Ghi chú về công việc - Max 500 chars */
+  notes?: string | null;
+}
+

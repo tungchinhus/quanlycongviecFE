@@ -15,6 +15,8 @@ import { AssignmentService } from '../../../services/assignment.service';
 import { WorkItemWithAssignment } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
 import { WorkItemDialogComponent } from '../work-item-dialog/work-item-dialog.component';
+import { WorkItemService } from '../../../services/work-item.service';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-work-item-list',
@@ -45,7 +47,8 @@ export class WorkItemListComponent implements OnInit {
     private assignmentService: AssignmentService,
     private authService: AuthService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private workItemService: WorkItemService
   ) {}
 
   ngOnInit() {
@@ -116,6 +119,56 @@ export class WorkItemListComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadWorkItems();
+      }
+    });
+  }
+
+  completeWorkItem(item: WorkItemWithAssignment) {
+    // Hiển thị confirm dialog
+    const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Xác nhận hoàn thành',
+        message: 'Bạn có chắc chắn muốn đánh dấu công việc này là đã hoàn thành?',
+        confirmText: 'Hoàn thành',
+        cancelText: 'Hủy'
+      }
+    });
+
+    confirmDialog.afterClosed().subscribe(result => {
+      if (result) {
+        // Cập nhật work item: set actualFinish = today, personConfirmation = true
+        const today = new Date();
+        const updateData = {
+          actualFinish: today.toISOString(),
+          personConfirmation: true
+        };
+
+        this.workItemService.updateWorkItem(item.workItemID, updateData).subscribe({
+          next: () => {
+            this.snackBar.open('Đã đánh dấu công việc là hoàn thành!', 'Đóng', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top'
+            });
+            this.loadWorkItems(); // Reload danh sách
+          },
+          error: (err) => {
+            console.error('Error completing work item:', err);
+            let errorMessage = 'Lỗi khi cập nhật công việc. ';
+            if (err.error?.message) {
+              errorMessage += err.error.message;
+            } else {
+              errorMessage += 'Vui lòng thử lại sau.';
+            }
+            this.snackBar.open(errorMessage, 'Đóng', {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
       }
     });
   }

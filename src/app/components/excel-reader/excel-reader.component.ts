@@ -315,7 +315,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         }
         
         // Lấy tất cả các cột từ hàng header
-        // Nếu có cả hàng 2 và 3, có thể kết hợp hoặc ưu tiên hàng 2
+        // Kết hợp header chính (hàng 3) với sub-header (hàng 2)
         const allColumns: string[] = [];
         const row2Data = row2 && Array.isArray(row2) ? row2 : [];
         const row3Data = row3 && Array.isArray(row3) ? row3 : [];
@@ -327,24 +327,50 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
           row3Data.length
         );
         
+        // Map để lưu header chính cho mỗi cột (xử lý merged cells) - lấy từ hàng 3
+        const mainHeaderMap: string[] = [];
+        let currentMainHeader = '';
+        
+        // Đầu tiên, xây dựng map header chính từ hàng 3
         for (let index = 0; index < maxCols; index++) {
-          // Ưu tiên lấy từ hàng header (hàng 2 hoặc 3 đã được chọn)
-          let columnName = '';
-          const headerCell = headerRow[index];
+          const row3Cell = index < row3Data.length ? row3Data[index] : null;
+          if (row3Cell !== null && row3Cell !== undefined && row3Cell !== '') {
+            currentMainHeader = String(row3Cell).trim();
+          }
+          // Nếu cell rỗng, giữ nguyên header trước đó (merged cells)
+          mainHeaderMap[index] = currentMainHeader;
+        }
+        
+        for (let index = 0; index < maxCols; index++) {
+          // Lấy sub-header từ hàng 2
+          let subHeader = '';
+          const subHeaderCell = index < row2Data.length ? row2Data[index] : null;
           
-          if (headerCell !== null && headerCell !== undefined && headerCell !== '') {
-            columnName = String(headerCell).trim();
-          } else {
-            // Nếu header cell rỗng, thử lấy từ hàng còn lại
-            if (headerRowIndex === 1 && row3Data[index] !== null && row3Data[index] !== undefined && row3Data[index] !== '') {
-              columnName = String(row3Data[index]).trim();
-            } else if (headerRowIndex === 2 && row2Data[index] !== null && row2Data[index] !== undefined && row2Data[index] !== '') {
-              columnName = String(row2Data[index]).trim();
-            }
+          if (subHeaderCell !== null && subHeaderCell !== undefined && subHeaderCell !== '') {
+            subHeader = String(subHeaderCell).trim();
           }
           
-          // Nếu vẫn không có tên, dùng tên mặc định
-          if (!columnName) {
+          // Lấy header chính từ map (hàng 3)
+          const mainHeader = mainHeaderMap[index] || '';
+          
+          // Tạo tên cột: kết hợp header chính với sub-header (format: mainHeader_subHeader)
+          let columnName = '';
+          
+          if (mainHeader) {
+            // Nếu có header chính, luôn ưu tiên kết hợp với sub-header
+            if (subHeader) {
+              // Làm sạch header chính: loại bỏ khoảng trắng thừa, giữ lại dấu ngoặc và ký tự đặc biệt
+              const cleanMainHeader = mainHeader.trim().replace(/\s+/g, '');
+              columnName = `${subHeader}_${cleanMainHeader}`;
+            } else {
+              // Nếu không có sub-header nhưng có header chính, dùng header chính
+              columnName = mainHeader.trim();
+            }
+          } else if (subHeader) {
+            // Nếu không có header chính nhưng có sub-header, chỉ dùng sub-header
+            columnName = subHeader;
+          } else {
+            // Nếu không có cả hai, dùng tên mặc định
             columnName = `Cột ${String.fromCharCode(65 + index)}`; // A, B, C, ...
           }
           
@@ -485,7 +511,15 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       // Cập nhật columnLabels trước
       selectedColumns.forEach(col => {
         if (!this.columnLabels[col]) {
-          this.columnLabels[col] = col;
+          // Nếu cột có suffix "TH" kèm số (TH1, TH2, ...), giữ nguyên format
+          const thMatch = col.match(/^(.+?)\s+TH(\d+)$/);
+          if (thMatch) {
+            const originalName = thMatch[1];
+            const thNumber = thMatch[2];
+            this.columnLabels[col] = `${originalName} TH${thNumber}`;
+          } else {
+            this.columnLabels[col] = col;
+          }
         }
       });
       
