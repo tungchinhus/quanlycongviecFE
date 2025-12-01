@@ -18,6 +18,17 @@
           </button>
         </label>
         
+        <button 
+          mat-raised-button 
+          color="accent" 
+          type="button"
+          (click)="exportToExcel()"
+          [disabled]="excelData().length === 0 || displayedColumns().length === 0"
+          class="export-button">
+          <mat-icon>download</mat-icon>
+          Xuất thống kê
+        </button>
+        
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Tìm kiếm</mat-label>
           <input 
@@ -118,6 +129,17 @@
               </button>
             </td>
           </ng-container>
+
+          <!-- Parent Header Row for Pk75 (W) -->
+          <tr class="parent-header-row">
+            <ng-container *ngFor="let col of displayedColumnsWithSettings(); let i = index">
+              <th *ngIf="getParentHeaderColspan(col) > 0" 
+                  [attr.colspan]="getParentHeaderColspan(col)"
+                  [class.merged-header]="isMergedHeader(col)">
+                {{ getParentHeaderLabel(col) }}
+              </th>
+            </ng-container>
+          </tr>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumnsWithSettings()"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsWithSettings();"></tr>

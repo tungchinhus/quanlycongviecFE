@@ -254,15 +254,85 @@ export class TSMayListComponent implements OnInit, AfterViewInit, OnDestroy {
       'tbkt': 'TBKT',
       'po': 'Po',
       'io': 'Io',
-      'pk75H1': 'Pk75(H1)',
-      'pk75H2': 'Pk75(H2)',
-      'uk75H1': 'Uk75(H1)',
-      'uk75H2': 'Uk75(H2)',
-      'udmHVH1': 'Uđm HV(H1)',
-      'udmHVH2': 'Uđm HV(H2)',
+      'pk75H1': 'Pk75 (W)_H1',
+      'pk75H2': 'Pk75 (W)_H2',
+      'uk75H1': 'Uk75 (%)_H1',
+      'uk75H2': 'Uk75 (%)_H2',
+      'udmHVH1': 'Uđm HV_H1',
+      'udmHVH2': 'Uđm HV_H2',
       'udmLV': 'Uđm LV'
     };
     return labels[column] || column;
+  }
+
+  getParentHeaderLabel(column: string): string {
+    // Nhóm Pk75 (W)
+    if (column === 'pk75H1') {
+      return 'Pk75 (W)';
+    }
+    
+    // Nhóm Uk75 (%)
+    if (column === 'uk75H1') {
+      return 'Uk75 (%)';
+    }
+    
+    // Nhóm Uđm HV
+    if (column === 'udmHVH1') {
+      return 'Uđm HV';
+    }
+    
+    // Các cột khác không có parent header
+    return '';
+  }
+
+  getParentHeaderColspan(column: string): number {
+    const columns = this.displayedColumnsWithSettings();
+    
+    // Nhóm Pk75 (W)
+    if (column === 'pk75H1') {
+      const pk75H1Index = columns.indexOf('pk75H1');
+      const pk75H2Index = columns.indexOf('pk75H2');
+      if (pk75H1Index !== -1 && pk75H2Index === pk75H1Index + 1) {
+        return 2;
+      }
+      return 1;
+    }
+    if (column === 'pk75H2') {
+      return 0;
+    }
+    
+    // Nhóm Uk75 (%)
+    if (column === 'uk75H1') {
+      const uk75H1Index = columns.indexOf('uk75H1');
+      const uk75H2Index = columns.indexOf('uk75H2');
+      if (uk75H1Index !== -1 && uk75H2Index === uk75H1Index + 1) {
+        return 2;
+      }
+      return 1;
+    }
+    if (column === 'uk75H2') {
+      return 0;
+    }
+    
+    // Nhóm Uđm HV
+    if (column === 'udmHVH1') {
+      const udmHVH1Index = columns.indexOf('udmHVH1');
+      const udmHVH2Index = columns.indexOf('udmHVH2');
+      if (udmHVH1Index !== -1 && udmHVH2Index === udmHVH1Index + 1) {
+        return 2;
+      }
+      return 1;
+    }
+    if (column === 'udmHVH2') {
+      return 0;
+    }
+    
+    // Các cột khác colspan = 1
+    return 1;
+  }
+
+  isMergedHeader(column: string): boolean {
+    return column === 'pk75H1' || column === 'uk75H1' || column === 'udmHVH1';
   }
 
   toggleColumnVisibility(column: string) {

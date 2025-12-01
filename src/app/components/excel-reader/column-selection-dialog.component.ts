@@ -11,6 +11,7 @@ import { MatDividerModule } from '@angular/material/divider';
 
 export interface ColumnSelectionData {
   columns: string[];
+  formattedColumns?: string[]; // Tên cột đã format để hiển thị
   selectedColumns: string[];
 }
 
@@ -67,12 +68,12 @@ export interface ColumnSelectionData {
 
         <div class="columns-list">
           <div 
-            *ngFor="let column of filteredColumns" 
+            *ngFor="let column of filteredColumns; let i = index" 
             class="column-item">
             <mat-checkbox
               [(ngModel)]="selectedColumnsMap[column]"
               (change)="updateSelectedColumns()">
-              {{ column }}
+              {{ getColumnDisplayName(column, i) }}
             </mat-checkbox>
           </div>
         </div>
@@ -217,6 +218,15 @@ export class ColumnSelectionDialogComponent {
     this.selectedColumns = this.data.columns.filter(
       col => this.selectedColumnsMap[col]
     );
+  }
+
+  getColumnDisplayName(column: string, index: number): string {
+    // Nếu có formattedColumns, sử dụng nó
+    if (this.data.formattedColumns && this.data.formattedColumns[index]) {
+      return this.data.formattedColumns[index];
+    }
+    // Nếu không, trả về tên cột gốc
+    return column;
   }
 
   onConfirm() {

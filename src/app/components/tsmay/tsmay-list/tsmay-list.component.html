@@ -129,37 +129,37 @@
 
           <!-- Pk75(H1) Column -->
           <ng-container matColumnDef="pk75H1">
-            <th mat-header-cell *matHeaderCellDef>Pk75(H1)</th>
+            <th mat-header-cell *matHeaderCellDef>Pk75 (W)_H1</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.pk75H1) }}</td>
           </ng-container>
 
           <!-- Pk75(H2) Column -->
           <ng-container matColumnDef="pk75H2">
-            <th mat-header-cell *matHeaderCellDef>Pk75(H2)</th>
+            <th mat-header-cell *matHeaderCellDef>Pk75 (W)_H2</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.pk75H2) }}</td>
           </ng-container>
 
           <!-- Uk75(H1) Column -->
           <ng-container matColumnDef="uk75H1">
-            <th mat-header-cell *matHeaderCellDef>Uk75(H1)</th>
+            <th mat-header-cell *matHeaderCellDef>Uk75 (%)_H1</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.uk75H1) }}</td>
           </ng-container>
 
           <!-- Uk75(H2) Column -->
           <ng-container matColumnDef="uk75H2">
-            <th mat-header-cell *matHeaderCellDef>Uk75(H2)</th>
+            <th mat-header-cell *matHeaderCellDef>Uk75 (%)_H2</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.uk75H2) }}</td>
           </ng-container>
 
           <!-- Uđm HV(H1) Column -->
           <ng-container matColumnDef="udmHVH1">
-            <th mat-header-cell *matHeaderCellDef>Uđm HV(H1)</th>
+            <th mat-header-cell *matHeaderCellDef>Uđm HV_H1</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmHVH1) }}</td>
           </ng-container>
 
           <!-- Uđm HV(H2) Column -->
           <ng-container matColumnDef="udmHVH2">
-            <th mat-header-cell *matHeaderCellDef>Uđm HV(H2)</th>
+            <th mat-header-cell *matHeaderCellDef>Uđm HV_H2</th>
             <td mat-cell *matCellDef="let row">{{ formatCellValue(row.udmHVH2) }}</td>
           </ng-container>
 
@@ -212,6 +212,17 @@
             <td mat-cell *matCellDef="let row"></td>
           </ng-container>
 
+          <!-- Parent Header Row for Pk75 (W) -->
+          <tr class="parent-header-row">
+            <ng-container *ngFor="let col of displayedColumnsWithSettings(); let i = index">
+              <th *ngIf="getParentHeaderColspan(col) > 0" 
+                  [attr.colspan]="getParentHeaderColspan(col)"
+                  [class.merged-header]="isMergedHeader(col)">
+                {{ getParentHeaderLabel(col) }}
+              </th>
+            </ng-container>
+          </tr>
+          
           <tr mat-header-row *matHeaderRowDef="displayedColumnsWithSettings()"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsWithSettings();"></tr>
           
