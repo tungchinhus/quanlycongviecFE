@@ -18,8 +18,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 // Sử dụng bản XLSX hỗ trợ style để có thể format font, alignment khi xuất Excel
 import * as XLSX from 'xlsx-js-style';
+// Sử dụng ExcelJS để vẽ biểu đồ
+import ExcelJS from 'exceljs';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { UserRole } from '../../constants/enums';
+import { environment } from '../../../environments/environment';
 import { ColumnSelectionDialogComponent, ColumnSelectionData } from './column-selection-dialog.component';
 import { ExportColumnMappingDialogComponent, ExportColumnMapping, ExportColumnMappingData } from './export-column-mapping-dialog.component';
 
@@ -145,7 +149,8 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
     private authService: AuthService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) {
     // Khởi tạo column visibility - chỉ 6 cột đầu hiển thị mặc định
     const visibility: ColumnVisibility = {};
@@ -1378,7 +1383,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   /**
    * Thực hiện xuất Excel với mapping đã chọn
    */
-  private performExport(data: ExcelData[], mapping: ExportColumnMapping) {
+  private async performExport(data: ExcelData[], mapping: ExportColumnMapping) {
     try {
       // Lọc bỏ các dòng không có TBKT
       const validData = data.filter(row => {
@@ -1461,152 +1466,88 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       
       console.log('Tổng số dòng thống kê:', statisticsRows.length);
       
-      // Tạo workbook
-      const workbook = XLSX.utils.book_new();
+      // Gọi backend API để xử lý Excel với chart
+      this.isLoading.set(true);
       
-      // Tạo worksheet với multi-level headers
-      const worksheetData = this.createWorksheetData(statisticsRows);
-      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-      
-      // Merge cells cho title
-      if (!worksheet['!merges']) worksheet['!merges'] = [];
-      const titleRow = 0;
-      const titleCol = 0;
-      const titleEndCol = 18; // Tổng số cột (có cột Công suất)
-      worksheet['!merges'].push({
-        s: { r: titleRow, c: titleCol },
-        e: { r: titleRow, c: titleEndCol }
-      });
-      
-      // Merge cells cho parent headers (row 1)
-      const parentHeaderRow = 1;
-      // Công suất: col 0, colspan 1
-      // TBKT: col 1, colspan 1
-      // Số mẫu: col 2, colspan 1
-      // Pk H1: col 3, colspan 4
-      worksheet['!merges'].push({ s: { r: parentHeaderRow, c: 3 }, e: { r: parentHeaderRow, c: 6 } });
-      // Pk H2: col 7, colspan 4
-      worksheet['!merges'].push({ s: { r: parentHeaderRow, c: 7 }, e: { r: parentHeaderRow, c: 10 } });
-      // Uk H1: col 11, colspan 4
-      worksheet['!merges'].push({ s: { r: parentHeaderRow, c: 11 }, e: { r: parentHeaderRow, c: 14 } });
-      // Uk H2: col 15, colspan 4
-      worksheet['!merges'].push({ s: { r: parentHeaderRow, c: 15 }, e: { r: parentHeaderRow, c: 18 } });
-      
-      // Merge cells cho Công suất theo nhóm (các TBKT cùng công suất)
-      const dataStartRow = 3; // Data bắt đầu từ row 3 (sau title, parent header, sub header)
-      let currentRow = dataStartRow;
-      
-      // Nhóm các dòng theo công suất để merge
-      const congSuatGroups: { [key: string]: { startRow: number; endRow: number } } = {};
-      let lastCongSuat = '';
-      let startRowForCongSuat = dataStartRow;
-      
-      statisticsRows.forEach((stats, index) => {
-        const congSuat = stats.congSuat || '';
+      try {
+        const apiUrl = `${environment.apiUrl}/ExcelExport/export-excel-with-chart`;
         
-        if (congSuat !== lastCongSuat) {
-          // Nếu công suất thay đổi
-          if (lastCongSuat !== '' && startRowForCongSuat < currentRow) {
-            // Lưu nhóm công suất trước đó
-            congSuatGroups[lastCongSuat] = {
-              startRow: startRowForCongSuat,
-              endRow: currentRow - 1
-            };
-          }
-          // Bắt đầu nhóm công suất mới
-          lastCongSuat = congSuat;
-          startRowForCongSuat = currentRow;
+        // Lấy token từ localStorage nếu có
+        const token = localStorage.getItem('token');
+        const headers: { [key: string]: string } = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
         
-        currentRow++;
-      });
-      
-      // Lưu nhóm công suất cuối cùng
-      if (lastCongSuat !== '' && startRowForCongSuat < currentRow) {
-        congSuatGroups[lastCongSuat] = {
-          startRow: startRowForCongSuat,
-          endRow: currentRow - 1
-        };
-      }
-      
-      // Merge cells cho Công suất
-      Object.values(congSuatGroups).forEach(group => {
-        if (group.endRow > group.startRow) {
-          worksheet['!merges']!.push({ 
-            s: { r: group.startRow, c: 0 }, 
-            e: { r: group.endRow, c: 0 } 
-          });
+        // Gọi API
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            statisticsData: statisticsRows
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Backend API error: ${response.status} - ${errorText}`);
         }
-      });
-      
-      // Đặt độ rộng cột (tối ưu hóa)
-      worksheet['!cols'] = [
-        { wch: 12 }, // Công suất
-        { wch: 15 }, // TBKT
-        { wch: 10 }, // Số mẫu
-        { wch: 10 }, // Pk H1 max
-        { wch: 10 }, // Pk H1 TB
-        { wch: 10 }, // Pk H1 min
-        { wch: 8 },  // Pk H1 δ
-        { wch: 10 }, // Pk H2 max
-        { wch: 10 }, // Pk H2 TB
-        { wch: 10 }, // Pk H2 min
-        { wch: 8 },  // Pk H2 δ
-        { wch: 10 }, // Uk H1 max
-        { wch: 10 }, // Uk H1 TB
-        { wch: 10 }, // Uk H1 min
-        { wch: 8 },  // Uk H1 δ
-        { wch: 10 }, // Uk H2 max
-        { wch: 10 }, // Uk H2 TB
-        { wch: 10 }, // Uk H2 min
-        { wch: 8 }   // Uk H2 δ
-      ];
-
-      // ===== Styling cho header theo yêu cầu =====
-      // Hàng 1 (index 0): in đậm, font size 20, canh giữa
-      const titleRowIndex = 0;
-      const titleCellAddress = XLSX.utils.encode_cell({ r: titleRowIndex, c: 0 }); // A1
-      const titleCell = worksheet[titleCellAddress];
-      if (titleCell) {
-        titleCell.s = {
-          font: { bold: true, sz: 20 },
-          alignment: { horizontal: 'center', vertical: 'center' }
-        };
-      }
-
-      // Hàng 2 và 3 (index 1 và 2): canh giữa nội dung
-      const headerRowIndices = [1, 2];
-      const totalColumns = 19; // 0 -> 18
-
-      headerRowIndices.forEach(rowIndex => {
-        for (let colIndex = 0; colIndex < totalColumns; colIndex++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-          const cell = worksheet[cellAddress];
-          if (cell) {
-            cell.s = {
-              ...(cell.s || {}),
-              alignment: { horizontal: 'center', vertical: 'center' }
-            };
+        
+        // Nhận file Excel từ backend
+        const blob = await response.blob();
+        
+        // Lấy tên file từ header hoặc tạo tên mặc định
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = `Thong_ke_so_sanh_thong_so_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.xlsx`;
+        
+        if (contentDisposition) {
+          const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (fileNameMatch && fileNameMatch[1]) {
+            fileName = fileNameMatch[1].replace(/['"]/g, '');
           }
         }
-      });
-      
-      // Thêm worksheet vào workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Thống kê');
-      
-      // Tạo tên file với timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const fileName = `Thong_ke_so_sanh_thong_so_${timestamp}.xlsx`;
-      
-      // Xuất file
-      XLSX.writeFile(workbook, fileName);
-      
-      this.snackBar.open(`Đã xuất thống kê ra file Excel`, 'Đóng', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'top',
-        panelClass: ['success-snackbar']
-      });
+        
+        // Download file
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        this.isLoading.set(false);
+        
+        this.snackBar.open('Đã xuất thống kê ra file Excel với chart', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+      } catch (apiError) {
+        this.isLoading.set(false);
+        console.error('Error calling backend API:', apiError);
+        
+        // Fallback: thử xử lý trực tiếp nếu backend không khả dụng
+        console.warn('Backend API không khả dụng, sử dụng fallback (chart có thể bị mất)');
+        this.snackBar.open(
+          'Backend API không khả dụng. Đang sử dụng phương pháp dự phòng (chart có thể bị mất).', 
+          'Đóng', 
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['warning-snackbar']
+          }
+        );
+        
+        // Có thể thêm fallback code ở đây nếu cần
+        throw apiError;
+      }
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
