@@ -44,6 +44,7 @@ export class AppComponent {
   private dialog = inject(MatDialog);
   
   isLoginPage = false;
+  currentYear = new Date().getFullYear();
 
   constructor() {
     // Lắng nghe thay đổi route để kiểm tra xem có đang ở trang login không
