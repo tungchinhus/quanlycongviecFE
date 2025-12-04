@@ -33,9 +33,18 @@ Frontend gửi dữ liệu thống kê lên backend, backend xử lý file Excel
       "ukH2Delta": null
     }
     // ... more rows
-  ]
+  ],
+  "chartConfig": {
+    "showChart": true,
+    "xAxisColumn": "tbkt",
+    "yAxisColumn": "soMau",
+    "xAxisOriginalColumn": "TBKT_LSX",
+    "yAxisOriginalColumn": "Po_(W)"
+  }
 }
 ```
+
+**Lưu ý:** `chartConfig` là optional. Nếu không có hoặc `showChart: false`, backend sẽ không tạo/update chart.
 
 ### Response
 
@@ -49,7 +58,11 @@ Frontend gửi dữ liệu thống kê lên backend, backend xử lý file Excel
 2. **Clear dữ liệu cũ** từ dòng 4 trở đi (chỉ clear giá trị, giữ nguyên style và chart)
 3. **Ghi dữ liệu mới** vào các cells từ dòng 4
 4. **Merge cells** cho cột "Công suất" theo nhóm (nếu cần)
-5. **Save và trả về** file Excel
+5. **Xử lý Chart Config** (nếu có):
+   - Kiểm tra `chartConfig.showChart === true`
+   - Map `xAxisColumn` và `yAxisColumn` sang vị trí cột trong Excel
+   - Tạo/update chart với data range động
+6. **Save và trả về** file Excel
 
 ## Format dữ liệu
 
@@ -70,5 +83,6 @@ Frontend gửi dữ liệu thống kê lên backend, backend xử lý file Excel
 
 ## Xem chi tiết
 
-Xem file `BACKEND_EXCEL_CHART_GUIDE.md` để biết code mẫu chi tiết cho từng ngôn ngữ.
+- **`BACKEND_EXCEL_CHART_GUIDE.md`** - Code mẫu chi tiết cho từng ngôn ngữ
+- **`BACKEND_EXCEL_CHART_DYNAMIC_COLUMNS.md`** - Hướng dẫn xử lý chart động theo lựa chọn cột data (QUAN TRỌNG)
 

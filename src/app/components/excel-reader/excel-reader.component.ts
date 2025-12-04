@@ -1329,6 +1329,26 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Map cột từ dữ liệu gốc sang cột trong statistics data
+   */
+  private mapToStatisticsColumn(originalColumn: string, mapping: ExportColumnMapping): string {
+    // Map các cột đã được mapping sang tên cột trong statistics
+    if (originalColumn === mapping.tbkt) {
+      return 'tbkt';
+    }
+    if (originalColumn === mapping.congSuat) {
+      return 'congSuat';
+    }
+    if (originalColumn === mapping.po) {
+      // Po được dùng để tính soMau (số mẫu)
+      return 'soMau';
+    }
+    // Các cột khác có thể map sang các cột thống kê tương ứng
+    // Nếu không tìm thấy mapping, trả về tên cột gốc
+    return originalColumn;
+  }
+
+  /**
    * Xuất thống kê ra file Excel theo format thống kê
    */
   exportToExcel() {
@@ -1351,6 +1371,7 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
     const dialogRef = this.dialog.open(ExportColumnMappingDialogComponent, {
       width: '700px',
       maxWidth: '90vw',
+      maxHeight: '90vh',
       data: {
         availableColumns: availableColumns,
         columnLabels: this.columnLabels,
@@ -1482,13 +1503,31 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
           headers['Authorization'] = `Bearer ${token}`;
         }
         
+        // Chuẩn bị request body với thông tin chart
+        const requestBody: any = {
+          statisticsData: statisticsRows
+        };
+        
+        // Thêm thông tin chart nếu được bật
+        if (mapping.showChart && mapping.xAxisColumn && mapping.yAxisColumn) {
+          // Map các cột từ dữ liệu gốc sang cột trong statistics data
+          const xAxisStatColumn = this.mapToStatisticsColumn(mapping.xAxisColumn, mapping);
+          const yAxisStatColumn = this.mapToStatisticsColumn(mapping.yAxisColumn, mapping);
+          
+          requestBody.chartConfig = {
+            showChart: true,
+            xAxisColumn: xAxisStatColumn,
+            yAxisColumn: yAxisStatColumn,
+            xAxisOriginalColumn: mapping.xAxisColumn,
+            yAxisOriginalColumn: mapping.yAxisColumn
+          };
+        }
+        
         // Gọi API
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: headers,
-          body: JSON.stringify({
-            statisticsData: statisticsRows
-          })
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {

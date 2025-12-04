@@ -20,6 +20,9 @@
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "xlsx-js-style"
+            ],
             "assets": [
               {
                 "glob": "**/*",
@@ -47,7 +50,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1MB",
+                  "maximumWarning": "1.2MB",
                   "maximumError": "2MB"
                 },
                 {
