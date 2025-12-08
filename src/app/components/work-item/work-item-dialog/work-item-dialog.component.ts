@@ -314,15 +314,13 @@ export class WorkItemDialogComponent implements OnInit {
 
       // Phân loại file
       if (isDesignerFile) {
-        // File giao việc - luôn hiển thị
+        // File giao việc - chỉ file của người giao việc (designer)
         this.assignmentFiles.push(file);
       } else if (isCurrentUserFile) {
         // File của user hiện tại
         this.userFiles.push(file);
-      } else if (!this.isDesignWorkItem()) {
-        // Nếu không phải design work item, hiển thị tất cả file trong assignmentFiles
-        this.assignmentFiles.push(file);
       }
+      // Bỏ qua các file của user khác - không hiển thị trong cả 2 section
     });
     
     console.log('Separated files:', {

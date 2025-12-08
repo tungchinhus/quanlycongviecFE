@@ -161,6 +161,25 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
            (typeof confirmationValue === 'string' && confirmationValue === '1');
   }
 
+  // Kiểm tra xem thiết kế đã hoàn thành chưa (có personConfirmation = true và actualFinish != null)
+  isDesignWorkItemCompleted(): boolean {
+    if (!this.designWorkItem) {
+      return false;
+    }
+    // Kiểm tra personConfirmation
+    const confirmationValue: any = this.designWorkItem.personConfirmation;
+    const isConfirmed = confirmationValue === true || 
+                        confirmationValue === 1 || 
+                        (typeof confirmationValue === 'string' && confirmationValue === '1');
+    
+    // Kiểm tra actualFinish (ngày hoàn thành thực tế)
+    const hasActualFinish = this.designWorkItem.actualFinish != null && 
+                            this.designWorkItem.actualFinish !== undefined;
+    
+    // Thiết kế hoàn thành khi cả hai điều kiện đều đúng
+    return isConfirmed && hasActualFinish;
+  }
+
   loadFiles() {
     this.fileService.getFilesByAssignment(this.reviewWorkItem.assignmentID).subscribe({
       next: (files) => {

@@ -204,6 +204,7 @@ export class AssignmentListComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
+      // Reload data sau khi lưu thành công (khi dialog trả về true)
       if (result) {
         this.loadAssignments();
       }

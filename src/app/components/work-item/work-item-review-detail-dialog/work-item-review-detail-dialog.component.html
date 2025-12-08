@@ -185,7 +185,8 @@
       mat-raised-button 
       color="primary" 
       (click)="onConfirm()" 
-      [disabled]="isConfirming()">
+      [disabled]="isConfirming() || !isDesignWorkItemCompleted()"
+      [matTooltip]="!isDesignWorkItemCompleted() ? 'Thiết kế chưa hoàn thành. Vui lòng đợi người thiết kế xác nhận hoàn thành trước.' : ''">
       <mat-spinner *ngIf="isConfirming()" diameter="20" class="button-spinner"></mat-spinner>
       <mat-icon *ngIf="!isConfirming()">check_circle</mat-icon>
       <span>{{ isConfirming() ? 'Đang xác nhận...' : 'Xác Nhận' }}</span>

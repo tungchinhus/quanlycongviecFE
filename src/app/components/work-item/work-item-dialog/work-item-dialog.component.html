@@ -107,10 +107,10 @@
     </div>
   </div>
 
-  <!-- File Giao Việc Section - File được giao việc ban đầu -->
-  <div class="files-reference-section" *ngIf="workItem?.assignmentID && assignmentFiles.length > 0">
-    <h3 class="section-title">File giao việc</h3>
-    <div class="uploaded-files-list">
+  <!-- File Giao Việc Section - Chỉ file của người giao việc -->
+  <div class="files-reference-section" *ngIf="workItem?.assignmentID">
+    <h3 class="section-title">Giao việc</h3>
+    <div class="uploaded-files-list" *ngIf="assignmentFiles.length > 0">
       <div *ngFor="let file of assignmentFiles" class="file-item">
         <mat-icon>insert_drive_file</mat-icon>
         <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
@@ -123,12 +123,15 @@
         </div>
       </div>
     </div>
+    <div *ngIf="assignmentFiles.length === 0" class="no-files">
+      <p>Chưa có file</p>
+    </div>
   </div>
 
-  <!-- File Của Bạn Section - File của user hiện tại -->
-  <div class="files-reference-section" *ngIf="workItem?.assignmentID && userFiles.length > 0">
-    <h3 class="section-title">File của bạn</h3>
-    <div class="uploaded-files-list">
+  <!-- File Của Tôi Section - Chỉ file của user đang login -->
+  <div class="files-reference-section" *ngIf="workItem?.assignmentID">
+    <h3 class="section-title">Của tôi</h3>
+    <div class="uploaded-files-list" *ngIf="userFiles.length > 0">
       <div *ngFor="let file of userFiles" class="file-item">
         <mat-icon>insert_drive_file</mat-icon>
         <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
@@ -138,16 +141,11 @@
           <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
             <mat-icon>download</mat-icon>
           </button>
-          <button 
-            *ngIf="!isViewMode() && canDeleteFile(file)" 
-            mat-icon-button 
-            (click)="deleteFile(file)" 
-            color="warn"
-            [matTooltip]="'Xóa'">
-            <mat-icon>delete</mat-icon>
-          </button>
         </div>
       </div>
+    </div>
+    <div *ngIf="userFiles.length === 0" class="no-files">
+      <p>Chưa có file</p>
     </div>
   </div>
 </mat-dialog-content>
