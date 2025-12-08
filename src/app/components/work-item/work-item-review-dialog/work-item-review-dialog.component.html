@@ -1,0 +1,195 @@
+<div class="work-item-review-dialog">
+  <h2 mat-dialog-title>Xem Xét và Xác Nhận Công Việc</h2>
+  
+  <mat-dialog-content>
+    <div *ngIf="isLoading" class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải thông tin...</p>
+    </div>
+
+    <div *ngIf="!isLoading" class="review-content">
+      <!-- Thông tin Assignment -->
+      <div class="info-section">
+        <h3 class="section-title">Thông tin Gán Công Việc</h3>
+        <div class="info-row">
+          <span class="label">Tên Máy:</span>
+          <span class="value">{{ reviewWorkItem.assignment?.machineName || '-' }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.assignment?.tbkt_ID"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.assignment?.tbkt_ID">
+          <span class="label">TBKT:</span>
+          <span class="value">{{ reviewWorkItem.assignment?.tbkt_ID }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.assignment?.standardRequirement"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.assignment?.standardRequirement">
+          <span class="label">Yêu Cầu Tiêu Chuẩn:</span>
+          <span class="value">{{ reviewWorkItem.assignment?.standardRequirement }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.assignment?.additionalRequest"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.assignment?.additionalRequest">
+          <span class="label">Yêu Cầu Bổ Sung:</span>
+          <span class="value">{{ reviewWorkItem.assignment?.additionalRequest }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.assignment?.deliveryDate"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.assignment?.deliveryDate">
+          <span class="label">Ngày Giao:</span>
+          <span class="value">{{ reviewWorkItem.assignment?.deliveryDate | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+      <!-- Thông tin Công Việc Design Đã Hoàn Thành - Chỉ hiển thị khi đã xác nhận -->
+      <div class="info-section" *ngIf="designWorkItem && isDesignWorkItemConfirmed()">
+        <h3 class="section-title">Thông Tin Thiết Kế</h3>
+        <div class="info-row">
+          <span class="label">Tên Người Thiết Kế:</span>
+          <span class="value">{{ getDesignPersonName() }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Loại Thiết Kế:</span>
+          <span class="value">{{ getWorkTypeDisplayName(designWorkItem.workType) }}</span>
+        </div>
+        <mat-divider *ngIf="designWorkItem.actualFinish"></mat-divider>
+        <div class="info-row" *ngIf="designWorkItem.actualFinish">
+          <span class="label">Ngày Hoàn Thành:</span>
+          <span class="value">
+            <mat-chip color="primary">{{ designWorkItem.actualFinish | date:'dd/MM/yyyy' }}</mat-chip>
+          </span>
+        </div>
+        <mat-divider *ngIf="designWorkItem.startDate"></mat-divider>
+        <div class="info-row" *ngIf="designWorkItem.startDate">
+          <span class="label">Ngày Bắt Đầu:</span>
+          <span class="value">{{ designWorkItem.startDate | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <mat-divider *ngIf="designWorkItem.expectedFinish"></mat-divider>
+        <div class="info-row" *ngIf="designWorkItem.expectedFinish">
+          <span class="label">Dự Kiến Hoàn Thành:</span>
+          <span class="value">{{ designWorkItem.expectedFinish | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <mat-divider *ngIf="designWorkItem.notes"></mat-divider>
+        <div class="info-row" *ngIf="designWorkItem.notes">
+          <span class="label">Ghi Chú:</span>
+          <span class="value">{{ designWorkItem.notes }}</span>
+        </div>
+      </div>
+
+      <!-- Thông tin thiết kế cơ bản khi chưa xác nhận -->
+      <div class="info-section" *ngIf="designWorkItem && !isDesignWorkItemConfirmed()">
+        <h3 class="section-title">Thông Tin Thiết Kế</h3>
+        <div class="info-row">
+          <span class="label">Tên Người Thiết Kế:</span>
+          <span class="value">{{ getDesignPersonName() }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Loại Thiết Kế:</span>
+          <span class="value">{{ getWorkTypeDisplayName(designWorkItem.workType) }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Trạng Thái:</span>
+          <span class="value">
+            <mat-chip color="warn">Chưa xác nhận hoàn thành</mat-chip>
+          </span>
+        </div>
+      </div>
+
+      <!-- Thông báo khi không có design work item -->
+      <div class="info-section" *ngIf="!designWorkItem">
+        <div class="no-design-work">
+          <mat-icon>info</mat-icon>
+          <p>Chưa có công việc design tương ứng</p>
+        </div>
+      </div>
+
+      <!-- File giao việc - Luôn hiển thị để tham khảo -->
+      <div class="files-section" *ngIf="assignmentFiles.length > 0">
+        <h3 class="section-title">File giao việc</h3>
+        <div class="uploaded-files-list">
+          <div *ngFor="let file of assignmentFiles" class="file-item">
+            <mat-icon>insert_drive_file</mat-icon>
+            <a 
+              class="file-name-link" 
+              (click)="viewFile(file); $event.preventDefault()" 
+              [matTooltip]="'Click để xem file trong tab mới'"
+              title="Click để xem file"
+              href="javascript:void(0)">
+              {{ file.fileName }}
+            </a>
+            <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
+            <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
+            <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'" class="action-button">
+              <mat-icon>download</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- File thiết kế - Luôn hiển thị để tham khảo -->
+      <div class="files-section" *ngIf="designFiles.length > 0">
+        <h3 class="section-title">File Thiết Kế</h3>
+        <div class="uploaded-files-list">
+          <div *ngFor="let file of designFiles" class="file-item">
+            <mat-icon>insert_drive_file</mat-icon>
+            <a 
+              class="file-name-link" 
+              (click)="viewFile(file); $event.preventDefault()" 
+              [matTooltip]="'Click để xem file trong tab mới'"
+              title="Click để xem file"
+              href="javascript:void(0)">
+              {{ file.fileName }}
+            </a>
+            <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
+            <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
+            <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'" class="action-button">
+              <mat-icon>download</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông tin Công Việc Review -->
+      <div class="info-section">
+        <h3 class="section-title">Công Việc Của Bạn</h3>
+        <div class="info-row">
+          <span class="label">Loại Công Việc:</span>
+          <span class="value">{{ getWorkTypeDisplayName(reviewWorkItem.workType) }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.startDate"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.startDate">
+          <span class="label">Ngày Bắt Đầu:</span>
+          <span class="value">{{ reviewWorkItem.startDate | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <mat-divider *ngIf="reviewWorkItem.expectedFinish"></mat-divider>
+        <div class="info-row" *ngIf="reviewWorkItem.expectedFinish">
+          <span class="label">Dự Kiến Hoàn Thành:</span>
+          <span class="value">{{ reviewWorkItem.expectedFinish | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-row">
+          <span class="label">Trạng Thái Xác Nhận:</span>
+          <span class="value">
+            <mat-chip [color]="reviewWorkItem.personConfirmation ? 'primary' : 'warn'">
+              {{ reviewWorkItem.personConfirmation ? 'Đã xác nhận' : 'Chưa xác nhận' }}
+            </mat-chip>
+          </span>
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onClose()">Đóng</button>
+    <button 
+      *ngIf="!reviewWorkItem.personConfirmation"
+      mat-raised-button 
+      color="primary" 
+      (click)="onConfirm()" 
+      [disabled]="isConfirming()">
+      <mat-spinner *ngIf="isConfirming()" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isConfirming()">check_circle</mat-icon>
+      <span>{{ isConfirming() ? 'Đang xác nhận...' : 'Xác Nhận' }}</span>
+    </button>
+  </mat-dialog-actions>
+</div>
+

@@ -1,0 +1,149 @@
+.work-item-review-dialog {
+  width: 100%;
+  max-width: 800px;
+}
+
+.work-item-review-dialog h2 {
+  margin: 0;
+  padding: 16px 24px;
+}
+
+.work-item-review-dialog mat-dialog-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0 24px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+  color: var(--thibidi-text-secondary);
+}
+
+.review-content {
+  padding: 16px 0;
+}
+
+.info-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 4px;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--thibidi-text-primary);
+}
+
+.info-row {
+  display: flex;
+  padding: 12px 0;
+  gap: 16px;
+}
+
+.label {
+  font-weight: 500;
+  color: var(--thibidi-text-secondary);
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.value {
+  flex: 1;
+  word-break: break-word;
+}
+
+.no-design-work {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  color: var(--thibidi-text-secondary);
+}
+
+.no-design-work mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #ff9800;
+}
+
+.no-design-work .hint-text {
+  font-size: 13px;
+  color: #999;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.files-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.uploaded-files-list {
+  margin-top: 16px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.file-name-link {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+  color: #1976d2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+.file-name-link:hover {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+.file-size {
+  color: var(--thibidi-text-secondary);
+  font-size: 12px;
+}
+
+.file-date {
+  color: var(--thibidi-text-secondary);
+  font-size: 12px;
+}
+
+.action-button {
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+}
+
+.button-spinner {
+  display: inline-block;
+  margin-right: 8px;
+}
+

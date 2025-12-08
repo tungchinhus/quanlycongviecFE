@@ -15,6 +15,8 @@ import { AssignmentService } from '../../../services/assignment.service';
 import { WorkItemWithAssignment } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
 import { WorkItemDialogComponent } from '../work-item-dialog/work-item-dialog.component';
+import { WorkItemReviewDialogComponent } from '../work-item-review-dialog/work-item-review-dialog.component';
+import { WorkItemReviewDetailDialogComponent } from '../work-item-review-detail-dialog/work-item-review-detail-dialog.component';
 import { WorkItemService } from '../../../services/work-item.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 
@@ -92,16 +94,97 @@ export class WorkItemListComponent implements OnInit {
   }
 
   viewWorkItem(item: WorkItemWithAssignment) {
-    this.dialog.open(WorkItemDialogComponent, {
+    // Kiểm tra nếu là công việc review và có công việc design đã hoàn thành
+    if (this.isReviewWorkItem(item)) {
+      const dialogRef = this.dialog.open(WorkItemReviewDetailDialogComponent, {
+        width: '90%',
+        maxWidth: '900px',
+        minWidth: '320px',
+        data: {
+          workItem: item
+        },
+        disableClose: false
+      });
+
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          this.loadWorkItems();
+        }
+      });
+    } else {
+      this.dialog.open(WorkItemDialogComponent, {
+        width: '90%',
+        maxWidth: '600px',
+        minWidth: '320px',
+        data: {
+          workItem: item,
+          mode: 'view'
+        },
+        disableClose: false
+      });
+    }
+  }
+
+  confirmWorkItem(item: WorkItemWithAssignment) {
+    // Chỉ dùng cho review work items
+    if (!this.isReviewWorkItem(item)) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(WorkItemReviewDialogComponent, {
       width: '90%',
-      maxWidth: '600px',
+      maxWidth: '900px',
       minWidth: '320px',
       data: {
-        workItem: item,
-        mode: 'view'
+        workItem: item
       },
       disableClose: false
     });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadWorkItems();
+      }
+    });
+  }
+
+  isReviewWorkItem(item: WorkItemWithAssignment): boolean {
+    // Kiểm tra nếu là Core Review hoặc Casing Review
+    return item.workType === 'Core Review' || item.workType === 'Casing Review';
+  }
+
+  shouldUseReviewDialog(item: WorkItemWithAssignment): boolean {
+    // Chỉ dùng review dialog cho Core Review hoặc Casing Review
+    const isReviewType = this.isReviewWorkItem(item);
+    if (!isReviewType) {
+      return false;
+    }
+
+    // Kiểm tra xem có công việc design tương ứng đã hoàn thành không
+    const assignment = item.assignment;
+    if (!assignment || !assignment.workItems) {
+      return false;
+    }
+
+    const reviewWorkType = item.workType;
+    let designWorkType: string | null = null;
+    
+    if (reviewWorkType === 'Core Review') {
+      designWorkType = 'Core Design';
+    } else if (reviewWorkType === 'Casing Review') {
+      designWorkType = 'Casing Design';
+    }
+
+    if (!designWorkType) {
+      return false;
+    }
+
+    // Tìm workItem design đã hoàn thành
+    const designWorkItem = assignment.workItems.find(
+      workItem => workItem.workType === designWorkType && workItem.actualFinish != null
+    );
+
+    return designWorkItem != null;
   }
 
   editWorkItem(item: WorkItemWithAssignment) {

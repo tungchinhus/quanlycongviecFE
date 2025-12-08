@@ -30,6 +30,20 @@
           <span class="label">Trưởng đơn vị:</span>
           <span class="value">{{ getTeamLeaderName(assignment.teamLeader) || '-' }}</span>
         </div>
+        <mat-divider *ngIf="getAssignedUsersWithWorkTypes().length > 0"></mat-divider>
+        <div class="info-row assigned-users-row" *ngIf="getAssignedUsersWithWorkTypes().length > 0">
+          <span class="label">Người được giao:</span>
+          <div class="value assigned-users-list">
+            <div *ngFor="let userInfo of getAssignedUsersWithWorkTypes()" class="assigned-user-item">
+              <span class="user-name">{{ userInfo.userName }}</span>
+              <span class="work-types">
+                (<span *ngFor="let workType of userInfo.workTypes; let last = last">
+                  {{ workType }}<span *ngIf="!last">, </span>
+                </span>)
+              </span>
+            </div>
+          </div>
+        </div>
         <mat-divider></mat-divider>
         <div class="info-row">
           <span class="label">Ngày Giao:</span>

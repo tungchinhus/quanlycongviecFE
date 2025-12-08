@@ -63,23 +63,38 @@
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #menu="matMenu">
-            <button mat-menu-item (click)="viewWorkItem(item)">
-              <mat-icon>visibility</mat-icon>
-              <span>Xem</span>
-            </button>
-            <button mat-menu-item (click)="editWorkItem(item)">
-              <mat-icon>edit</mat-icon>
-              <span>Chỉnh sửa</span>
-            </button>
-            <button mat-menu-item (click)="completeWorkItem(item)" *ngIf="!item.personConfirmation">
-              <mat-icon>check_circle</mat-icon>
-              <span>Hoàn Thành</span>
-            </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item (click)="deleteWorkItem(item)" class="delete-action">
-              <mat-icon>delete</mat-icon>
-              <span>Xóa</span>
-            </button>
+            <!-- Menu cho Review Work Items (Kiểm soát vỏ/ruột) -->
+            <ng-container *ngIf="isReviewWorkItem(item)">
+              <button mat-menu-item (click)="viewWorkItem(item)">
+                <mat-icon>visibility</mat-icon>
+                <span>Xem chi tiết</span>
+              </button>
+              <button mat-menu-item (click)="confirmWorkItem(item)" *ngIf="!item.personConfirmation">
+                <mat-icon>check_circle</mat-icon>
+                <span>Xác nhận</span>
+              </button>
+            </ng-container>
+            
+            <!-- Menu cho các Work Items khác -->
+            <ng-container *ngIf="!isReviewWorkItem(item)">
+              <button mat-menu-item (click)="viewWorkItem(item)">
+                <mat-icon>visibility</mat-icon>
+                <span>Xem</span>
+              </button>
+              <button mat-menu-item (click)="editWorkItem(item)">
+                <mat-icon>edit</mat-icon>
+                <span>Chỉnh sửa</span>
+              </button>
+              <button mat-menu-item (click)="completeWorkItem(item)" *ngIf="!item.personConfirmation">
+                <mat-icon>check_circle</mat-icon>
+                <span>Hoàn Thành</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="deleteWorkItem(item)" class="delete-action">
+                <mat-icon>delete</mat-icon>
+                <span>Xóa</span>
+              </button>
+            </ng-container>
           </mat-menu>
         </td>
       </ng-container>

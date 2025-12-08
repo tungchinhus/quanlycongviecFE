@@ -18,10 +18,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { WorkItemService } from '../../../services/work-item.service';
 import { FileService } from '../../../services/file.service';
-import { AuthService } from '../../../services/auth.service';
+import { AuthService, AuthUser } from '../../../services/auth.service';
+import { UsersService } from '../../../services/users.service';
 import { WorkItemWithAssignment } from '../../../models/machine-assignment.model';
 import { FileDocument } from '../../../models/file.model';
 
@@ -62,6 +63,9 @@ export class WorkItemDialogComponent implements OnInit {
   readonly selectedFiles = signal<File[]>([]);
   readonly isUploading = signal<boolean>(false);
   files: FileDocument[] = [];
+  users: AuthUser[] = [];
+  assignmentFiles: FileDocument[] = []; // File giao việc (file của designer)
+  userFiles: FileDocument[] = []; // File của user hiện tại
   
   // Lưu giá trị ban đầu để so sánh thay đổi
   private initialFormValues: any = null;
@@ -82,6 +86,7 @@ export class WorkItemDialogComponent implements OnInit {
     private workItemService: WorkItemService,
     private fileService: FileService,
     private authService: AuthService,
+    private usersService: UsersService,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: { 
       workItem?: WorkItemWithAssignment;
@@ -108,27 +113,54 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   ngOnInit() {
-    if (this.workItem) {
-      // Populate form với data từ workItem
-      const formValues = {
-        workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
-        startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
-        expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
-        actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
-        personConfirmation: this.workItem.personConfirmation || false,
-        notes: this.workItem.notes || ''
-      };
-      
-      this.workItemForm.patchValue(formValues);
-      
-      // Lưu giá trị ban đầu để so sánh thay đổi
-      this.initialFormValues = this.getFormValuesForComparison(formValues);
+    // Load users trước, sau đó mới load files
+    this.loadUsers().subscribe({
+      next: () => {
+        // Sau khi users đã load xong, mới load files
+        if (this.workItem) {
+          // Populate form với data từ workItem
+          const formValues = {
+            workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
+            startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
+            expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
+            actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
+            personConfirmation: this.workItem.personConfirmation || false,
+            notes: this.workItem.notes || ''
+          };
+          
+          this.workItemForm.patchValue(formValues);
+          
+          // Lưu giá trị ban đầu để so sánh thay đổi
+          this.initialFormValues = this.getFormValuesForComparison(formValues);
 
-      // Load files nếu có assignmentID
-      if (this.workItem.assignmentID) {
-        this.loadFiles();
+          // Load files nếu có assignmentID
+          if (this.workItem.assignmentID) {
+            this.loadFiles();
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Error loading users:', err);
+        // Vẫn load files ngay cả khi load users lỗi
+        if (this.workItem) {
+          const formValues = {
+            workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
+            startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
+            expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
+            actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
+            personConfirmation: this.workItem.personConfirmation || false,
+            notes: this.workItem.notes || ''
+          };
+          
+          this.workItemForm.patchValue(formValues);
+          this.initialFormValues = this.getFormValuesForComparison(formValues);
+
+          if (this.workItem.assignmentID) {
+            this.loadFiles();
+          }
+        }
       }
-    }
+    });
     
     // Subscribe vào form changes để detect thay đổi
     this.workItemForm.valueChanges.subscribe(() => {
@@ -194,13 +226,132 @@ export class WorkItemDialogComponent implements OnInit {
     
     this.fileService.getFilesByAssignment(this.workItem.assignmentID).subscribe({
       next: (files) => {
-        this.files = files;
+        // Tách files thành 2 nhóm: file giao việc và file của user
+        this.separateFiles(files);
+        
+        // Set files để hiển thị (bao gồm cả file giao việc và file của user)
+        this.files = [...this.assignmentFiles, ...this.userFiles];
       },
       error: (err) => {
         console.error('Error loading files:', err);
       }
     });
   }
+
+  separateFiles(files: FileDocument[]) {
+    // Reset
+    this.assignmentFiles = [];
+    this.userFiles = [];
+    
+    if (!this.workItem) {
+      this.files = files;
+      return;
+    }
+
+    const assignment = this.workItem.assignment;
+    if (!assignment) {
+      this.files = files;
+      return;
+    }
+
+    // Lấy ID của người giao việc (designer)
+    const designerId = assignment.designer;
+    
+    // Tìm user designer từ danh sách users để lấy userName
+    let designerUser: AuthUser | undefined;
+    if (designerId && this.users.length > 0) {
+      designerUser = this.users.find(u => 
+        u.id === designerId ||
+        u.id?.toString() === designerId ||
+        u.userId?.toString() === designerId
+      );
+    }
+    
+    // Tạo danh sách các identifier có thể của designer
+    const designerIdentifiers: string[] = [];
+    if (designerId) {
+      designerIdentifiers.push(designerId.toString());
+    }
+    if (designerUser) {
+      if (designerUser.userName) designerIdentifiers.push(designerUser.userName);
+      if (designerUser.name) designerIdentifiers.push(designerUser.name);
+      if (designerUser.email) designerIdentifiers.push(designerUser.email);
+      if (designerUser.id) designerIdentifiers.push(designerUser.id.toString());
+      if (designerUser.userId) designerIdentifiers.push(designerUser.userId.toString());
+    }
+    
+    files.forEach(file => {
+      const uploadedBy = file.uploadedBy || file.uploadBy;
+      
+      // Kiểm tra nếu là file của designer (người giao việc)
+      let isDesignerFile = false;
+      
+      // Nếu không có uploadedBy, coi như file giao việc (an toàn)
+      if (!uploadedBy) {
+        isDesignerFile = true;
+      } else if (designerIdentifiers.length > 0) {
+        // So sánh với tất cả các identifier của designer
+        isDesignerFile = designerIdentifiers.some(id => 
+          id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
+        );
+      }
+
+      // Kiểm tra nếu là file của user hiện tại (chỉ khi có currentUser)
+      let isCurrentUserFile = false;
+      if (this.currentUser && uploadedBy) {
+        const currentUserIdentifiers = [
+          this.currentUser.userName,
+          this.currentUser.id?.toString(),
+          this.currentUser.userId?.toString(),
+          this.currentUser.email,
+          this.currentUser.name
+        ].filter(id => id);
+        
+        isCurrentUserFile = currentUserIdentifiers.some(id => 
+          id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
+        );
+      }
+
+      // Phân loại file
+      if (isDesignerFile) {
+        // File giao việc - luôn hiển thị
+        this.assignmentFiles.push(file);
+      } else if (isCurrentUserFile) {
+        // File của user hiện tại
+        this.userFiles.push(file);
+      } else if (!this.isDesignWorkItem()) {
+        // Nếu không phải design work item, hiển thị tất cả file trong assignmentFiles
+        this.assignmentFiles.push(file);
+      }
+    });
+    
+    console.log('Separated files:', {
+      assignmentFiles: this.assignmentFiles.length,
+      userFiles: this.userFiles.length,
+      designerId,
+      designerUser: designerUser?.userName
+    });
+  }
+
+  isDesignWorkItem(): boolean {
+    if (!this.workItem) return false;
+    const workType = this.workItem.workType;
+    return workType === 'Casing Design' || workType === 'Core Design';
+  }
+
+  loadUsers() {
+    return this.usersService.loadUsers(1, 100).pipe(
+      catchError(err => {
+        console.error('Error loading users:', err);
+        return of([]); // Return empty array on error
+      })
+    ).pipe(
+      tap(users => {
+        this.users = users;
+      })
+    );
+  }
+
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;

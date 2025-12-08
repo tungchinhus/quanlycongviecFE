@@ -45,6 +45,34 @@
   word-break: break-word;
 }
 
+.assigned-users-row {
+  align-items: flex-start;
+}
+
+.assigned-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.assigned-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.assigned-user-item .user-name {
+  font-weight: 500;
+  color: var(--thibidi-text-primary);
+}
+
+.assigned-user-item .work-types {
+  color: var(--thibidi-text-secondary);
+  font-size: 0.9em;
+}
+
 .work-items-section {
   margin-top: 24px;
   padding-top: 24px;

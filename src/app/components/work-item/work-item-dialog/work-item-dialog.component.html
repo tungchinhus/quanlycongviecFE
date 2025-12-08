@@ -107,14 +107,33 @@
     </div>
   </div>
 
-  <!-- File Reference Section - File tham khảo -->
-  <div class="files-reference-section" *ngIf="workItem?.assignmentID && files.length > 0">
-    <h3 class="section-title">File tham khảo</h3>
+  <!-- File Giao Việc Section - File được giao việc ban đầu -->
+  <div class="files-reference-section" *ngIf="workItem?.assignmentID && assignmentFiles.length > 0">
+    <h3 class="section-title">File giao việc</h3>
     <div class="uploaded-files-list">
-      <div *ngFor="let file of files" class="file-item">
+      <div *ngFor="let file of assignmentFiles" class="file-item">
         <mat-icon>insert_drive_file</mat-icon>
         <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
         <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
+        <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
+        <div class="file-actions">
+          <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
+            <mat-icon>download</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Của Bạn Section - File của user hiện tại -->
+  <div class="files-reference-section" *ngIf="workItem?.assignmentID && userFiles.length > 0">
+    <h3 class="section-title">File của bạn</h3>
+    <div class="uploaded-files-list">
+      <div *ngFor="let file of userFiles" class="file-item">
+        <mat-icon>insert_drive_file</mat-icon>
+        <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+        <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
+        <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
         <div class="file-actions">
           <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
             <mat-icon>download</mat-icon>

@@ -97,5 +97,40 @@ export class AssignmentDetailComponent implements OnInit {
     };
     return workTypeMap[workType] || workType;
   }
+
+  getAssignedUsersWithWorkTypes(): Array<{ userName: string; workTypes: string[] }> {
+    if (!this.assignment || !this.assignment.workItems) {
+      return [];
+    }
+    
+    // Nhóm work items theo personName
+    const userWorkMap = new Map<string, Set<string>>();
+    
+    this.assignment.workItems.forEach(item => {
+      if (item.personName) {
+        const userName = this.getPersonName(item.personName);
+        if (userName) {
+          if (!userWorkMap.has(userName)) {
+            userWorkMap.set(userName, new Set<string>());
+          }
+          const workTypeName = this.getWorkTypeName(item.workType);
+          if (workTypeName) {
+            userWorkMap.get(userName)!.add(workTypeName);
+          }
+        }
+      }
+    });
+    
+    // Chuyển đổi Map thành mảng
+    const result: Array<{ userName: string; workTypes: string[] }> = [];
+    userWorkMap.forEach((workTypes, userName) => {
+      result.push({
+        userName: userName,
+        workTypes: Array.from(workTypes)
+      });
+    });
+    
+    return result;
+  }
 }
 

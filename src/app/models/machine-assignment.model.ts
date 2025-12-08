@@ -62,6 +62,7 @@ export interface WorkItem {
   actualFinish?: Date | string; // API trả về ISO 8601 string
   personConfirmation?: boolean;
   notes?: string;
+  file_ID?: string; // Comma-separated file IDs (e.g., "1,2,3")
 }
 
 // WorkItem với thông tin Assignment đầy đủ (từ API my-work-items)
