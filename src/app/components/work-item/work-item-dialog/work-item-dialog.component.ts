@@ -10,6 +10,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
+import { environment } from '../../../../environments/environment';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -58,6 +59,7 @@ export class WorkItemDialogComponent implements OnInit {
   workItemForm: FormGroup;
   mode: 'view' | 'edit' | 'create' = 'create';
   workItem: WorkItemWithAssignment | null = null;
+  assignmentId: number | null = null;
   currentUserName: string = '';
   currentUser: any = null;
   readonly selectedFiles = signal<File[]>([]);
@@ -96,6 +98,7 @@ export class WorkItemDialogComponent implements OnInit {
   ) {
     this.mode = data.mode || 'create';
     this.workItem = data.workItem || null;
+    this.assignmentId = this.getAssignmentId(this.workItem);
     
     // Lấy thông tin user đang login
     this.currentUser = this.authService.user();
@@ -134,7 +137,8 @@ export class WorkItemDialogComponent implements OnInit {
           this.initialFormValues = this.getFormValuesForComparison(formValues);
 
           // Load files nếu có assignmentID
-          if (this.workItem.assignmentID) {
+          this.assignmentId = this.getAssignmentId(this.workItem);
+          if (this.assignmentId) {
             this.loadFiles();
           }
         }
@@ -155,7 +159,8 @@ export class WorkItemDialogComponent implements OnInit {
           this.workItemForm.patchValue(formValues);
           this.initialFormValues = this.getFormValuesForComparison(formValues);
 
-          if (this.workItem.assignmentID) {
+          this.assignmentId = this.getAssignmentId(this.workItem);
+          if (this.assignmentId) {
             this.loadFiles();
           }
         }
@@ -222,9 +227,9 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   loadFiles() {
-    if (!this.workItem?.assignmentID) return;
+    if (!this.assignmentId) return;
     
-    this.fileService.getFilesByAssignment(this.workItem.assignmentID).subscribe({
+    this.fileService.getFilesByAssignment(this.assignmentId).subscribe({
       next: (files) => {
         // Tách files thành 2 nhóm: file giao việc và file của user
         this.separateFiles(files);
@@ -312,15 +317,15 @@ export class WorkItemDialogComponent implements OnInit {
         );
       }
 
-      // Phân loại file
-      if (isDesignerFile) {
-        // File giao việc - chỉ file của người giao việc (designer)
-        this.assignmentFiles.push(file);
-      } else if (isCurrentUserFile) {
-        // File của user hiện tại
+      // Chỉ hiển thị:
+      // - File giao việc (designer upload hoặc không có uploadedBy)
+      // - File chính user đang đăng nhập upload
+      if (isCurrentUserFile) {
         this.userFiles.push(file);
+      } else if (isDesignerFile) {
+        this.assignmentFiles.push(file);
       }
-      // Bỏ qua các file của user khác - không hiển thị trong cả 2 section
+      // Các file khác (người thứ 3) sẽ bị bỏ qua theo yêu cầu
     });
     
     console.log('Separated files:', {
@@ -439,6 +444,15 @@ export class WorkItemDialogComponent implements OnInit {
     });
   }
 
+  private getAssignmentId(workItem?: WorkItemWithAssignment | null): number | null {
+    if (!workItem) return null;
+    // Chuẩn hóa lấy assignmentId dù backend trả camelCase hay PascalCase
+    const idFromWorkItem = (workItem as any).assignmentId || workItem.assignmentID;
+    const idFromAssignment = workItem.assignment?.assignmentID || (workItem.assignment as any)?.assignmentId;
+    const finalId = idFromWorkItem || idFromAssignment;
+    return finalId && Number(finalId) > 0 ? Number(finalId) : null;
+  }
+
   deleteFile(file: FileDocument) {
     const fileId = file.id || file.fileID;
     if (!fileId) return;
@@ -464,6 +478,105 @@ export class WorkItemDialogComponent implements OnInit {
         }
       });
     }
+  }
+
+  // Xây dựng URL tải trực tiếp từ backend (dùng cho custom protocol)
+  private buildDownloadUrl(file: FileDocument): string {
+    const fileId = file.id || file.fileID;
+    if (!fileId) return '';
+    return `${environment.apiUrl}/files/${fileId}/download`;
+  }
+
+  // Nhận diện file CAD
+  private isCadFile(fileName?: string): boolean {
+    if (!fileName) return false;
+    const lower = fileName.toLowerCase();
+    return lower.endsWith('.dwg') || lower.endsWith('.dxf');
+  }
+
+  // Handler chung khi click mở file
+  openFile(file: FileDocument, event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const downloadUrl = this.buildDownloadUrl(file);
+    if (this.isCadFile(file.fileName) && downloadUrl) {
+      // Dùng custom protocol cadopen:// để app desktop mở AutoCAD
+      const cadUrl = `cadopen://open?fileId=${encodeURIComponent(file.id || file.fileID || '')}` +
+        `&name=${encodeURIComponent(file.fileName || '')}` +
+        `&url=${encodeURIComponent(downloadUrl)}`;
+      window.location.href = cadUrl;
+      return;
+    }
+
+    // Mặc định: mở xem trong tab mới
+    this.viewFile(file);
+  }
+
+  viewFile(file: FileDocument) {
+    const fileId = file.id || file.fileID;
+    if (!fileId) return;
+
+    this.fileService.downloadFile(fileId).subscribe({
+      next: (blob) => {
+        // Nếu backend trả lỗi json nhỏ, hiển thị thông báo
+        if (blob.type === 'application/json' || blob.size < 100) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errorText = reader.result as string;
+              const errorObj = JSON.parse(errorText);
+              this.snackBar.open(
+                errorObj.message || errorObj.error || 'Lỗi khi xem file',
+                'Đóng',
+                {
+                  duration: 5000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'top',
+                  panelClass: ['error-snackbar']
+                }
+              );
+            } catch {
+              this.snackBar.open('Lỗi khi xem file', 'Đóng', {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                panelClass: ['error-snackbar']
+              });
+            }
+          };
+          reader.readAsText(blob);
+          return;
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const newWindow = window.open(url, '_blank');
+
+        // Fallback nếu popup bị chặn
+        if (!newWindow) {
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+      },
+      error: (err) => {
+        console.error('Error viewing file:', err);
+        const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi khi xem file';
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   downloadFile(file: FileDocument) {

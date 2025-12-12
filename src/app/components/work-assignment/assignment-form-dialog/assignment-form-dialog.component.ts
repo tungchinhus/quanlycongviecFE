@@ -68,16 +68,17 @@ export class AssignmentFormDialogComponent implements OnInit {
     // Lấy current user
     this.currentUser = this.authService.user();
     
+    // Validators mirror backend constraints to tránh lỗi 500 do tràn độ dài/thiếu dữ liệu
     this.assignmentForm = this.fb.group({
-      machineName: ['', Validators.required],
-      requestDocument: [''], // ĐĐH/Giấy đề nghị
-      tbktId: [''], // TBKT_ID để map với TechnicalSheet
-      standardRequirement: [''],
-      additionalRequest: [''],
+      tbktId: ['', [Validators.required, Validators.maxLength(50)]], // TBKT_ID để map với TechnicalSheet
+      machineName: ['', [Validators.required, Validators.maxLength(255)]],
+      requestDocument: ['', Validators.maxLength(255)], // ĐĐH/Giấy đề nghị (chỉ lưu client-side)
+      standardRequirement: ['', Validators.maxLength(1000)],
+      additionalRequest: ['', Validators.maxLength(1000)],
       deliveryDate: [null],
       // Lưu user ID nhưng hiển thị tên
       designer: [this.currentUser?.id || '', { disabled: true }],
-      teamLeader: [''],
+      teamLeader: ['', Validators.maxLength(100)],
       // Danh mục với user assignment
       coreDesignUser: [''],
       coreReviewUser: [''],
@@ -85,7 +86,7 @@ export class AssignmentFormDialogComponent implements OnInit {
       casingReviewUser: [''],
       materialLevelingUser: [''],
       // Các hạng mục thay đổi
-      workChanges: ['']
+      workChanges: ['', Validators.maxLength(1000)]
     });
   }
 
@@ -141,48 +142,57 @@ export class AssignmentFormDialogComponent implements OnInit {
   }
 
   onSave() {
-    if (this.assignmentForm.valid) {
-      this.isUploading.set(true);
-      // Sử dụng getRawValue() để lấy cả giá trị của các trường disabled
-      const formValue = this.assignmentForm.getRawValue();
-      
-      // Map form data đúng format API
-      const assignmentData: any = {
-        tbkt_ID: formValue.tbktId || '',
-        machineName: formValue.machineName,
-        requestDocument: formValue.requestDocument || '',
-        standardRequirement: formValue.standardRequirement || '',
-        additionalRequest: formValue.additionalRequest || '',
-        deliveryDate: formValue.deliveryDate ? new Date(formValue.deliveryDate).toISOString() : null,
-        designer: formValue.designer ? formValue.designer.toString() : '',
-        teamLeader: formValue.teamLeader ? formValue.teamLeader.toString() : ''
-      };
-
-      // TODO: Thêm filePaths vào payload khi backend đã hỗ trợ column này trong database
-      // Hiện tại tạm thời không gửi filePaths để tránh lỗi "Invalid column name 'FilePath'"
-      // Files sẽ được upload sau khi tạo assignment thành công
-
-      // Tạo assignment chính
-      this.assignmentService.createAssignment(assignmentData).subscribe({
-        next: (assignment) => {
-          const assignmentId = assignment.assignmentID;
-          
-          // Tạo work items và work changes
-          this.createWorkItemsAndChanges(assignmentId, formValue);
-        },
-        error: (err) => {
-          this.isUploading.set(false);
-          console.error('Error creating assignment:', err);
-          const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi tạo gán công việc';
-          this.snackBar.open(errorMessage, 'Đóng', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
-        }
+    if (!this.assignmentForm.valid) {
+      this.assignmentForm.markAllAsTouched();
+      this.snackBar.open('Vui lòng nhập đủ thông tin bắt buộc và không vượt quá giới hạn ký tự.', 'Đóng', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar']
       });
+      return;
     }
+
+    this.isUploading.set(true);
+    // Sử dụng getRawValue() để lấy cả giá trị của các trường disabled
+    const formValue = this.assignmentForm.getRawValue();
+    
+    // Map form data đúng format API
+    const assignmentData: any = {
+      tbkt_ID: (formValue.tbktId || '').trim(),
+      machineName: (formValue.machineName || '').trim(),
+      requestDocument: formValue.requestDocument?.trim() || '',
+      standardRequirement: formValue.standardRequirement?.trim() || '',
+      additionalRequest: formValue.additionalRequest?.trim() || '',
+      deliveryDate: formValue.deliveryDate ? new Date(formValue.deliveryDate).toISOString() : null,
+      designer: formValue.designer ? formValue.designer.toString() : '',
+      teamLeader: formValue.teamLeader ? formValue.teamLeader.toString() : ''
+    };
+
+    // TODO: Thêm filePaths vào payload khi backend đã hỗ trợ column này trong database
+    // Hiện tại tạm thời không gửi filePaths để tránh lỗi "Invalid column name 'FilePath'"
+    // Files sẽ được upload sau khi tạo assignment thành công
+
+    // Tạo assignment chính
+    this.assignmentService.createAssignment(assignmentData).subscribe({
+      next: (assignment) => {
+        const assignmentId = assignment.assignmentID;
+        
+        // Tạo work items và work changes
+        this.createWorkItemsAndChanges(assignmentId, formValue);
+      },
+      error: (err) => {
+        this.isUploading.set(false);
+        console.error('Error creating assignment:', err);
+        const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi tạo gán công việc';
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   private createWorkItemsAndChanges(assignmentId: number, formValue: any) {

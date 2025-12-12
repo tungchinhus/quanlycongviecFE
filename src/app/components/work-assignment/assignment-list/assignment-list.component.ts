@@ -21,6 +21,7 @@ import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignm
 import { AssignmentDetailDialogComponent } from '../assignment-detail-dialog/assignment-detail-dialog.component';
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
+import { AuthUser } from '../../../services/auth.service';
 
 interface ColumnVisibility {
   [key: string]: boolean;
@@ -59,6 +60,7 @@ export class AssignmentListComponent implements OnInit {
   readonly allColumns = signal<string[]>([]);
   readonly columnVisibility = signal<ColumnVisibility>({});
   isUserRole: boolean = false;
+  isAdminOrManager: boolean = false;
 
   constructor(
     private assignmentService: AssignmentService,
@@ -77,6 +79,14 @@ export class AssignmentListComponent implements OnInit {
   checkUserRole() {
     const currentUser = this.authService.user();
     this.isUserRole = currentUser?.roles?.includes(UserRole.User) || false;
+    // Kiểm tra nếu user là Admin hoặc Manager
+    this.isAdminOrManager = this.authService.hasAnyRole([
+      UserRole.Administrator, 
+      'Administrator', 
+      'Admin',
+      UserRole.Manager,
+      'Manager'
+    ]);
   }
 
   setupDisplayedColumns() {
@@ -159,25 +169,38 @@ export class AssignmentListComponent implements OnInit {
 
         // Filter assignments by logged-in user
         const currentUser = this.authService.user();
-        if (currentUser && this.isUserRole) {
-          // Chỉ hiển thị assignments có work items được gán cho user đăng nhập
+        
+        // Admin và Manager: hiển thị tất cả assignments
+        if (this.isAdminOrManager) {
+          this.assignments = assignments;
+        } else if (currentUser && this.isUserRole) {
+          // User thường: chỉ hiển thị assignments có work items được gán cho user đăng nhập
           this.assignments = assignments.filter(assignment => {
             if (!assignment.workItems || assignment.workItems.length === 0) {
               return false;
             }
             // Kiểm tra xem có work item nào được gán cho user hiện tại không
             return assignment.workItems.some(item => {
-              const personId = item.personName;
-              return personId && (
-                personId === currentUser.id ||
-                personId === currentUser.id?.toString() ||
-                personId === currentUser.userId?.toString() ||
-                personId === currentUser.name
+              const personName = item.personName;
+              if (!personName) return false;
+              
+              // So sánh với nhiều identifier của user
+              const userIdentifiers = [
+                currentUser.id,
+                currentUser.id?.toString(),
+                currentUser.userId?.toString(),
+                currentUser.userName,
+                currentUser.name,
+                currentUser.email
+              ].filter(id => id);
+              
+              return userIdentifiers.some(id => 
+                id && personName.toString().toLowerCase() === id.toString().toLowerCase()
               );
             });
           });
         } else {
-          // Admin/Manager: hiển thị tất cả assignments
+          // Nếu không có user hoặc không phải user role, hiển thị tất cả (fallback)
           this.assignments = assignments;
         }
 

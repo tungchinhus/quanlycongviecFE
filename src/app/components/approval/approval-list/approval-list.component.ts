@@ -11,6 +11,8 @@ import { ApprovalService } from '../../../services/approval.service';
 import { AssignmentApproval } from '../../../models/machine-assignment.model';
 import { ApprovalDialogComponent } from '../approval-dialog/approval-dialog.component';
 import { AssignmentService } from '../../../services/assignment.service';
+import { AuthService } from '../../../services/auth.service';
+import { UserRole } from '../../../constants/enums';
 
 @Component({
   selector: 'app-approval-list',
@@ -31,12 +33,23 @@ import { AssignmentService } from '../../../services/assignment.service';
 export class ApprovalListComponent implements OnInit {
   approvals: AssignmentApproval[] = [];
   displayedColumns: string[] = ['assignmentID', 'approverRole', 'approverName', 'approvalDate', 'notes', 'actions'];
+  isAdminOrManager: boolean = false;
 
   constructor(
     private approvalService: ApprovalService,
     private assignmentService: AssignmentService,
-    private dialog: MatDialog
-  ) {}
+    private dialog: MatDialog,
+    private authService: AuthService
+  ) {
+    // Kiểm tra nếu user là Admin hoặc Manager
+    this.isAdminOrManager = this.authService.hasAnyRole([
+      UserRole.Administrator, 
+      'Administrator', 
+      'Admin',
+      UserRole.Manager,
+      'Manager'
+    ]);
+  }
 
   ngOnInit() {
     this.loadApprovals();
@@ -45,7 +58,34 @@ export class ApprovalListComponent implements OnInit {
   loadApprovals() {
     this.approvalService.getAllApprovals().subscribe({
       next: (approvals) => {
-        this.approvals = approvals;
+        // Admin và Manager: hiển thị tất cả approvals
+        if (this.isAdminOrManager) {
+          this.approvals = approvals;
+        } else {
+          // User thường: chỉ hiển thị approvals của user đăng nhập
+          const currentUser = this.authService.user();
+          if (currentUser) {
+            const userIdentifiers = [
+              currentUser.id,
+              currentUser.id?.toString(),
+              currentUser.userId?.toString(),
+              currentUser.userName,
+              currentUser.name,
+              currentUser.email
+            ].filter(id => id);
+            
+            this.approvals = approvals.filter(approval => {
+              const approverName = approval.approverName;
+              if (!approverName) return false;
+              
+              return userIdentifiers.some(id => 
+                id && approverName.toString().toLowerCase() === id.toString().toLowerCase()
+              );
+            });
+          } else {
+            this.approvals = [];
+          }
+        }
       },
       error: (err) => {
         console.error('Error loading approvals:', err);
@@ -58,9 +98,41 @@ export class ApprovalListComponent implements OnInit {
     // Get available assignments for selection
     this.assignmentService.getAllAssignments().subscribe({
       next: (assignments) => {
+        // Filter assignments by logged-in user (same logic as assignment-list)
+        let filteredAssignments = assignments;
+        const currentUser = this.authService.user();
+        
+        // Admin và Manager: hiển thị tất cả assignments
+        if (!this.isAdminOrManager && currentUser) {
+          // User thường: chỉ hiển thị assignments có work items được gán cho user đăng nhập
+          filteredAssignments = assignments.filter(assignment => {
+            if (!assignment.workItems || assignment.workItems.length === 0) {
+              return false;
+            }
+            // Kiểm tra xem có work item nào được gán cho user hiện tại không
+            return assignment.workItems.some(item => {
+              const personName = item.personName;
+              if (!personName) return false;
+              
+              const userIdentifiers = [
+                currentUser.id,
+                currentUser.id?.toString(),
+                currentUser.userId?.toString(),
+                currentUser.userName,
+                currentUser.name,
+                currentUser.email
+              ].filter(id => id);
+              
+              return userIdentifiers.some(id => 
+                id && personName.toString().toLowerCase() === id.toString().toLowerCase()
+              );
+            });
+          });
+        }
+        
         const dialogRef = this.dialog.open(ApprovalDialogComponent, {
           width: '500px',
-          data: { assignments }
+          data: { assignments: filteredAssignments }
         });
 
         dialogRef.afterClosed().subscribe(result => {

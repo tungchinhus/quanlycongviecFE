@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, getIdTokenResult, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from '@angular/fire/auth';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, switchMap, catchError, tap } from 'rxjs/operators';
@@ -187,7 +187,7 @@ export class AuthService {
             return from(firebaseUser.getIdToken(true)).pipe(
               switchMap((idToken) => {
                 // Bước 3: Lấy roles từ Firebase Custom Claims (source of truth)
-                return from(getIdTokenResult(firebaseUser, true)).pipe(
+                return from(firebaseUser.getIdTokenResult(true)).pipe(
                   switchMap((tokenResult) => {
                     // Lấy roles từ custom claims
                     const claims = tokenResult.claims;
@@ -348,7 +348,7 @@ export class AuthService {
    * Roles luôn lấy từ Firebase Custom Claims, không từ API/DB
    */
   private loadUserFromFirebase(firebaseUser: FirebaseUser): Observable<AuthUser> {
-    return from(getIdTokenResult(firebaseUser, true)).pipe(
+    return from(firebaseUser.getIdTokenResult(true)).pipe(
       map((tokenResult) => {
         // Lấy roles từ custom claims - đây là source of truth
         const claims = tokenResult.claims;

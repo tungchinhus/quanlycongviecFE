@@ -71,7 +71,7 @@
   </form>
 
   <!-- File Upload Section -->
-  <div class="files-section" *ngIf="workItem?.assignmentID">
+  <div class="files-section" *ngIf="assignmentId">
     <h3 class="section-title">File đính kèm</h3>
     
     <!-- File Upload Area -->
@@ -108,15 +108,24 @@
   </div>
 
   <!-- File Giao Việc Section - Chỉ file của người giao việc -->
-  <div class="files-reference-section" *ngIf="workItem?.assignmentID">
+  <div class="files-reference-section" *ngIf="assignmentId">
     <h3 class="section-title">Giao việc</h3>
     <div class="uploaded-files-list" *ngIf="assignmentFiles.length > 0">
       <div *ngFor="let file of assignmentFiles" class="file-item">
         <mat-icon>insert_drive_file</mat-icon>
-        <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+        <a 
+          class="file-name file-name-link"
+          (click)="openFile(file, $event)"
+          [matTooltip]="'Click để xem file trong tab mới'"
+          href="javascript:void(0)">
+          {{ file.fileName }}
+        </a>
         <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
         <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
         <div class="file-actions">
+          <button mat-icon-button (click)="openFile(file)" [matTooltip]="'Mở file'">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
           <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
             <mat-icon>download</mat-icon>
           </button>
@@ -129,17 +138,34 @@
   </div>
 
   <!-- File Của Tôi Section - Chỉ file của user đang login -->
-  <div class="files-reference-section" *ngIf="workItem?.assignmentID">
+  <div class="files-reference-section" *ngIf="assignmentId">
     <h3 class="section-title">Của tôi</h3>
     <div class="uploaded-files-list" *ngIf="userFiles.length > 0">
       <div *ngFor="let file of userFiles" class="file-item">
         <mat-icon>insert_drive_file</mat-icon>
-        <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+        <a 
+          class="file-name file-name-link"
+          (click)="openFile(file, $event)"
+          [matTooltip]="'Click để xem file trong tab mới'"
+          href="javascript:void(0)">
+          {{ file.fileName }}
+        </a>
         <span class="file-size" *ngIf="file.fileSize">({{ formatFileSize(file.fileSize) }})</span>
         <span class="file-date" *ngIf="file.uploadDate">{{ file.uploadDate | date:'dd/MM/yyyy' }}</span>
         <div class="file-actions">
+          <button mat-icon-button (click)="openFile(file)" [matTooltip]="'Mở file'">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
           <button mat-icon-button (click)="downloadFile(file)" [matTooltip]="'Tải xuống'">
             <mat-icon>download</mat-icon>
+          </button>
+          <button 
+            *ngIf="!isViewMode() && canDeleteFile(file)" 
+            mat-icon-button 
+            (click)="deleteFile(file)" 
+            color="warn"
+            [matTooltip]="'Xóa file này'">
+            <mat-icon>delete</mat-icon>
           </button>
         </div>
       </div>
