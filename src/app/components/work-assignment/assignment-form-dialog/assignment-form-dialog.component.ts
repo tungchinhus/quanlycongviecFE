@@ -72,22 +72,22 @@ export class AssignmentFormDialogComponent implements OnInit {
     this.assignmentForm = this.fb.group({
       tbktId: ['', [Validators.required, Validators.maxLength(50)]], // TBKT_ID để map với TechnicalSheet
       machineName: ['', [Validators.required, Validators.maxLength(255)]],
-      requestDocument: ['', Validators.maxLength(255)], // ĐĐH/Giấy đề nghị (chỉ lưu client-side)
-      standardRequirement: ['', Validators.maxLength(1000)],
-      additionalRequest: ['', Validators.maxLength(1000)],
-      deliveryDate: [null],
+      requestDocument: ['', [Validators.required, Validators.maxLength(255)]], // ĐĐH/Giấy đề nghị - BẮT BUỘC
+      standardRequirement: ['', [Validators.required, Validators.maxLength(1000)]], // BẮT BUỘC
+      additionalRequest: ['', [Validators.required, Validators.maxLength(1000)]], // BẮT BUỘC
+      deliveryDate: [null, Validators.required], // BẮT BUỘC
       // Lưu user ID nhưng hiển thị tên
       designer: [this.currentUser?.id || '', { disabled: true }],
-      teamLeader: ['', Validators.maxLength(100)],
-      // Danh mục với user assignment
+      teamLeader: ['', [Validators.required, Validators.maxLength(100)]], // BẮT BUỘC
+      // Danh mục với user assignment - ít nhất một trường phải được chọn
       coreDesignUser: [''],
       coreReviewUser: [''],
       casingDesignUser: [''],
       casingReviewUser: [''],
       materialLevelingUser: [''],
-      // Các hạng mục thay đổi
+      // Các hạng mục thay đổi - KHÔNG BẮT BUỘC
       workChanges: ['', Validators.maxLength(1000)]
-    });
+    }, { validators: this.atLeastOnePerformerValidator });
   }
 
   ngOnInit() {
@@ -104,10 +104,10 @@ export class AssignmentFormDialogComponent implements OnInit {
           !user.roles.includes(UserRole.Administrator)
         );
         
-        // Filter managers cho dropdown "Trưởng Đ.vị"
+        // Filter managers cho dropdown "Trưởng Đ.vị" - chỉ lấy users có role ManagerL1
         this.managers = users.filter(user => 
           user.isActive !== false && 
-          user.roles.includes(UserRole.Manager)
+          user.roles.includes('ManagerL1')
         );
         
         this.isLoadingUsers = false;
@@ -399,6 +399,24 @@ export class AssignmentFormDialogComponent implements OnInit {
 
   onCancel() {
     this.dialogRef.close();
+  }
+
+  // Custom validator: Đảm bảo ít nhất một người thực hiện được chọn
+  private atLeastOnePerformerValidator = (group: FormGroup): { [key: string]: any } | null => {
+    const coreDesignUser = group.get('coreDesignUser')?.value;
+    const coreReviewUser = group.get('coreReviewUser')?.value;
+    const casingDesignUser = group.get('casingDesignUser')?.value;
+    const casingReviewUser = group.get('casingReviewUser')?.value;
+    const materialLevelingUser = group.get('materialLevelingUser')?.value;
+
+    const hasAtLeastOne = !!(coreDesignUser || coreReviewUser || casingDesignUser || casingReviewUser || materialLevelingUser);
+    
+    return hasAtLeastOne ? null : { atLeastOnePerformerRequired: true };
+  };
+
+  // Getter để kiểm tra form có valid không (dùng trong template)
+  get isFormValid(): boolean {
+    return this.assignmentForm.valid;
   }
 }
 

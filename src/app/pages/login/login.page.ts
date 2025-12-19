@@ -49,9 +49,9 @@ export class LoginPage implements OnDestroy {
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
 
-    // Nếu đã đăng nhập, chuyển hướng về trang chính
+    // Nếu đã đăng nhập, chuyển hướng về Dashboard
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/files']);
+      this.router.navigate(['/dashboard']);
     }
   }
 
@@ -85,7 +85,7 @@ export class LoginPage implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'top'
           });
-          this.router.navigate(['/files']);
+          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           this.isLoading = false;

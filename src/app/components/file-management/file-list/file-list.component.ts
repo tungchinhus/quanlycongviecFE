@@ -14,6 +14,7 @@ import { FileService } from '../../../services/file.service';
 import { FileDocument, FileStatus } from '../../../models/file.model';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FileUploadDialogComponent } from '../file-upload-dialog/file-upload-dialog.component';
+import { AuthService, AuthUser } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-file-list',
@@ -41,25 +42,46 @@ export class FileListComponent implements OnInit {
   displayedColumns: string[] = ['fileName', 'fileType', 'fileSize', 'status', 'uploadDate', 'actions'];
   selectedStatus: FileStatus | null = null;
   statusOptions = Object.values(FileStatus);
+  currentUser: AuthUser | null = null;
 
   constructor(
     private fileService: FileService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
+    this.currentUser = this.authService.user();
     this.loadFiles();
   }
 
   loadFiles() {
     this.fileService.getAllFiles().subscribe({
       next: (files) => {
-        this.files = files;
+        // Lọc chỉ những file của user đang đăng nhập
+        if (this.currentUser) {
+          const currentUserIdentifiers = [
+            this.currentUser.userName,
+            this.currentUser.id?.toString(),
+            this.currentUser.userId?.toString(),
+            this.currentUser.email,
+            this.currentUser.name
+          ].filter(id => id != null && id !== '') as string[];
+
+          this.files = files.filter(file => {
+            if (!file.uploadedBy) return false;
+            return currentUserIdentifiers.some(id => 
+              file.uploadedBy?.toLowerCase() === id.toLowerCase()
+            );
+          });
+        } else {
+          // Nếu không có user, không hiển thị file nào
+          this.files = [];
+        }
         this.applyFilter();
       },
       error: (err) => {
         console.error('Error loading files:', err);
-        // Mock data for development
         this.files = [];
         this.applyFilter();
       }

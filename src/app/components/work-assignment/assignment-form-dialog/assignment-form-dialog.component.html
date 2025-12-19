@@ -12,36 +12,51 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>ĐĐH/Giấy đề nghị</mat-label>
-        <input matInput formControlName="requestDocument" placeholder="Nhập ĐĐH/Giấy đề nghị">
+        <mat-label>ĐĐH/Giấy đề nghị *</mat-label>
+        <input matInput formControlName="requestDocument" placeholder="Nhập ĐĐH/Giấy đề nghị" required>
+        <mat-error *ngIf="assignmentForm.get('requestDocument')?.hasError('required')">
+          ĐĐH/Giấy đề nghị là bắt buộc
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>TBKT</mat-label>
-        <input matInput formControlName="tbktId" placeholder="Nhập mã TBKT (ví dụ: TC: 96/QĐ-HDTV)">
+        <mat-label>TBKT *</mat-label>
+        <input matInput formControlName="tbktId" placeholder="Nhập mã TBKT (ví dụ: TC: 96/QĐ-HDTV)" required>
+        <mat-error *ngIf="assignmentForm.get('tbktId')?.hasError('required')">
+          TBKT là bắt buộc
+        </mat-error>
       </mat-form-field>
     </div>
 
     <!-- Row 2: Yêu Cầu SP và Yêu Cầu khác -->
     <div class="form-row">
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>Yêu Cầu SP(Tiêu Chuẩn)</mat-label>
-        <textarea matInput formControlName="standardRequirement" rows="2"></textarea>
+        <mat-label>Yêu Cầu SP(Tiêu Chuẩn) *</mat-label>
+        <textarea matInput formControlName="standardRequirement" rows="2" required></textarea>
+        <mat-error *ngIf="assignmentForm.get('standardRequirement')?.hasError('required')">
+          Yêu cầu SP(Tiêu Chuẩn) là bắt buộc
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>Yêu Cầu khác</mat-label>
-        <textarea matInput formControlName="additionalRequest" rows="2"></textarea>
+        <mat-label>Yêu Cầu khác *</mat-label>
+        <textarea matInput formControlName="additionalRequest" rows="2" required></textarea>
+        <mat-error *ngIf="assignmentForm.get('additionalRequest')?.hasError('required')">
+          Yêu cầu khác là bắt buộc
+        </mat-error>
       </mat-form-field>
     </div>
 
     <!-- Row 3: Ngày Giao, Người Giao việc, Trưởng Đ.vị -->
     <div class="form-row form-row-three">
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>Ngày Giao</mat-label>
-        <input matInput [matDatepicker]="picker" formControlName="deliveryDate">
+        <mat-label>Ngày Giao *</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="deliveryDate" required>
         <mat-datepicker-toggle matIconSuffix [for]="picker" type="button"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
+        <mat-error *ngIf="assignmentForm.get('deliveryDate')?.hasError('required')">
+          Ngày giao là bắt buộc
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
@@ -50,19 +65,26 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
-        <mat-label>Trưởng Đ.vị</mat-label>
-        <mat-select formControlName="teamLeader">
+        <mat-label>Trưởng Đ.vị *</mat-label>
+        <mat-select formControlName="teamLeader" required>
           <mat-option value="">-- Chọn --</mat-option>
           @for (manager of managers; track manager.id) {
             <mat-option [value]="manager.id">{{ manager.name || manager.userName }}</mat-option>
           }
         </mat-select>
+        <mat-error *ngIf="assignmentForm.get('teamLeader')?.hasError('required')">
+          Trưởng Đ.vị là bắt buộc
+        </mat-error>
       </mat-form-field>
     </div>
 
     <!-- Danh mục công việc -->
     <div class="work-categories">
-      <h3>Người thực hiện</h3>
+      <h3>Người thực hiện *</h3>
+      <div *ngIf="assignmentForm.hasError('atLeastOnePerformerRequired') && assignmentForm.touched" class="form-error-message">
+        <mat-icon>error</mat-icon>
+        <span>Vui lòng chọn ít nhất một người thực hiện</span>
+      </div>
       <div class="form-row">
         <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>T.kể ruột</mat-label>
@@ -173,7 +195,7 @@
     mat-raised-button 
     color="primary" 
     (click)="onSave()" 
-    [disabled]="assignmentForm.invalid || isUploading()">
+    [disabled]="!isFormValid || isUploading()">
     @if (isUploading()) {
       <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
       <span>Đang lưu...</span>

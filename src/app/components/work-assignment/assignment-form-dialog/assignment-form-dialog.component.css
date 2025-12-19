@@ -293,3 +293,23 @@ mat-dialog-actions button {
   color: white !important;
 }
 
+/* Error message for form-level validation */
+.form-error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f44336;
+  font-size: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+  border-radius: 4px;
+}
+
+.form-error-message mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+

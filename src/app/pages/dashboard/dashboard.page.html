@@ -1,0 +1,162 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Làm mới">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="refresh()">Thử lại</button>
+    </div>
+  }
+
+  <!-- Dashboard Content -->
+  @if (stats() && !loading() && !error()) {
+    <div class="dashboard-content">
+      <!-- Statistics Cards -->
+      <div class="stats-grid">
+        <!-- Work Items Stats - Only for regular users -->
+        @if (!isManager()) {
+          <mat-card class="stat-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>work</mat-icon>
+                Công việc
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="stat-value">{{ stats()!.workItems.total }}</div>
+              <div class="stat-label">Tổng số công việc</div>
+              <div class="stat-details">
+                <div class="stat-item">
+                  <span class="stat-item-label">Hoàn thành:</span>
+                  <span class="stat-item-value success">{{ stats()!.workItems.completed }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Đang xử lý:</span>
+                  <span class="stat-item-value warning clickable" 
+                        [matTooltip]="getPendingWorkItemsTooltip()"
+                        [matTooltipClass]="'work-items-tooltip'"
+                        (click)="navigateToWorkItems()"
+                        style="cursor: pointer;">
+                    {{ stats()!.workItems.pending }}
+                  </span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Đã xác nhận:</span>
+                  <span class="stat-item-value info">{{ stats()!.workItems.confirmed }}</span>
+                </div>                
+                <div class="stat-item">
+                  <span class="stat-item-label">Quá hạn:</span>
+                  <span class="stat-item-value danger">{{ stats()!.workItems.overdue }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Tỷ lệ hoàn thành:</span>
+                  <span class="stat-item-value">{{ stats()!.workItems.completionRate }}%</span>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Assignments Stats - Only for Managers -->
+        @if (isManager()) {
+          <mat-card class="stat-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>assignment</mat-icon>
+                Phân công
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="stat-value">{{ stats()!.assignments.total }}</div>
+              <div class="stat-label">Tổng số phân công</div>
+              <div class="stat-details">
+                <div class="stat-item">
+                  <span class="stat-item-label">Mới:</span>
+                  <span class="stat-item-value info">{{ stats()!.assignments.new }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Đang xử lý:</span>
+                  <span class="stat-item-value warning">{{ stats()!.assignments.inProgress }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Hoàn thành:</span>
+                  <span class="stat-item-value success">{{ stats()!.assignments.completed }}</span>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Recent Activity -->
+        <mat-card class="stat-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>schedule</mat-icon>
+              Hoạt động gần đây
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (stats()!.recent.machines && stats()!.recent.machines.length > 0) {
+              <div class="recent-machines">
+                <ul class="recent-machines-list">
+                  @for (machine of stats()!.recent.machines; track machine) {
+                    <li class="recent-machine-item">
+                      <mat-icon class="machine-icon">precision_manufacturing</mat-icon>
+                      <span class="machine-name">{{ machine }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+            } @else {
+              <div class="recent-machines-empty">
+                <p>Chưa có hoạt động nào trong 7 ngày qua</p>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <!-- Monthly Stats Chart - Always visible -->
+        <mat-card class="chart-card chart-card-full">
+          <mat-card-header>
+            <mat-card-title>Thống kê theo tháng</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="chart-container">
+              @if (stats() && stats()!.monthly && stats()!.monthly.length > 0) {
+                <canvas baseChart
+                        [data]="monthlyChartData"
+                        [type]="monthlyChartType"
+                        [options]="monthlyChartOptions">
+                </canvas>
+              } @else {
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
+                  <p>Chưa có dữ liệu để hiển thị</p>
+                </div>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  }
+</div>
+

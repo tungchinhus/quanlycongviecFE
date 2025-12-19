@@ -6,8 +6,13 @@ import { UserRole } from './constants/enums';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/files',
+    redirectTo: '/dashboard',
     pathMatch: 'full'
+  },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./pages/dashboard/dashboard.page').then(m => m.DashboardPage),
+    canActivate: [authGuard]
   },
   {
     path: 'login',
@@ -78,7 +83,7 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '/files'
+    redirectTo: '/dashboard'
   }
 ];
 
