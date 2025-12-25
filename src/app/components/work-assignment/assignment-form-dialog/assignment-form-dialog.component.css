@@ -10,6 +10,10 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
+.form-row-two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .form-row-single {
   grid-template-columns: 1fr;
 }
@@ -27,6 +31,10 @@
   
   .form-row-three .form-field-flex:last-child {
     grid-column: 1 / -1; /* Span full width */
+  }
+
+  .form-row-two {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -57,6 +65,10 @@
   
   .form-row-three .form-field-flex:last-child {
     grid-column: 1;
+  }
+
+  .form-row-two {
+    grid-template-columns: 1fr;
   }
   
   mat-dialog-content {

@@ -1,0 +1,155 @@
+.tbkt-management-container {
+  padding: 24px;
+  max-width: 100%;
+}
+
+.tbkt-header {
+  margin-bottom: 16px;
+}
+
+.tbkt-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--thibidi-text-primary, #333);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 1;
+  min-width: 300px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+}
+
+.loading-container p {
+  color: var(--thibidi-text-secondary, #666);
+  margin: 0;
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  color: #c62828;
+}
+
+.error-container p {
+  color: var(--thibidi-text-secondary, #666);
+  margin: 0;
+}
+
+.tbkt-table-card {
+  margin-top: 16px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.tbkt-table {
+  width: 100%;
+}
+
+.tbkt-table th {
+  background-color: var(--thibidi-primary, #1976d2);
+  color: white;
+  font-weight: 500;
+  padding: 12px 8px;
+  text-align: left;
+}
+
+.tbkt-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.tbkt-table tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.tbkt-table tr:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.tbkt-id-header,
+.tbkt-id-cell {
+  font-weight: 600;
+  color: var(--thibidi-primary, #1976d2);
+}
+
+.tbkt-id-cell {
+  font-family: 'Courier New', monospace;
+}
+
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+  gap: 16px;
+}
+
+.empty-container mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  color: var(--thibidi-text-secondary, #999);
+}
+
+.empty-container p {
+  color: var(--thibidi-text-secondary, #666);
+  margin: 0;
+  font-size: 16px;
+}
+
+::ng-deep .error-snackbar {
+  background-color: #c62828 !important;
+  color: white !important;
+}
+
+@media (max-width: 768px) {
+  .tbkt-management-container {
+    padding: 16px;
+  }
+
+  .tbkt-header h1 {
+    font-size: 20px;
+  }
+
+  .tbkt-table {
+    font-size: 12px;
+  }
+
+  .tbkt-table th,
+  .tbkt-table td {
+    padding: 8px 4px;
+  }
+}
+

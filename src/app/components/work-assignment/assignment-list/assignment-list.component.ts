@@ -16,12 +16,10 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { AssignmentService } from '../../../services/assignment.service';
-import { MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
-import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignment-form-dialog.component';
-import { AssignmentDetailDialogComponent } from '../assignment-detail-dialog/assignment-detail-dialog.component';
+import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
-import { AuthUser } from '../../../services/auth.service';
+import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignment-form-dialog.component';
 
 interface ColumnVisibility {
   [key: string]: boolean;
@@ -53,8 +51,9 @@ interface ColumnVisibility {
 })
 
 export class AssignmentListComponent implements OnInit {
-  assignments: MachineAssignment[] = [];
-  filteredAssignments: MachineAssignment[] = [];
+  readonly technicalSheets = signal<TechnicalSheet[]>([]);
+  filteredTechnicalSheets: TechnicalSheet[] = [];
+  assignments: MachineAssignment[] = []; // Để kiểm tra xem technical sheet có assignments chưa
   readonly searchTerm = signal<string>('');
   readonly displayedColumns = signal<string[]>([]);
   readonly allColumns = signal<string[]>([]);
@@ -73,30 +72,34 @@ export class AssignmentListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.loadAssignments();
+    this.loadTechnicalSheets();
   }
 
   checkUserRole() {
     const currentUser = this.authService.user();
     this.isUserRole = currentUser?.roles?.includes(UserRole.User) || false;
-    // Kiểm tra nếu user là Admin hoặc Manager
+    // Kiểm tra nếu user là Admin hoặc Manager (bao gồm ManagerL1, ManagerL2, v.v.)
     this.isAdminOrManager = this.authService.hasAnyRole([
       UserRole.Administrator, 
       'Administrator', 
       'Admin',
       UserRole.Manager,
-      'Manager'
+      'Manager',
+      'ManagerL1',
+      'ManagerL2',
+      'ManagerL3'
     ]);
   }
 
   setupDisplayedColumns() {
-    let columns: string[] = [];
-    if (this.isUserRole) {
-      // Ẩn cột Công Việc và Ký Duyệt cho role User
-      columns = ['machineName', 'deliveryDate', 'actions'];
-    } else {
-      columns = ['machineName', 'deliveryDate', 'workItems', 'approvals', 'actions'];
-    }
+    // Các cột hiển thị cho technical sheets (đã bỏ: phase, salesOrder, drawingDate, deliveryDate, requesterElectrical, requesterMechanical)
+    const columns: string[] = [
+      'tbkt_ID',
+      'power_kVA',
+      'voltageSpec',
+      'standardCode',
+      'actions'
+    ];
     
     this.allColumns.set(columns);
     
@@ -110,7 +113,7 @@ export class AssignmentListComponent implements OnInit {
   }
 
   readonly filteredData = computed(() => {
-    const data = this.assignments;
+    const data = this.technicalSheets();
     const search = this.searchTerm().toLowerCase().trim();
     const visibleColumns = this.displayedColumns();
     
@@ -119,26 +122,25 @@ export class AssignmentListComponent implements OnInit {
     }
     
     // Tìm kiếm chỉ trong các cột đang hiển thị
-    return data.filter(assignment => {
+    return data.filter(sheet => {
       return visibleColumns.some(col => {
         let value: any = '';
         
         switch(col) {
-          case 'machineName':
-            value = assignment.machineName;
+          case 'tbkt_ID':
+            value = sheet.tbkt_ID;
             break;
-          case 'deliveryDate':
-            value = assignment.deliveryDate ? new Date(assignment.deliveryDate).toLocaleDateString('vi-VN') : '';
+          case 'power_kVA':
+            value = sheet.power_kVA;
             break;
-          case 'workItems':
-            value = assignment.workItems?.length || 0;
+          case 'voltageSpec':
+            value = sheet.voltageSpec;
             break;
-          case 'approvals':
-            value = assignment.approvals?.length || 0;
+          case 'standardCode':
+            value = sheet.standardCode;
             break;
           default:
-            // Tìm kiếm trong các trường khác nếu có
-            value = assignment.standardRequirement || assignment.additionalRequest || '';
+            value = '';
         }
         
         if (value === null || value === undefined) return false;
@@ -149,216 +151,268 @@ export class AssignmentListComponent implements OnInit {
 
   onSearchChange(value: string) {
     this.searchTerm.set(value);
-    this.updateFilteredAssignments();
+    this.updateFilteredTechnicalSheets();
   }
 
-  private updateFilteredAssignments() {
-    this.filteredAssignments = this.filteredData();
+  private updateFilteredTechnicalSheets() {
+    this.filteredTechnicalSheets = this.filteredData();
   }
 
-  loadAssignments() {
+  loadTechnicalSheets() {
+    // Load cả technical sheets và assignments để kiểm tra trạng thái
+    // Nếu là Admin/Manager, không truyền firebaseUID để xem tất cả
+    // Nếu không phải Admin/Manager, truyền firebaseUID để chỉ xem của mình
+    const currentUser = this.authService.user();
+    const firebaseUID = this.isAdminOrManager ? undefined : currentUser?.firebaseUid;
+    
+    console.log('Loading TechnicalSheets - isAdminOrManager:', this.isAdminOrManager, 'firebaseUID:', firebaseUID);
+    
+    this.assignmentService.getAllTechnicalSheets(firebaseUID).subscribe({
+      next: (sheets) => {
+        console.log('Received TechnicalSheets:', sheets.length, sheets);
+        this.technicalSheets.set(sheets || []);
+        this.updateFilteredTechnicalSheets();
+        console.log('Updated filteredTechnicalSheets:', this.filteredTechnicalSheets.length);
+      },
+      error: (err) => {
+        console.error('Error loading technical sheets:', err);
+        this.technicalSheets.set([]);
+        this.filteredTechnicalSheets = [];
+        this.snackBar.open('Không thể tải danh sách đề nghị. Vui lòng thử lại sau.', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+
+    // Load assignments để kiểm tra xem technical sheet nào đã có assignment
     this.assignmentService.getAllAssignments().subscribe({
       next: (assignments) => {
-        // Normalize API response: map assignmentApprovals to approvals for backward compatibility
-        assignments = assignments.map(assignment => {
-          if (assignment.assignmentApprovals && !assignment.approvals) {
-            assignment.approvals = assignment.assignmentApprovals;
-          }
-          return assignment;
-        });
-
-        // Filter assignments by logged-in user
-        const currentUser = this.authService.user();
-        
-        // Admin và Manager: hiển thị tất cả assignments
-        if (this.isAdminOrManager) {
-          this.assignments = assignments;
-        } else if (currentUser && this.isUserRole) {
-          // User thường: chỉ hiển thị assignments có work items được gán cho user đăng nhập
-          this.assignments = assignments.filter(assignment => {
-            if (!assignment.workItems || assignment.workItems.length === 0) {
-              return false;
-            }
-            // Kiểm tra xem có work item nào được gán cho user hiện tại không
-            return assignment.workItems.some(item => {
-              const personName = item.personName;
-              if (!personName) return false;
-              
-              // So sánh với nhiều identifier của user
-              const userIdentifiers = [
-                currentUser.id,
-                currentUser.id?.toString(),
-                currentUser.userId?.toString(),
-                currentUser.userName,
-                currentUser.name,
-                currentUser.email
-              ].filter(id => id);
-              
-              return userIdentifiers.some(id => 
-                id && personName.toString().toLowerCase() === id.toString().toLowerCase()
-              );
-            });
-          });
-        } else {
-          // Nếu không có user hoặc không phải user role, hiển thị tất cả (fallback)
-          this.assignments = assignments;
-        }
-
-        this.updateFilteredAssignments();
-        // Apply search filter if exists
-        if (this.searchTerm()) {
-          this.updateFilteredAssignments();
-        }
+        this.assignments = assignments;
       },
       error: (err) => {
         console.error('Error loading assignments:', err);
-        this.assignments = [];
-        this.filteredAssignments = [];
+        // Không hiển thị lỗi vì đây chỉ để kiểm tra trạng thái
       }
     });
   }
 
-  openAssignmentDialog() {
+  viewTechnicalSheet(sheet: TechnicalSheet) {
+    // Có thể mở dialog để xem chi tiết technical sheet hoặc điều hướng đến trang chi tiết
+    this.snackBar.open(`Xem chi tiết đề nghị: ${sheet.tbkt_ID}`, 'Đóng', {
+      duration: 2000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top'
+    });
+    // TODO: Implement view technical sheet detail dialog or navigation
+  }
+
+  openAssignmentDialog(sheet: TechnicalSheet) {
+    // Kiểm tra xem có assignment ở trạng thái "New" không
+    const newAssignment = this.getNewAssignment(sheet);
+    
+    // Mở dialog tạo hoặc chỉnh sửa assignment
     const dialogRef = this.dialog.open(AssignmentFormDialogComponent, {
       width: '90%',
       maxWidth: '1000px',
       minWidth: '320px',
-      disableClose: false
+      disableClose: false,
+      data: { 
+        tbktId: sheet.tbkt_ID,
+        technicalSheet: sheet,
+        assignment: newAssignment, // Truyền assignment nếu có để edit
+        isEditMode: newAssignment !== null
+      }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       // Reload data sau khi lưu thành công (khi dialog trả về true)
       if (result) {
-        this.loadAssignments();
+        this.loadTechnicalSheets();
       }
     });
   }
 
-  viewAssignment(assignment: MachineAssignment) {
-    this.dialog.open(AssignmentDetailDialogComponent, {
-      width: '90%',
-      maxWidth: '750px',
-      minWidth: '320px',
-      data: { assignmentId: assignment.assignmentID },
-      disableClose: false
-    });
+  canCreateAssignment(sheet: TechnicalSheet): boolean {
+    // Chỉ cho phép tạo assignment khi chưa có assignment nào (trạng thái mới)
+    // Kiểm tra xem có assignment nào sử dụng technical sheet này không
+    const hasAssignments = this.assignments.some(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    return !hasAssignments;
   }
 
-  canDeleteAssignment(assignment: MachineAssignment): boolean {
-    // Chỉ cho phép xóa khi status = 1 (New)
-    const assignmentStatus = assignment.status ?? AssignmentStatus.New;
-    return assignmentStatus === AssignmentStatus.New || assignmentStatus === 1;
-  }
-
-  getDeleteTooltip(assignment: MachineAssignment): string {
-    if (this.canDeleteAssignment(assignment)) {
-      return 'Xóa';
-    }
-    const assignmentStatus = assignment.status ?? AssignmentStatus.New;
-    let statusText = 'đang xử lý';
-    if (assignmentStatus === AssignmentStatus.Completed || assignmentStatus === 3) {
-      statusText = 'hoàn thành';
-    } else if (assignmentStatus === AssignmentStatus.InProgress || assignmentStatus === 2) {
-      statusText = 'đang xử lý';
-    }
-    return `Không thể xóa. Chỉ có thể xóa gán công việc ở trạng thái "Mới". Gán công việc này đang ở trạng thái "${statusText}".`;
-  }
-
-  toggleColumnVisibility(column: string) {
-    const visibility = { ...this.columnVisibility() };
-    visibility[column] = !visibility[column];
-    this.columnVisibility.set(visibility);
-    
-    // Cập nhật displayedColumns
-    const visibleColumns = this.allColumns().filter(col => visibility[col]);
-    this.displayedColumns.set(visibleColumns);
-    this.updateFilteredAssignments();
-  }
-
-  showAllColumns() {
-    const visibility: ColumnVisibility = {};
-    this.allColumns().forEach(col => {
-      visibility[col] = true;
-    });
-    this.columnVisibility.set(visibility);
-    this.displayedColumns.set([...this.allColumns()]);
-    this.updateFilteredAssignments();
-  }
-
-  hideAllColumns() {
-    const visibility: ColumnVisibility = {};
-    this.allColumns().forEach(col => {
-      visibility[col] = false;
-    });
-    this.columnVisibility.set(visibility);
-    this.displayedColumns.set([]);
-    this.updateFilteredAssignments();
-  }
-
-  deleteAssignment(assignment: MachineAssignment) {
-    // Kiểm tra status: chỉ cho phép xóa khi status = 1 (New)
-    const assignmentStatus = assignment.status ?? AssignmentStatus.New;
-    if (assignmentStatus !== AssignmentStatus.New && assignmentStatus !== 1) {
-      let statusText = 'đang xử lý';
-      if (assignmentStatus === AssignmentStatus.Completed || assignmentStatus === 3) {
-        statusText = 'hoàn thành';
-      } else if (assignmentStatus === AssignmentStatus.InProgress || assignmentStatus === 2) {
-        statusText = 'đang xử lý';
-      }
+  getNewAssignment(sheet: TechnicalSheet): MachineAssignment | null {
+    // Tìm assignment với trạng thái "New" liên quan đến technical sheet này
+    const newAssignment = this.assignments.find(assignment => {
+      const matchesTBKT = assignment.tbkt_ID === sheet.tbkt_ID || 
+                          assignment.tbkt_ID === sheet.tbkt_ID?.toString();
+      if (!matchesTBKT) return false;
       
-      this.snackBar.open(
-        `Không thể xóa gán công việc "${assignment.machineName}". Chỉ có thể xóa gán công việc ở trạng thái "Mới" (status = 1). Gán công việc này đang ở trạng thái "${statusText}".`,
-        'Đóng',
-        {
-          duration: 6000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
+      const status = assignment.status ?? AssignmentStatus.New;
+      return status === AssignmentStatus.New || status === 1;
+    });
+    return newAssignment || null;
+  }
+
+  hasNewAssignment(sheet: TechnicalSheet): boolean {
+    return this.getNewAssignment(sheet) !== null;
+  }
+
+  canDeleteTechnicalSheet(sheet: TechnicalSheet): boolean {
+    // Tìm assignment liên quan đến technical sheet này
+    const relatedAssignments = this.assignments.filter(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+
+    // Nếu chưa có assignment nào, cho phép xóa
+    if (relatedAssignments.length === 0) {
+      return true;
+    }
+
+    // Nếu có assignment, chỉ cho phép xóa khi:
+    // 1. Tất cả assignment đều ở trạng thái "New" (status = 1)
+    // 2. Không có work item nào đã được cập nhật (chưa có StartDate, ExpectedFinish, ActualFinish, PersonConfirmation, Notes, File_ID)
+    return relatedAssignments.every(assignment => {
+      const status = assignment.status ?? AssignmentStatus.New;
+      const isNewStatus = status === AssignmentStatus.New || status === 1;
+      
+      if (!isNewStatus) {
+        return false;
+      }
+
+      // Kiểm tra xem có work item nào đã được cập nhật chưa
+      // Work item được coi là đã cập nhật nếu có bất kỳ trường nào: StartDate, ExpectedFinish, ActualFinish, PersonConfirmation, Notes, File_ID
+      if (assignment.workItems && assignment.workItems.length > 0) {
+        const hasUpdatedWorkItems = assignment.workItems.some(wi => 
+          wi.startDate != null ||
+          wi.expectedFinish != null ||
+          wi.actualFinish != null ||
+          wi.personConfirmation != null ||
+          (wi.notes != null && wi.notes.trim() !== '') ||
+          (wi.file_ID != null && wi.file_ID.trim() !== '')
+        );
+        
+        if (hasUpdatedWorkItems) {
+          return false;
         }
-      );
-      return;
+      }
+
+      return true;
+    });
+  }
+
+  deleteTechnicalSheet(sheet: TechnicalSheet) {
+    // Tìm assignment liên quan đến technical sheet này
+    const relatedAssignments = this.assignments.filter(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+
+    // Kiểm tra trạng thái của assignment
+    if (relatedAssignments.length > 0) {
+      // Kiểm tra xem có assignment nào không phải trạng thái New
+      const hasNonNewStatus = relatedAssignments.some(assignment => {
+        const status = assignment.status ?? AssignmentStatus.New;
+        return status !== AssignmentStatus.New && status !== 1;
+      });
+
+      if (hasNonNewStatus) {
+        // Tìm assignment không phải trạng thái New để hiển thị thông báo
+        const nonNewAssignments = relatedAssignments.filter(assignment => {
+          const status = assignment.status ?? AssignmentStatus.New;
+          return status !== AssignmentStatus.New && status !== 1;
+        });
+
+        let statusText = 'đang xử lý';
+        if (nonNewAssignments.length > 0) {
+          const firstStatus = nonNewAssignments[0].status ?? AssignmentStatus.New;
+          if (firstStatus === AssignmentStatus.Completed || firstStatus === 3) {
+            statusText = 'hoàn thành';
+          } else if (firstStatus === AssignmentStatus.InProgress || firstStatus === 2) {
+            statusText = 'đang xử lý';
+          }
+        }
+
+        this.snackBar.open(
+          `Không thể xóa đề nghị "${sheet.tbkt_ID}". Gán công việc liên quan đang ở trạng thái "${statusText}". Chỉ có thể xóa khi gán công việc ở trạng thái "Mới".`,
+          'Đóng',
+          {
+            duration: 6000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          }
+        );
+        return;
+      }
+
+      // Kiểm tra xem có work item nào đã được cập nhật chưa
+      const hasUpdatedWorkItems = relatedAssignments.some(assignment => {
+        if (assignment.workItems && assignment.workItems.length > 0) {
+          return assignment.workItems.some(wi => 
+            wi.startDate != null ||
+            wi.expectedFinish != null ||
+            wi.actualFinish != null ||
+            wi.personConfirmation != null ||
+            (wi.notes != null && wi.notes.trim() !== '') ||
+            (wi.file_ID != null && wi.file_ID.trim() !== '')
+          );
+        }
+        return false;
+      });
+
+      if (hasUpdatedWorkItems) {
+        this.snackBar.open(
+          `Không thể xóa đề nghị "${sheet.tbkt_ID}". Gán công việc liên quan đã có công việc con được cập nhật (đã có ngày bắt đầu, ngày hoàn thành dự kiến, ngày hoàn thành thực tế, xác nhận, ghi chú hoặc file đính kèm). Chỉ có thể xóa giao việc mới chưa có công việc con nào được cập nhật.`,
+          'Đóng',
+          {
+            duration: 7000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          }
+        );
+        return;
+      }
     }
 
-    // Kiểm tra xem assignment có công việc hoặc ký duyệt liên quan không
-    const hasWorkItems = assignment.workItems && assignment.workItems.length > 0;
-    const hasApprovals = assignment.approvals && assignment.approvals.length > 0;
-    const hasAssignmentApprovals = assignment.assignmentApprovals && assignment.assignmentApprovals.length > 0;
-    
-    let confirmMessage = `Bạn có chắc muốn xóa gán công việc "${assignment.machineName}"?`;
-    if (hasWorkItems || hasApprovals || hasAssignmentApprovals) {
-      const workCount = assignment.workItems?.length || 0;
-      const approvalCount = (assignment.approvals?.length || 0) + (assignment.assignmentApprovals?.length || 0);
-      confirmMessage += `\n\nLưu ý: Assignment này có ${workCount} công việc và ${approvalCount} ký duyệt. Việc xóa có thể gặp lỗi nếu backend chưa hỗ trợ xóa cascade.`;
+    let confirmMessage = `Bạn có chắc muốn xóa đề nghị "${sheet.tbkt_ID}"?`;
+    if (relatedAssignments.length > 0) {
+      confirmMessage += `\n\nLưu ý: Đề nghị này đã có ${relatedAssignments.length} gán công việc ở trạng thái "Mới". Việc xóa sẽ xóa cả các gán công việc liên quan.`;
     }
-
     if (confirm(confirmMessage)) {
-      this.assignmentService.deleteAssignment(assignment.assignmentID).subscribe({
+      this.assignmentService.deleteTechnicalSheet(sheet.tbkt_ID).subscribe({
         next: () => {
-          this.snackBar.open('Xóa gán công việc thành công!', 'Đóng', {
+          this.snackBar.open('Xóa đề nghị thành công!', 'Đóng', {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'top'
           });
-          this.loadAssignments();
+          this.loadTechnicalSheets();
         },
         error: (err) => {
-          console.error('Error deleting assignment:', err);
+          console.error('Error deleting technical sheet:', err);
           
-          let errorMessage = 'Không thể xóa gán công việc. ';
+          let errorMessage = 'Không thể xóa đề nghị. ';
           
           if (err.status === 500) {
             const backendError = err.error?.message || err.error?.error || '';
-            if (backendError.includes('entity changes') || backendError.includes('foreign key') || backendError.includes('constraint')) {
-              errorMessage += 'Assignment này có dữ liệu liên quan (công việc, ký duyệt) không thể xóa. Vui lòng xóa các dữ liệu liên quan trước.';
+            if (backendError.includes('being used') || backendError.includes('assignment')) {
+              errorMessage += 'Đề nghị này đang được sử dụng bởi một hoặc nhiều gán công việc. Vui lòng xóa các gán công việc trước.';
             } else if (backendError) {
               errorMessage += backendError;
             } else {
               errorMessage += 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
             }
           } else if (err.status === 404) {
-            errorMessage += 'Không tìm thấy assignment cần xóa.';
+            errorMessage += 'Không tìm thấy đề nghị cần xóa.';
           } else if (err.status === 403) {
-            errorMessage += 'Bạn không có quyền xóa assignment này.';
+            errorMessage += 'Bạn không có quyền xóa đề nghị này.';
           } else if (err.error?.message) {
             errorMessage += err.error.message;
           } else {
@@ -376,15 +430,50 @@ export class AssignmentListComponent implements OnInit {
     }
   }
 
+  toggleColumnVisibility(column: string) {
+    const visibility = { ...this.columnVisibility() };
+    visibility[column] = !visibility[column];
+    this.columnVisibility.set(visibility);
+    
+    // Cập nhật displayedColumns
+    const visibleColumns = this.allColumns().filter(col => visibility[col]);
+    this.displayedColumns.set(visibleColumns);
+    this.updateFilteredTechnicalSheets();
+  }
+
+  showAllColumns() {
+    const visibility: ColumnVisibility = {};
+    this.allColumns().forEach(col => {
+      visibility[col] = true;
+    });
+    this.columnVisibility.set(visibility);
+    this.displayedColumns.set([...this.allColumns()]);
+    this.updateFilteredTechnicalSheets();
+  }
+
+  hideAllColumns() {
+    const visibility: ColumnVisibility = {};
+    this.allColumns().forEach(col => {
+      visibility[col] = false;
+    });
+    this.columnVisibility.set(visibility);
+    this.displayedColumns.set([]);
+    this.updateFilteredTechnicalSheets();
+  }
+
   getColumnLabel(column: string): string {
     const labels: { [key: string]: string } = {
-      'machineName': 'Tên Máy',
-      'deliveryDate': 'Ngày Giao',
-      'workItems': 'Công Việc',
-      'approvals': 'Ký Duyệt',
-      'actions': 'Thao tác'
+      'tbkt_ID': 'TBKT',
+      'power_kVA': 'Công Suất (kVA)',
+      'voltageSpec': 'Điện Áp',
+      'standardCode': 'Mã Tiêu Chuẩn',
+      'actions': 'Menu'
     };
     return labels[column] || column;
   }
 }
+
+
+
+
 

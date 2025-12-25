@@ -147,9 +147,22 @@ export class FileListComponent implements OnInit {
         return;
       }
       
+      // Xóa file khỏi danh sách ngay lập tức để UI responsive hơn
+      this.files = this.files.filter(f => (f.id || f.fileID) !== fileId);
+      
       this.fileService.deleteFile(fileId).subscribe({
-        next: () => this.loadFiles(),
-        error: (err) => console.error('Error deleting file:', err)
+        next: () => {
+          // Reload danh sách file sau khi xóa thành công
+          // Thêm delay nhỏ để đảm bảo backend đã xử lý xong
+          setTimeout(() => {
+            this.loadFiles();
+          }, 300);
+        },
+        error: (err) => {
+          console.error('Error deleting file:', err);
+          // Nếu xóa thất bại, reload lại danh sách để hiển thị đúng
+          this.loadFiles();
+        }
       });
     }
   }

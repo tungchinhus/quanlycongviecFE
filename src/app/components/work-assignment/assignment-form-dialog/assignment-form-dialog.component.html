@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Tạo Giao Việc Mới</h2>
+<h2 mat-dialog-title>{{ isEditMode ? 'Chỉnh sửa Giao Việc' : 'Tạo Giao Việc Mới' }}</h2>
 <mat-dialog-content>
   <form [formGroup]="assignmentForm">
     <!-- Row 1: Tên Máy, ĐĐH/Giấy đề nghị và TBKT -->
@@ -6,25 +6,31 @@
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Tên Máy *</mat-label>
         <input matInput formControlName="machineName" required>
-        <mat-error *ngIf="assignmentForm.get('machineName')?.hasError('required')">
-          Tên máy là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('machineName')?.hasError('required')) {
+          <mat-error>
+            Tên máy là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>ĐĐH/Giấy đề nghị *</mat-label>
         <input matInput formControlName="requestDocument" placeholder="Nhập ĐĐH/Giấy đề nghị" required>
-        <mat-error *ngIf="assignmentForm.get('requestDocument')?.hasError('required')">
-          ĐĐH/Giấy đề nghị là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('requestDocument')?.hasError('required')) {
+          <mat-error>
+            ĐĐH/Giấy đề nghị là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>TBKT *</mat-label>
         <input matInput formControlName="tbktId" placeholder="Nhập mã TBKT (ví dụ: TC: 96/QĐ-HDTV)" required>
-        <mat-error *ngIf="assignmentForm.get('tbktId')?.hasError('required')">
-          TBKT là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('tbktId')?.hasError('required')) {
+          <mat-error>
+            TBKT là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -33,17 +39,21 @@
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Yêu Cầu SP(Tiêu Chuẩn) *</mat-label>
         <textarea matInput formControlName="standardRequirement" rows="2" required></textarea>
-        <mat-error *ngIf="assignmentForm.get('standardRequirement')?.hasError('required')">
-          Yêu cầu SP(Tiêu Chuẩn) là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('standardRequirement')?.hasError('required')) {
+          <mat-error>
+            Yêu cầu SP(Tiêu Chuẩn) là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Yêu Cầu khác *</mat-label>
         <textarea matInput formControlName="additionalRequest" rows="2" required></textarea>
-        <mat-error *ngIf="assignmentForm.get('additionalRequest')?.hasError('required')">
-          Yêu cầu khác là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('additionalRequest')?.hasError('required')) {
+          <mat-error>
+            Yêu cầu khác là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -54,9 +64,11 @@
         <input matInput [matDatepicker]="picker" formControlName="deliveryDate" required>
         <mat-datepicker-toggle matIconSuffix [for]="picker" type="button"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
-        <mat-error *ngIf="assignmentForm.get('deliveryDate')?.hasError('required')">
-          Ngày giao là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('deliveryDate')?.hasError('required')) {
+          <mat-error>
+            Ngày giao là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
@@ -72,19 +84,23 @@
             <mat-option [value]="manager.id">{{ manager.name || manager.userName }}</mat-option>
           }
         </mat-select>
-        <mat-error *ngIf="assignmentForm.get('teamLeader')?.hasError('required')">
-          Trưởng Đ.vị là bắt buộc
-        </mat-error>
+        @if (assignmentForm.get('teamLeader')?.hasError('required')) {
+          <mat-error>
+            Trưởng Đ.vị là bắt buộc
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
     <!-- Danh mục công việc -->
     <div class="work-categories">
       <h3>Người thực hiện *</h3>
-      <div *ngIf="assignmentForm.hasError('atLeastOnePerformerRequired') && assignmentForm.touched" class="form-error-message">
-        <mat-icon>error</mat-icon>
-        <span>Vui lòng chọn ít nhất một người thực hiện</span>
-      </div>
+      @if (assignmentForm.hasError('atLeastOnePerformerRequired') && assignmentForm.touched) {
+        <div class="form-error-message">
+          <mat-icon>error</mat-icon>
+          <span>Vui lòng chọn ít nhất một người thực hiện</span>
+        </div>
+      }
       <div class="form-row">
         <mat-form-field appearance="outline" class="form-field-flex">
           <mat-label>T.kể ruột</mat-label>

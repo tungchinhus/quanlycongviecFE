@@ -270,5 +270,21 @@ export class WorkItemListComponent implements OnInit {
   getMachineName(item: WorkItemWithAssignment): string {
     return item.assignment?.machineName || `Assignment #${item.assignmentID}`;
   }
+
+  isWorkItemCompleted(item: WorkItemWithAssignment): boolean {
+    // Kiểm tra nếu actualFinish có giá trị (không null, không undefined, không empty string)
+    if (!item.actualFinish) {
+      return false;
+    }
+    
+    // Nếu là string, kiểm tra không phải empty string
+    if (typeof item.actualFinish === 'string') {
+      const trimmed = item.actualFinish.trim();
+      return trimmed !== '' && trimmed !== 'null' && trimmed !== 'undefined';
+    }
+    
+    // Nếu là Date object, luôn coi là đã hoàn thành
+    return true;
+  }
 }
 

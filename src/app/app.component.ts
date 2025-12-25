@@ -46,6 +46,17 @@ export class AppComponent {
   isLoginPage = false;
   currentYear = new Date().getFullYear();
 
+  // Check if user is Admin or Manager
+  get isAdminOrManager(): boolean {
+    return this.authService.hasAnyRole([
+      UserRole.Administrator,
+      'Administrator',
+      'Admin',
+      UserRole.Manager,
+      'Manager'
+    ]);
+  }
+
   constructor() {
     // Lắng nghe thay đổi route để kiểm tra xem có đang ở trang login không
     this.router.events.pipe(

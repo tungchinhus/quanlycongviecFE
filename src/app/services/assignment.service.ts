@@ -40,6 +40,14 @@ export class AssignmentService {
     return this.http.post<TechnicalSheet>(`${environment.apiUrl}/technical-sheets`, sheet);
   }
 
+  updateTechnicalSheet(tbktId: number | string, sheet: Partial<TechnicalSheet>): Observable<TechnicalSheet> {
+    return this.http.put<TechnicalSheet>(`${environment.apiUrl}/technical-sheets/${tbktId}`, sheet);
+  }
+
+  deleteTechnicalSheet(tbktId: number | string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/technical-sheets/${tbktId}`);
+  }
+
   /**
    * Tạo Work Item mới cho Assignment
    * 
@@ -97,6 +105,21 @@ export class AssignmentService {
   // Get work items của user đăng nhập
   getMyWorkItems(): Observable<WorkItemWithAssignment[]> {
     return this.http.get<WorkItemWithAssignment[]>(`${this.apiUrl}/my-work-items`);
+  }
+
+  // Get all TechnicalSheets
+  // @param firebaseUID - Optional. Nếu không truyền, backend sẽ tự động lấy từ token
+  getAllTechnicalSheets(firebaseUID?: string): Observable<TechnicalSheet[]> {
+    let url = `${environment.apiUrl}/technical-sheets`;
+    if (firebaseUID) {
+      url += `?firebaseUID=${encodeURIComponent(firebaseUID)}`;
+    }
+    return this.http.get<TechnicalSheet[]>(url);
+  }
+
+  // Get assignments grouped by TBKT (for TBKT list view)
+  getAssignmentsGroupedByTBKT(): Observable<MachineAssignment[]> {
+    return this.http.get<MachineAssignment[]>(`${this.apiUrl}?includeTechnicalSheet=true`);
   }
 }
 

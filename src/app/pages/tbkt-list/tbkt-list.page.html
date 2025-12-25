@@ -1,0 +1,131 @@
+<div class="tbkt-list-container">
+  <!-- Header -->
+  <div class="tbkt-header">
+    <h1>LẤY SỐ TBKT CỦA P. THIẾT KẾ NĂM 2025</h1>
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Làm mới">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- Warning Note -->
+  <div class="warning-note">
+    <mat-icon>info</mat-icon>
+    <span>Đề nghị các ACE lấy số TBKT không được xóa những số đã lấy rồi nhé. Thanks</span>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="refresh()">Thử lại</button>
+    </div>
+  }
+
+  <!-- TBKT Table -->
+  @if (tbktList().length > 0 && !loading() && !error()) {
+    <mat-card class="tbkt-table-card">
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="tbktList()" class="tbkt-table">
+          <!-- STT Column -->
+          <ng-container matColumnDef="stt">
+            <th mat-header-cell *matHeaderCellDef>STT</th>
+            <td mat-cell *matCellDef="let element">{{ element.stt }}</td>
+          </ng-container>
+
+          <!-- SỐ TBKT TỰ ĐỘNG Column -->
+          <ng-container matColumnDef="tbkt_ID">
+            <th mat-header-cell *matHeaderCellDef class="tbkt-id-header">TBKT</th>
+            <td mat-cell *matCellDef="let element" class="tbkt-id-cell">{{ element.tbkt_ID }}</td>
+          </ng-container>
+
+          <!-- Số Pha Column -->
+          <ng-container matColumnDef="phase">
+            <th mat-header-cell *matHeaderCellDef>Số Pha</th>
+            <td mat-cell *matCellDef="let element">{{ element.phase || '-' }}</td>
+          </ng-container>
+
+          <!-- Công Suất MBA-kVA Column -->
+          <ng-container matColumnDef="power_kVA">
+            <th mat-header-cell *matHeaderCellDef>Công Suất</th>
+            <td mat-cell *matCellDef="let element">{{ element.power_kVA || '-' }}</td>
+          </ng-container>
+
+          <!-- ĐIỆN ÁP Column -->
+          <ng-container matColumnDef="voltageSpec">
+            <th mat-header-cell *matHeaderCellDef>ĐIỆN ÁP</th>
+            <td mat-cell *matCellDef="let element">{{ element.voltageSpec || '-' }}</td>
+          </ng-container>
+
+          <!-- SO (Nếu có) Column -->
+          <ng-container matColumnDef="salesOrder">
+            <th mat-header-cell *matHeaderCellDef>SO (Nếu có)</th>
+            <td mat-cell *matCellDef="let element">{{ element.salesOrder || '-' }}</td>
+          </ng-container>
+
+          <!-- TIÊU CHUẨN (Nếu có) Column -->
+          <ng-container matColumnDef="standardCode">
+            <th mat-header-cell *matHeaderCellDef>TIÊU CHUẨN (Nếu có)</th>
+            <td mat-cell *matCellDef="let element">{{ element.standardCode || '-' }}</td>
+          </ng-container>
+
+          <!-- NGƯỜI ĐỀ NGHỊ Column -->
+          <ng-container matColumnDef="proposer">
+            <th mat-header-cell *matHeaderCellDef>NGƯỜI ĐỀ NGHỊ</th>
+            <td mat-cell *matCellDef="let element">{{ element.proposer || '-' }}</td>
+          </ng-container>
+
+          <!-- NGÀY GIAO TBKT & BẢN VẼ Column -->
+          <ng-container matColumnDef="drawingDate">
+            <th mat-header-cell *matHeaderCellDef>NGÀY GIAO</th>
+            <td mat-cell *matCellDef="let element">{{ formatDate(element.drawingDate) || '-' }}</td>
+          </ng-container>
+
+          <!-- KS Điện Column -->
+          <ng-container matColumnDef="requesterElectrical">
+            <th mat-header-cell *matHeaderCellDef>KS Điện</th>
+            <td mat-cell *matCellDef="let element">{{ element.requesterElectrical || '-' }}</td>
+          </ng-container>
+
+          <!-- KS Cơ Column -->
+          <ng-container matColumnDef="requesterMechanical">
+            <th mat-header-cell *matHeaderCellDef>KS Cơ</th>
+            <td mat-cell *matCellDef="let element">{{ element.requesterMechanical || '-' }}</td>
+          </ng-container>
+
+          <!-- NGÀY LƯU Column -->
+          <ng-container matColumnDef="archivedDate">
+            <th mat-header-cell *matHeaderCellDef>NGÀY LƯU</th>
+            <td mat-cell *matCellDef="let element">{{ formatDate(element.archivedDate) || '-' }}</td>
+          </ng-container>
+
+          <!-- GHI CHÚ Column -->
+          <ng-container matColumnDef="notes">
+            <th mat-header-cell *matHeaderCellDef>GHI CHÚ</th>
+            <td mat-cell *matCellDef="let element">{{ element.notes || '-' }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </mat-card>
+  }
+
+  <!-- Empty State -->
+  @if (tbktList().length === 0 && !loading() && !error()) {
+    <div class="empty-container">
+      <mat-icon>inbox</mat-icon>
+      <p>Chưa có dữ liệu TBKT</p>
+    </div>
+  }
+</div>
+

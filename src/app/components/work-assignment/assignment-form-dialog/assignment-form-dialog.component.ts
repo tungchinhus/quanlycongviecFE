@@ -21,6 +21,7 @@ import { FileService } from '../../../services/file.service';
 import { UserRole } from '../../../constants/enums';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { WorkItem, WorkChange } from '../../../models/machine-assignment.model';
 
 @Component({
   selector: 'app-assignment-form-dialog',
@@ -54,6 +55,8 @@ export class AssignmentFormDialogComponent implements OnInit {
   currentUser: AuthUser | null = null;
   readonly selectedFiles = signal<File[]>([]);
   readonly isUploading = signal<boolean>(false);
+  isEditMode: boolean = false;
+  assignmentId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -92,6 +95,66 @@ export class AssignmentFormDialogComponent implements OnInit {
 
   ngOnInit() {
     this.loadUsers();
+    
+    // Kiểm tra xem có phải edit mode không
+    this.isEditMode = this.data?.isEditMode === true && this.data?.assignment;
+    
+    if (this.isEditMode && this.data.assignment) {
+      // Edit mode: điền form với data từ assignment
+      const assignment = this.data.assignment;
+      this.assignmentId = assignment.assignmentID;
+      
+      // Điền các trường cơ bản
+      this.assignmentForm.patchValue({
+        tbktId: assignment.tbkt_ID || this.data.tbktId || '',
+        machineName: assignment.machineName || '',
+        requestDocument: assignment.requestDocument || '',
+        standardRequirement: assignment.standardRequirement || '',
+        additionalRequest: assignment.additionalRequest || '',
+        deliveryDate: assignment.deliveryDate ? new Date(assignment.deliveryDate) : null,
+        designer: assignment.designer || this.currentUser?.id || '',
+        teamLeader: assignment.teamLeader || ''
+      });
+      
+      // Disable field tbktId vì đã được chọn từ danh sách
+      this.assignmentForm.get('tbktId')?.disable();
+      
+      // Điền work items nếu có
+      if (assignment.workItems && assignment.workItems.length > 0) {
+        assignment.workItems.forEach((workItem: WorkItem) => {
+          switch(workItem.workType) {
+            case 'Core Design':
+              this.assignmentForm.patchValue({ coreDesignUser: workItem.personName || '' });
+              break;
+            case 'Core Review':
+              this.assignmentForm.patchValue({ coreReviewUser: workItem.personName || '' });
+              break;
+            case 'Casing Design':
+              this.assignmentForm.patchValue({ casingDesignUser: workItem.personName || '' });
+              break;
+            case 'Casing Review':
+              this.assignmentForm.patchValue({ casingReviewUser: workItem.personName || '' });
+              break;
+            case 'Material Leveling':
+              this.assignmentForm.patchValue({ materialLevelingUser: workItem.personName || '' });
+              break;
+          }
+        });
+      }
+      
+      // Điền work changes nếu có
+      if (assignment.workChanges && assignment.workChanges.length > 0) {
+        const workChangesText = assignment.workChanges.map((wc: WorkChange) => wc.description).filter((d: string | undefined): d is string => !!d).join('\n');
+        this.assignmentForm.patchValue({ workChanges: workChangesText });
+      }
+    } else if (this.data?.tbktId) {
+      // Create mode: chỉ điền tbktId
+      this.assignmentForm.patchValue({
+        tbktId: this.data.tbktId
+      });
+      // Disable field tbktId vì đã được chọn từ danh sách
+      this.assignmentForm.get('tbktId')?.disable();
+    }
   }
 
   loadUsers() {
@@ -173,26 +236,57 @@ export class AssignmentFormDialogComponent implements OnInit {
     // Hiện tại tạm thời không gửi filePaths để tránh lỗi "Invalid column name 'FilePath'"
     // Files sẽ được upload sau khi tạo assignment thành công
 
-    // Tạo assignment chính
-    this.assignmentService.createAssignment(assignmentData).subscribe({
-      next: (assignment) => {
-        const assignmentId = assignment.assignmentID;
-        
-        // Tạo work items và work changes
-        this.createWorkItemsAndChanges(assignmentId, formValue);
-      },
-      error: (err) => {
-        this.isUploading.set(false);
-        console.error('Error creating assignment:', err);
-        const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi tạo gán công việc';
-        this.snackBar.open(errorMessage, 'Đóng', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
-      }
-    });
+    if (this.isEditMode && this.assignmentId) {
+      // Update assignment
+      this.assignmentService.updateAssignment(this.assignmentId, assignmentData).subscribe({
+        next: () => {
+          // Reload assignment để lấy dữ liệu mới nhất
+          this.assignmentService.getAssignmentById(this.assignmentId!).subscribe({
+            next: (updatedAssignment) => {
+              // Tạo/cập nhật work items và work changes
+              this.createWorkItemsAndChanges(this.assignmentId!, formValue);
+            },
+            error: (err) => {
+              console.error('Error reloading assignment:', err);
+              // Vẫn tiếp tục với work items
+              this.createWorkItemsAndChanges(this.assignmentId!, formValue);
+            }
+          });
+        },
+        error: (err) => {
+          this.isUploading.set(false);
+          console.error('Error updating assignment:', err);
+          const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi cập nhật gán công việc';
+          this.snackBar.open(errorMessage, 'Đóng', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    } else {
+      // Tạo assignment mới
+      this.assignmentService.createAssignment(assignmentData).subscribe({
+        next: (assignment) => {
+          const assignmentId = assignment.assignmentID;
+          
+          // Tạo work items và work changes
+          this.createWorkItemsAndChanges(assignmentId, formValue);
+        },
+        error: (err) => {
+          this.isUploading.set(false);
+          console.error('Error creating assignment:', err);
+          const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi tạo gán công việc';
+          this.snackBar.open(errorMessage, 'Đóng', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
   }
 
   private createWorkItemsAndChanges(assignmentId: number, formValue: any) {
@@ -289,7 +383,8 @@ export class AssignmentFormDialogComponent implements OnInit {
           } else {
             this.isUploading.set(false);
             const successCount = results.filter(r => r !== null).length;
-            this.snackBar.open(`Tạo gán công việc và ${successCount} công việc con thành công!`, 'Đóng', {
+            const actionText = this.isEditMode ? 'Cập nhật' : 'Tạo';
+            this.snackBar.open(`${actionText} gán công việc và ${successCount} công việc con thành công!`, 'Đóng', {
               duration: 3000,
               horizontalPosition: 'center',
               verticalPosition: 'top',
@@ -306,7 +401,8 @@ export class AssignmentFormDialogComponent implements OnInit {
             this.uploadFiles(assignmentId, files);
           } else {
             this.isUploading.set(false);
-            this.snackBar.open('Tạo gán công việc thành công nhưng có lỗi khi tạo một số công việc con.', 'Đóng', {
+            const actionText = this.isEditMode ? 'Cập nhật' : 'Tạo';
+            this.snackBar.open(`${actionText} gán công việc thành công nhưng có lỗi khi tạo một số công việc con.`, 'Đóng', {
               duration: 5000,
               horizontalPosition: 'center',
               verticalPosition: 'top',
@@ -323,7 +419,8 @@ export class AssignmentFormDialogComponent implements OnInit {
         this.uploadFiles(assignmentId, files);
       } else {
         this.isUploading.set(false);
-        this.snackBar.open('Tạo gán công việc thành công!', 'Đóng', {
+        const actionText = this.isEditMode ? 'Cập nhật' : 'Tạo';
+        this.snackBar.open(`${actionText} gán công việc thành công!`, 'Đóng', {
           duration: 3000,
           horizontalPosition: 'center',
           verticalPosition: 'top',
@@ -337,6 +434,8 @@ export class AssignmentFormDialogComponent implements OnInit {
   uploadFiles(assignmentID: number, files: File[]) {
     // Upload tất cả files với assignmentId để nhận diện theo từng máy
     // Backend sẽ tự động cập nhật MachineAssignment.FilePath
+    console.log(`Starting upload of ${files.length} file(s) for assignment ${assignmentID}`);
+    
     const uploadObservables = files.map(file => 
       this.fileService.uploadFile(
         file, 
@@ -345,36 +444,55 @@ export class AssignmentFormDialogComponent implements OnInit {
       ).pipe(
         catchError(error => {
           console.error(`Error uploading file ${file.name}:`, error);
-          // Trả về null nếu upload thất bại, không block các file khác
-          return of(null);
+          const errorMessage = error.error?.message || error.error?.error || error.message || 'Lỗi không xác định';
+          console.error(`Error details for ${file.name}:`, {
+            status: error.status,
+            statusText: error.statusText,
+            message: errorMessage,
+            fullError: error
+          });
+          // Trả về object với thông tin lỗi thay vì null
+          return of({ 
+            error: true, 
+            fileName: file.name, 
+            errorMessage: errorMessage,
+            status: error.status 
+          });
         })
       )
     );
 
     forkJoin(uploadObservables).subscribe({
       next: (results) => {
-        const successFiles = results.filter(r => r !== null) as any[];
+        const successFiles = results.filter(r => r !== null && !('error' in r && r.error)) as any[];
+        const failedFiles = results.filter(r => r !== null && 'error' in r && r.error) as any[];
         const successCount = successFiles.length;
-        const failCount = results.length - successCount;
+        const failCount = failedFiles.length;
+
+        console.log(`Upload completed: ${successCount} success, ${failCount} failed`);
 
         // Backend tự động cập nhật MachineAssignment.FilePath khi upload file
         // Không cần cập nhật thủ công nữa
 
         this.isUploading.set(false);
 
+        const actionText = this.isEditMode ? 'Cập nhật' : 'Tạo';
         if (failCount === 0) {
-          this.snackBar.open(`Tạo gán công việc và upload ${successCount} file thành công!`, 'Đóng', {
+          this.snackBar.open(`${actionText} gán công việc và upload ${successCount} file thành công!`, 'Đóng', {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'top',
             panelClass: ['success-snackbar']
           });
         } else {
+          // Hiển thị chi tiết lỗi
+          const errorDetails = failedFiles.map(f => `${f.fileName}: ${f.errorMessage}`).join('; ');
+          console.error('Failed files:', failedFiles);
           this.snackBar.open(
-            `Tạo gán công việc thành công. Upload ${successCount}/${results.length} file thành công.`,
+            `${actionText} gán công việc thành công. Upload ${successCount}/${results.length} file thành công. Lỗi: ${errorDetails}`,
             'Đóng',
             {
-              duration: 5000,
+              duration: 8000,
               horizontalPosition: 'center',
               verticalPosition: 'top',
               panelClass: ['warning-snackbar']
@@ -386,11 +504,19 @@ export class AssignmentFormDialogComponent implements OnInit {
       error: (err) => {
         this.isUploading.set(false);
         console.error('Error uploading files:', err);
-        this.snackBar.open('Tạo gán công việc thành công nhưng có lỗi khi upload file.', 'Đóng', {
-          duration: 5000,
+        const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi không xác định';
+        console.error('Full error details:', {
+          status: err.status,
+          statusText: err.statusText,
+          message: errorMessage,
+          fullError: err
+        });
+        const actionText = this.isEditMode ? 'Cập nhật' : 'Tạo';
+        this.snackBar.open(`${actionText} gán công việc thành công nhưng có lỗi khi upload file: ${errorMessage}`, 'Đóng', {
+          duration: 8000,
           horizontalPosition: 'center',
           verticalPosition: 'top',
-          panelClass: ['warning-snackbar']
+          panelClass: ['error-snackbar']
         });
         this.dialogRef.close(true);
       }

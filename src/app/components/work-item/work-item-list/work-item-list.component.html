@@ -81,7 +81,7 @@
                 <mat-icon>visibility</mat-icon>
                 <span>Xem</span>
               </button>
-              <button mat-menu-item (click)="editWorkItem(item)">
+              <button mat-menu-item (click)="editWorkItem(item)" *ngIf="!isWorkItemCompleted(item)">
                 <mat-icon>edit</mat-icon>
                 <span>Chỉnh sửa</span>
               </button>

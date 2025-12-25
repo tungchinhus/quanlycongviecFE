@@ -4,11 +4,6 @@
   </mat-card-header>
   <mat-card-content>
     <div class="toolbar">
-      <button *ngIf="!isUserRole" mat-raised-button color="primary" (click)="openAssignmentDialog()">
-        <mat-icon>add</mat-icon>
-        Tạo Giao Việc Mới
-      </button>
-      
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Tìm kiếm</mat-label>
         <input 
@@ -57,52 +52,61 @@
       </mat-menu>
     </div>
 
-    <table mat-table [dataSource]="filteredAssignments" class="assignment-table">
-      <ng-container matColumnDef="machineName">
-        <th mat-header-cell *matHeaderCellDef>Tên Máy</th>
-        <td mat-cell *matCellDef="let assignment">{{ assignment.machineName }}</td>
+    <table mat-table [dataSource]="filteredData()" class="assignment-table">
+      <ng-container matColumnDef="tbkt_ID">
+        <th mat-header-cell *matHeaderCellDef>TBKT</th>
+        <td mat-cell *matCellDef="let sheet">{{ sheet.tbkt_ID }}</td>
       </ng-container>
 
-      <ng-container matColumnDef="deliveryDate">
-        <th mat-header-cell *matHeaderCellDef>Ngày Giao</th>
-        <td mat-cell *matCellDef="let assignment">
-          {{ assignment.deliveryDate ? (assignment.deliveryDate | date:'dd/MM/yyyy') : '-' }}
-        </td>
+      <ng-container matColumnDef="power_kVA">
+        <th mat-header-cell *matHeaderCellDef>Công Suất (kVA)</th>
+        <td mat-cell *matCellDef="let sheet">{{ sheet.power_kVA || '-' }}</td>
       </ng-container>
 
-      <ng-container matColumnDef="workItems" *ngIf="!isUserRole">
-        <th mat-header-cell *matHeaderCellDef>Công Việc</th>
-        <td mat-cell *matCellDef="let assignment">
-          <mat-chip [matBadge]="assignment.workItems?.length || 0" matBadgeColor="primary">
-            {{ assignment.workItems?.length || 0 }} công việc
-          </mat-chip>
-        </td>
+      <ng-container matColumnDef="voltageSpec">
+        <th mat-header-cell *matHeaderCellDef>Điện Áp</th>
+        <td mat-cell *matCellDef="let sheet">{{ sheet.voltageSpec || '-' }}</td>
       </ng-container>
 
-      <ng-container matColumnDef="approvals" *ngIf="!isUserRole">
-        <th mat-header-cell *matHeaderCellDef>Ký Duyệt</th>
-        <td mat-cell *matCellDef="let assignment">
-          <mat-chip [matBadge]="assignment.approvals?.length || 0" matBadgeColor="accent">
-            {{ assignment.approvals?.length || 0 }} ký duyệt
-          </mat-chip>
-        </td>
+      <ng-container matColumnDef="standardCode">
+        <th mat-header-cell *matHeaderCellDef>Mã Tiêu Chuẩn</th>
+        <td mat-cell *matCellDef="let sheet">{{ sheet.standardCode || '-' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Thao tác</th>
-        <td mat-cell *matCellDef="let assignment">
-          <button mat-icon-button [matTooltip]="'Cập nhật'" (click)="viewAssignment(assignment)">
-            <mat-icon>edit</mat-icon>
+        <th mat-header-cell *matHeaderCellDef>Menu</th>
+        <td mat-cell *matCellDef="let sheet">
+          <button mat-icon-button [matMenuTriggerFor]="menu">
+            <mat-icon>more_vert</mat-icon>
           </button>
-          <button 
-            *ngIf="!isUserRole" 
-            mat-icon-button 
-            [matTooltip]="getDeleteTooltip(assignment)" 
-            [disabled]="!canDeleteAssignment(assignment)"
-            (click)="deleteAssignment(assignment)" 
-            color="warn">
-            <mat-icon>delete</mat-icon>
-          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="viewTechnicalSheet(sheet)">
+              <mat-icon>visibility</mat-icon>
+              <span>Xem</span>
+            </button>
+            <button 
+              *ngIf="!hasNewAssignment(sheet)"
+              mat-menu-item 
+              (click)="openAssignmentDialog(sheet)"
+              [disabled]="!canCreateAssignment(sheet)">
+              <mat-icon>assignment</mat-icon>
+              <span>Giao việc</span>
+            </button>
+            <button 
+              *ngIf="hasNewAssignment(sheet)"
+              mat-menu-item 
+              (click)="openAssignmentDialog(sheet)">
+              <mat-icon>edit</mat-icon>
+              <span>Chỉnh sửa</span>
+            </button>
+            <button 
+              mat-menu-item 
+              (click)="deleteTechnicalSheet(sheet)"
+              [disabled]="!canDeleteTechnicalSheet(sheet)">
+              <mat-icon>delete</mat-icon>
+              <span>Xóa</span>
+            </button>
+          </mat-menu>
         </td>
       </ng-container>
 
@@ -110,16 +114,16 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
     </table>
 
-    <div class="data-info" *ngIf="assignments.length > 0">
-      <span>Hiển thị {{ filteredAssignments.length }} / {{ assignments.length }} gán công việc</span>
+    <div class="data-info" *ngIf="technicalSheets().length > 0">
+      <span>Hiển thị {{ filteredData().length }} / {{ technicalSheets().length }} đề nghị</span>
       <span *ngIf="searchTerm()" class="search-info">
         (Đang tìm kiếm: "{{ searchTerm() }}")
       </span>
     </div>
 
-    <div *ngIf="filteredAssignments.length === 0" class="no-data">
+    <div *ngIf="filteredData().length === 0" class="no-data">
       <mat-icon>assignment</mat-icon>
-      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có gán công việc nào' }}</p>
+      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có đề nghị nào' }}</p>
     </div>
   </mat-card-content>
 </mat-card>

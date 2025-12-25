@@ -424,6 +424,10 @@ export class AssignmentDetailDialogComponent implements OnInit {
           verticalPosition: 'top',
           panelClass: ['error-snackbar']
         });
+        // Reload files list ngay cả khi có lỗi (có thể một số file đã upload thành công)
+        if (this.assignment) {
+          this.loadFiles(this.assignment.assignmentID);
+        }
       }
     });
   }
@@ -441,6 +445,9 @@ export class AssignmentDetailDialogComponent implements OnInit {
         return;
       }
 
+      // Xóa file khỏi danh sách ngay lập tức để UI responsive hơn
+      this.files = this.files.filter(f => (f.id || f.fileID) !== fileId);
+
       this.fileService.deleteFile(fileId).subscribe({
         next: () => {
           // Backend tự động cập nhật MachineAssignment.FilePath khi xóa file
@@ -451,16 +458,27 @@ export class AssignmentDetailDialogComponent implements OnInit {
             horizontalPosition: 'center',
             verticalPosition: 'top'
           });
+          
+          // Reload danh sách file sau khi xóa thành công
           if (this.assignment) {
-            this.loadFiles(this.assignment.assignmentID);
+            const assignmentId = this.assignment.assignmentID;
+            // Thêm delay nhỏ để đảm bảo backend đã xử lý xong
+            setTimeout(() => {
+              this.loadFiles(assignmentId);
+            }, 300);
           }
         },
         error: (err) => {
           console.error('Error deleting file:', err);
-          this.snackBar.open('Lỗi khi xóa file', 'Đóng', {
-            duration: 3000,
+          // Nếu xóa thất bại, reload lại danh sách để hiển thị đúng
+          if (this.assignment) {
+            this.loadFiles(this.assignment.assignmentID);
+          }
+          this.snackBar.open('Lỗi khi xóa file. Vui lòng thử lại.', 'Đóng', {
+            duration: 5000,
             horizontalPosition: 'center',
-            verticalPosition: 'top'
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
           });
         }
       });

@@ -21,11 +21,20 @@ export const roleGuard: CanActivateFn = (route) => {
   const requiresAny = data?.anyOf ?? [];
 
   let allowed = true;
+  
+  // Nếu có requiresAll, user phải có TẤT CẢ các roles
   if (requiresAll.length > 0) {
     allowed = allowed && auth.hasRole(requiresAll);
   }
+  
+  // Nếu có requiresAny, user chỉ cần có MỘT TRONG các roles
   if (requiresAny.length > 0) {
     allowed = allowed && auth.hasAnyRole(requiresAny);
+  }
+  
+  // Nếu không có yêu cầu role nào, cho phép truy cập
+  if (requiresAll.length === 0 && requiresAny.length === 0) {
+    allowed = true;
   }
 
   if (allowed) return true;

@@ -142,6 +142,16 @@
             </div>
             <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tra Cứu Thông Số MBA</span>
           </a>
+          <a routerLink="/tbkt-management"
+             routerLinkActive="active"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Quản Lý Đề Nghị TBKT' : ''"
+             matTooltipPosition="right"
+             class="nav-item">
+            <div class="nav-icon">
+              <mat-icon>description</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản Lý Đề Nghị TBKT</span>
+          </a>
           <a [routerLink]="hasAdminRole() ? '/users' : null"
              [routerLinkActive]="hasAdminRole() ? 'active' : ''"
              [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý người dùng' : ''"

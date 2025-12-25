@@ -30,10 +30,15 @@ export interface TechnicalSheet {
   voltageSpec?: string;
   phase?: string;
   standardCode?: string;
-  proposer?: string;
-  deliveryDate?: Date;
-  drawingDate?: Date;
+  proposer?: string; // FirebaseUID (string) thay vì number
+  deliveryDate?: Date | string;
+  drawingDate?: Date | string;
   notes?: string;
+  salesOrder?: string; // SO (Nếu có)
+  handOverDate?: Date | string; // Ngày bàn giao
+  archivedDate?: Date | string; // Ngày lưu trữ
+  requesterElectrical?: string; // KS Điện
+  requesterMechanical?: string; // KS Cơ
 }
 
 export interface AssignmentApproval {

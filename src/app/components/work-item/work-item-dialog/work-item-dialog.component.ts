@@ -437,6 +437,8 @@ export class WorkItemDialogComponent implements OnInit {
         error: (err) => {
           this.isUploading.set(false);
           console.error('Error uploading files:', err);
+          // Reload files list ngay cả khi có lỗi (có thể một số file đã upload thành công)
+          this.loadFiles();
           // Không hiển thị snackbar ở đây, để onSave xử lý
           resolve(false);
         }
@@ -458,6 +460,11 @@ export class WorkItemDialogComponent implements OnInit {
     if (!fileId) return;
 
     if (confirm('Bạn có chắc muốn xóa file này?')) {
+      // Xóa file khỏi danh sách ngay lập tức để UI responsive hơn
+      this.files = this.files.filter(f => (f.id || f.fileID) !== fileId);
+      this.assignmentFiles = this.assignmentFiles.filter(f => (f.id || f.fileID) !== fileId);
+      this.userFiles = this.userFiles.filter(f => (f.id || f.fileID) !== fileId);
+
       this.fileService.deleteFile(fileId).subscribe({
         next: () => {
           this.snackBar.open('Xóa file thành công!', 'Đóng', {
@@ -465,10 +472,17 @@ export class WorkItemDialogComponent implements OnInit {
             horizontalPosition: 'center',
             verticalPosition: 'top'
           });
-          this.loadFiles();
+          
+          // Reload danh sách file sau khi xóa thành công
+          // Thêm delay nhỏ để đảm bảo backend đã xử lý xong
+          setTimeout(() => {
+            this.loadFiles();
+          }, 300);
         },
         error: (err) => {
           console.error('Error deleting file:', err);
+          // Nếu xóa thất bại, reload lại danh sách để hiển thị đúng
+          this.loadFiles();
           this.snackBar.open('Lỗi khi xóa file. Vui lòng thử lại.', 'Đóng', {
             duration: 5000,
             horizontalPosition: 'center',

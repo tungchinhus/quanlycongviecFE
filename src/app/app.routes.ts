@@ -31,7 +31,8 @@ export const routes: Routes = [
   {
     path: 'assignments/new',
     loadComponent: () => import('./components/work-assignment/assignment-form/assignment-form.component').then(m => m.AssignmentFormComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, roleGuard],
+    data: { anyOf: [UserRole.Administrator, UserRole.Manager] }
   },
   {
     path: 'assignments/:id',
@@ -79,6 +80,16 @@ export const routes: Routes = [
   {
     path: 'tsmay',
     loadComponent: () => import('./components/tsmay/tsmay-list/tsmay-list.component').then(m => m.TSMayListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'tbkt-list',
+    loadComponent: () => import('./pages/tbkt-list/tbkt-list.page').then(m => m.TBKTListPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'tbkt-management',
+    loadComponent: () => import('./components/tbkt-management/tbkt-management.component').then(m => m.TBKTManagementComponent),
     canActivate: [authGuard]
   },
   {
