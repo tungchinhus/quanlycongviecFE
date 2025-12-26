@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSelectModule } from '@angular/material/select';
 import { AssignmentService } from '../../../services/assignment.service';
 import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
@@ -24,6 +25,15 @@ import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignm
 interface ColumnVisibility {
   [key: string]: boolean;
 }
+
+// Trạng thái filter
+export const TASK_STATUS = {
+  NEW: 1,           // Mới
+  IN_PROGRESS: 2,  // Đang xử lý
+  COMPLETED: 3     // Hoàn thành
+} as const;
+
+export type TaskStatus = typeof TASK_STATUS[keyof typeof TASK_STATUS];
 
 @Component({
   selector: 'app-assignment-list',
@@ -44,7 +54,8 @@ interface ColumnVisibility {
     MatSnackBarModule,
     MatCheckboxModule,
     MatMenuModule,
-    MatDividerModule
+    MatDividerModule,
+    MatSelectModule
   ],
   templateUrl: './assignment-list.component.html',
   styleUrls: ['./assignment-list.component.css']
@@ -55,11 +66,19 @@ export class AssignmentListComponent implements OnInit {
   filteredTechnicalSheets: TechnicalSheet[] = [];
   assignments: MachineAssignment[] = []; // Để kiểm tra xem technical sheet có assignments chưa
   readonly searchTerm = signal<string>('');
+  readonly statusFilter = signal<TaskStatus>(TASK_STATUS.NEW); // Mặc định hiển thị mới
   readonly displayedColumns = signal<string[]>([]);
   readonly allColumns = signal<string[]>([]);
   readonly columnVisibility = signal<ColumnVisibility>({});
   isUserRole: boolean = false;
   isAdminOrManager: boolean = false;
+  
+  // Status options cho dropdown
+  readonly statusOptions = [
+    { value: TASK_STATUS.NEW, label: 'Mới' },
+    { value: TASK_STATUS.IN_PROGRESS, label: 'Đang xử lý' },
+    { value: TASK_STATUS.COMPLETED, label: 'Hoàn thành' }
+  ];
 
   constructor(
     private assignmentService: AssignmentService,
@@ -115,14 +134,36 @@ export class AssignmentListComponent implements OnInit {
   readonly filteredData = computed(() => {
     const data = this.technicalSheets();
     const search = this.searchTerm().toLowerCase().trim();
+    const statusFilter = this.statusFilter();
     const visibleColumns = this.displayedColumns();
     
+    // Lọc theo trạng thái trước
+    let filteredByStatus = data.filter(sheet => {
+      // Tìm assignment liên quan đến technical sheet này
+      const relatedAssignment = this.assignments.find(assignment => 
+        assignment.tbkt_ID === sheet.tbkt_ID || 
+        assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+      );
+      
+      if (!relatedAssignment) {
+        // Nếu không có assignment, chỉ hiển thị khi filter là "Mới" (status = 1)
+        return statusFilter === TASK_STATUS.NEW;
+      }
+      
+      // Lấy status của assignment (mặc định là 1 nếu không có)
+      const assignmentStatus = relatedAssignment.status ?? AssignmentStatus.New;
+      const statusValue = typeof assignmentStatus === 'number' ? assignmentStatus : assignmentStatus;
+      
+      return statusValue === statusFilter;
+    });
+    
+    // Sau đó lọc theo search term nếu có
     if (!search) {
-      return data;
+      return filteredByStatus;
     }
     
     // Tìm kiếm chỉ trong các cột đang hiển thị
-    return data.filter(sheet => {
+    return filteredByStatus.filter(sheet => {
       return visibleColumns.some(col => {
         let value: any = '';
         
@@ -151,6 +192,11 @@ export class AssignmentListComponent implements OnInit {
 
   onSearchChange(value: string) {
     this.searchTerm.set(value);
+    this.updateFilteredTechnicalSheets();
+  }
+
+  onStatusFilterChange(value: TaskStatus) {
+    this.statusFilter.set(value);
     this.updateFilteredTechnicalSheets();
   }
 

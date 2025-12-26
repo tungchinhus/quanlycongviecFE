@@ -22,34 +22,15 @@
         </button>
       </mat-form-field>
 
-      <!-- Column Visibility Menu -->
-      <button 
-        mat-raised-button 
-        [matMenuTriggerFor]="columnMenu"
-        class="column-settings-button">
-        <mat-icon>view_column</mat-icon>
-        <span>Cột hiển thị ({{ displayedColumns().length }}/{{ allColumns().length }})</span>
-      </button>
-      
-      <mat-menu #columnMenu="matMenu" class="column-menu">
-        <button mat-menu-item (click)="showAllColumns()">
-          <mat-icon>check_box</mat-icon>
-          <span>Hiển thị tất cả</span>
-        </button>
-        <button mat-menu-item (click)="hideAllColumns()">
-          <mat-icon>check_box_outline_blank</mat-icon>
-          <span>Ẩn tất cả</span>
-        </button>
-        <mat-divider></mat-divider>
-        <div *ngFor="let column of allColumns()" class="column-menu-item">
-          <mat-checkbox
-            [checked]="columnVisibility()[column]"
-            (change)="toggleColumnVisibility(column)"
-            (click)="$event.stopPropagation()">
-            {{ getColumnLabel(column) }}
-          </mat-checkbox>
-        </div>
-      </mat-menu>
+      <!-- Status Filter -->
+      <mat-form-field appearance="outline">
+        <mat-label>Trạng thái</mat-label>
+        <mat-select [value]="statusFilter()" (selectionChange)="onStatusFilterChange($event.value)">
+          <mat-option *ngFor="let option of statusOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
     </div>
 
     <table mat-table [dataSource]="filteredData()" class="assignment-table">
