@@ -78,6 +78,12 @@ export const routes: Routes = [
     data: { roles: [UserRole.Administrator] }
   },
   {
+    path: 'page-permissions',
+    loadComponent: () => import('./pages/page-permissions/page-permissions.page').then(m => m.PagePermissionsPage),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: [UserRole.Administrator] }
+  },
+  {
     path: 'excel-reader',
     loadComponent: () => import('./components/excel-reader/excel-reader.component').then(m => m.ExcelReaderComponent),
     canActivate: [authGuard]

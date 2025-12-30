@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SettingsService } from '../../services/settings.service';
 import { AuthService } from '../../services/auth.service';
 import { UserRole } from '../../constants/enums';
@@ -26,7 +27,8 @@ import { UserRole } from '../../constants/enums';
     MatInputModule,
     MatSnackBarModule,
     MatTooltipModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatCheckboxModule
   ],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.css'
@@ -51,7 +53,8 @@ export class SettingsPage implements OnInit {
 
   initForm() {
     this.settingsForm = this.fb.group({
-      fileStoragePath: ['', [Validators.required, Validators.minLength(1)]]
+      fileStoragePath: ['', [Validators.required, Validators.minLength(1)]],
+      sendEmailNotifications: [true]
     });
   }
 
@@ -61,11 +64,12 @@ export class SettingsPage implements OnInit {
     }
 
     this.isLoading.set(true);
-    this.settingsService.getFileStoragePath().subscribe({
-      next: (response) => {
+    this.settingsService.getAllSystemSettings().subscribe({
+      next: (settings) => {
         this.isLoading.set(false);
         this.settingsForm.patchValue({
-          fileStoragePath: response.fileStoragePath || ''
+          fileStoragePath: settings.fileStoragePath || '',
+          sendEmailNotifications: settings.sendEmailNotifications !== false // Default to true
         });
       },
       error: (error) => {
@@ -152,15 +156,37 @@ export class SettingsPage implements OnInit {
       return;
     }
 
+    const sendEmailNotifications = this.settingsForm.get('sendEmailNotifications')?.value ?? true;
+
     this.isSaving.set(true);
-    this.settingsService.updateFileStoragePath(fileStoragePath).subscribe({
-      next: (settings) => {
-        this.isSaving.set(false);
-        this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['success-snackbar']
+    
+    // Save both file storage path and notification preference
+    const saveFileStorage = this.settingsService.updateFileStoragePath(fileStoragePath);
+    const saveNotification = this.settingsService.updateNotificationPreference(sendEmailNotifications);
+
+    // Execute both saves
+    saveFileStorage.subscribe({
+      next: () => {
+        saveNotification.subscribe({
+          next: () => {
+            this.isSaving.set(false);
+            this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['success-snackbar']
+            });
+          },
+          error: (error) => {
+            this.isSaving.set(false);
+            console.error('Error saving notification preference:', error);
+            this.snackBar.open('Đã lưu đường dẫn nhưng không thể lưu cài đặt thông báo.', 'Đóng', {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar']
+            });
+          }
         });
       },
       error: (error) => {

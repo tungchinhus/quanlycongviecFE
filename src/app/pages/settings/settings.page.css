@@ -120,6 +120,24 @@
   margin-bottom: 16px;
 }
 
+.notification-setting {
+  margin: 24px 0;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.notification-setting mat-checkbox {
+  margin-bottom: 8px;
+}
+
+.notification-hint {
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .form-actions {
   display: flex;
   justify-content: space-between;

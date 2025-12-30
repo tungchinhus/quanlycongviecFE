@@ -1,0 +1,113 @@
+<div class="page-permissions-container">
+  <div class="header">
+    <h1>Quản Lý Phân Quyền Chức Năng</h1>
+    <p class="subtitle">Phân quyền truy cập các trang cho từng user</p>
+  </div>
+
+  <div class="content">
+    <!-- User Selection -->
+    <mat-form-field appearance="outline" class="user-select">
+      <mat-label>Chọn User</mat-label>
+      <mat-select [formControl]="userIdControl" (selectionChange)="onUserSelected($event.value)">
+        <mat-option *ngFor="let user of users()" [value]="user.userId">
+          {{ user.fullName || user.userName }} ({{ user.userName }})
+        </mat-option>
+      </mat-select>
+      @if (users().length === 0 && !isLoading()) {
+        <mat-hint>Không có user nào</mat-hint>
+      }
+    </mat-form-field>
+
+    <!-- Permissions Table -->
+    @if (selectedUserId()) {
+      <div class="permissions-section">
+        <div class="section-header">
+          <h2>Danh Sách Permissions</h2>
+          <button mat-raised-button color="primary" (click)="saveAllPermissions()" [disabled]="isLoading()">
+            <mat-icon>save</mat-icon>
+            Lưu Tất Cả
+          </button>
+        </div>
+
+        @if (isLoading()) {
+          <div class="loading">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Đang tải...</p>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="pages()" class="permissions-table">
+            <!-- Page Name Column -->
+            <ng-container matColumnDef="pageName">
+              <th mat-header-cell *matHeaderCellDef>Tên Trang</th>
+              <td mat-cell *matCellDef="let page">
+                <div class="page-info">
+                  <strong>{{ page.pageName }}</strong>
+                  <span class="page-route">{{ page.pageRoute }}</span>
+                  @if (page.description) {
+                    <span class="page-description">{{ page.description }}</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Can View Column -->
+            <ng-container matColumnDef="canView">
+              <th mat-header-cell *matHeaderCellDef>Xem</th>
+              <td mat-cell *matCellDef="let page">
+                <mat-checkbox
+                  [checked]="getPermissionForPage(page.id)?.canView ?? false"
+                  (change)="togglePermission(page.id, 'canView')">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <!-- Can Create Column -->
+            <ng-container matColumnDef="canCreate">
+              <th mat-header-cell *matHeaderCellDef>Tạo Mới</th>
+              <td mat-cell *matCellDef="let page">
+                <mat-checkbox
+                  [checked]="getPermissionForPage(page.id)?.canCreate ?? false"
+                  (change)="togglePermission(page.id, 'canCreate')"
+                  [disabled]="!getPermissionForPage(page.id)?.canView">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <!-- Can Edit Column -->
+            <ng-container matColumnDef="canEdit">
+              <th mat-header-cell *matHeaderCellDef>Chỉnh Sửa</th>
+              <td mat-cell *matCellDef="let page">
+                <mat-checkbox
+                  [checked]="getPermissionForPage(page.id)?.canEdit ?? false"
+                  (change)="togglePermission(page.id, 'canEdit')"
+                  [disabled]="!getPermissionForPage(page.id)?.canView">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <!-- Can Delete Column -->
+            <ng-container matColumnDef="canDelete">
+              <th mat-header-cell *matHeaderCellDef>Xóa</th>
+              <td mat-cell *matCellDef="let page">
+                <mat-checkbox
+                  [checked]="getPermissionForPage(page.id)?.canDelete ?? false"
+                  (change)="togglePermission(page.id, 'canDelete')"
+                  [disabled]="!getPermissionForPage(page.id)?.canView">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        }
+      </div>
+    } @else {
+      <div class="no-selection">
+        <mat-icon>person</mat-icon>
+        <p>Vui lòng chọn user để xem và chỉnh sửa permissions</p>
+      </div>
+    }
+  </div>
+</div>
+

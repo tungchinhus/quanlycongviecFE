@@ -58,6 +58,16 @@
               }
             </mat-form-field>
 
+            <div class="notification-setting">
+              <mat-checkbox formControlName="sendEmailNotifications" class="full-width">
+                Gửi thông báo qua email
+              </mat-checkbox>
+              <p class="notification-hint">
+                Nếu bật: Hệ thống sẽ gửi email thông báo khi có file được upload.<br>
+                Nếu tắt: Hệ thống sẽ hiển thị thông báo (badge đỏ) trên biểu tượng chuông.
+              </p>
+            </div>
+
             <div class="form-actions">
               <button 
                 mat-raised-button 

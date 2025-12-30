@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, ChangeDetectorRef, OnInit, OnDestroy, signal, effect } from '@angular/core';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -8,13 +8,19 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { SidenavService } from './services/sidenav.service';
 import { AuthService } from './services/auth.service';
+import { NotificationService, Notification } from './services/notification.service';
+import { SettingsService } from './services/settings.service';
+import { SignalRService } from './services/signalr.service';
 import { ChangePasswordDialogComponent } from './components/change-password-dialog/change-password-dialog.component';
 import { UserRole } from './constants/enums';
-import { filter } from 'rxjs/operators';
+import { filter, Subscription, interval } from 'rxjs';
+import { switchMap, startWith } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -31,20 +37,31 @@ import { filter } from 'rxjs/operators';
     MatMenuModule,
     MatTooltipModule,
     MatDividerModule,
-    MatDialogModule
+    MatDialogModule,
+    MatBadgeModule,
+    MatListModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
   public sidenavService = inject(SidenavService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private dialog = inject(MatDialog);
+  private notificationService = inject(NotificationService);
+  private settingsService = inject(SettingsService);
+  private signalRService = inject(SignalRService);
   
   isLoginPage = false;
   currentYear = new Date().getFullYear();
+  readonly unreadNotificationCount = signal<number>(0);
+  readonly showNotificationBadge = signal<boolean>(false);
+  readonly notifications = signal<Notification[]>([]);
+  readonly isLoadingNotifications = signal<boolean>(false);
+  private notificationSubscription?: Subscription;
 
   // Check if user is Admin or Manager
   get isAdminOrManager(): boolean {
@@ -68,6 +85,263 @@ export class AppComponent {
     
     // Kiểm tra route ban đầu
     this.isLoginPage = this.router.url === '/login';
+
+    // Lắng nghe thay đổi auth state để load notifications khi user login
+    effect(() => {
+      const user = this.authService.user();
+      if (user && this.isAuthenticated) {
+        // User đã authenticated, load notifications và start SignalR
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+          this.loadNotificationPreference();
+          this.startSignalRConnection();
+        }, 100);
+      } else {
+        // User chưa authenticated, stop SignalR
+        this.signalRService.stopConnection();
+        if (this.notificationSubscription) {
+          this.notificationSubscription.unsubscribe();
+          this.notificationSubscription = undefined;
+        }
+        this.unreadNotificationCount.set(0);
+        this.showNotificationBadge.set(false);
+        // Clear sync flag when user logs out
+        const syncKey = 'notifications_synced';
+        if (user) {
+          sessionStorage.removeItem(`${syncKey}_${user.firebaseUid}`);
+        }
+      }
+    });
+
+    // Effect to track badge state changes
+    effect(() => {
+      const showBadge = this.showNotificationBadge();
+      const count = this.unreadNotificationCount();
+      const shouldShow = showBadge && count > 0;
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:98',message:'Badge state effect',data:{showBadge,count,shouldShow},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      // Force change detection when badge state changes
+      this.cdr.detectChanges();
+    });
+  }
+
+  ngOnInit() {
+    // Load notification preference and unread count if already authenticated
+    if (this.isAuthenticated) {
+      this.loadNotificationPreference();
+      this.startSignalRConnection();
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.notificationSubscription) {
+      this.notificationSubscription.unsubscribe();
+    }
+    // Stop SignalR connection
+    this.signalRService.stopConnection();
+  }
+
+  loadNotificationPreference() {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:123',message:'loadNotificationPreference called',data:{isAuthenticated:this.isAuthenticated},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    this.settingsService.getNotificationPreference().subscribe({
+      next: (pref) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:126',message:'Notification preference loaded',data:{sendEmailNotifications:pref.sendEmailNotifications},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        // Only show badge if email notifications are disabled
+        this.showNotificationBadge.set(!pref.sendEmailNotifications);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:129',message:'Badge visibility set',data:{showBadge:!pref.sendEmailNotifications,sendEmailNotifications:pref.sendEmailNotifications},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        if (!pref.sendEmailNotifications) {
+          // Sync notifications for existing work items (only once per session)
+          this.syncNotificationsIfNeeded();
+          this.loadUnreadCount();
+        }
+      },
+      error: (error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:135',message:'Error loading preference',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        console.error('Error loading notification preference:', error);
+        // Default to showing badge if we can't load preference
+        this.showNotificationBadge.set(true);
+        this.syncNotificationsIfNeeded();
+        this.loadUnreadCount();
+      }
+    });
+  }
+
+  syncNotificationsIfNeeded() {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:144',message:'syncNotificationsIfNeeded called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    // Check if we've already synced in this session
+    const syncKey = 'notifications_synced';
+    const lastSync = sessionStorage.getItem(syncKey);
+    const user = this.authService.user();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:150',message:'User check',data:{hasUser:!!user,firebaseUid:user?.firebaseUid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    if (!user) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:152',message:'No user, returning early',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+
+    // Create a unique key per user
+    const userSyncKey = `${syncKey}_${user.firebaseUid}`;
+    const userLastSync = sessionStorage.getItem(userSyncKey);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:159',message:'Sync check',data:{userSyncKey,hasLastSync:!!userLastSync},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    // Only sync once per user per session
+    if (userLastSync) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:161',message:'Already synced, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:164',message:'Calling sync API',data:{firebaseUid:user.firebaseUid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    // Sync notifications in background (don't block UI)
+    this.notificationService.syncMyNotifications().subscribe({
+      next: (response) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:166',message:'Sync API success',data:{created:response.created,skipped:response.skipped},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        console.log('Notifications synced:', response);
+        // Mark as synced for this user
+        sessionStorage.setItem(userSyncKey, new Date().toISOString());
+        // Reload unread count after sync
+        this.loadUnreadCount();
+      },
+      error: (error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:173',message:'Sync API error',data:{error:error.message,status:error.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        console.error('Error syncing notifications:', error);
+        // Still mark as attempted to avoid repeated failures
+        sessionStorage.setItem(userSyncKey, new Date().toISOString());
+      }
+    });
+  }
+
+  loadUnreadCount() {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:180',message:'loadUnreadCount called',data:{showBadge:this.showNotificationBadge()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    this.notificationService.getUnreadCount().subscribe({
+      next: (response) => {
+        this.unreadNotificationCount.set(response.count);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:183',message:'Unread count loaded',data:{count:response.count,showBadge:this.showNotificationBadge(),shouldShow:this.showNotificationBadge() && response.count > 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        // Force change detection
+        this.cdr.detectChanges();
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:186',message:'After change detection',data:{count:this.unreadNotificationCount(),showBadge:this.showNotificationBadge()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+      },
+      error: (error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:186',message:'Error loading unread count',data:{error:error.message,status:error.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        console.error('Error loading unread count:', error);
+      }
+    });
+  }
+
+  async startSignalRConnection(): Promise<void> {
+    // Start SignalR connection
+    await this.signalRService.startConnection();
+
+    // Load initial unread count
+    this.loadUnreadCount();
+
+    // Listen for new notifications
+    this.signalRService.onNotificationReceived((notification) => {
+      console.log('New notification received:', notification);
+      // Reload notifications if menu is open
+      if (this.notifications().length > 0) {
+        this.loadNotifications();
+      }
+      // Update unread count
+      this.loadUnreadCount();
+    });
+
+    // Listen for notification removed (work item completed)
+    this.signalRService.onNotificationRemoved((data) => {
+      console.log('Notification removed:', data);
+      // Remove from local list if exists
+      const updatedNotifications = this.notifications().filter(
+        n => !(n.relatedEntityType === 'WorkItem' && n.relatedEntityId === data.workItemId)
+      );
+      this.notifications.set(updatedNotifications);
+      // Update unread count
+      this.loadUnreadCount();
+    });
+
+    // Listen for unread count changes
+    this.signalRService.onUnreadCountChanged(() => {
+      console.log('Unread count changed');
+      this.loadUnreadCount();
+      // Reload notifications if menu is open
+      if (this.notifications().length > 0) {
+        this.loadNotifications();
+      }
+    });
+
+    // Backup polling mỗi 30 giây để đảm bảo sync nếu SignalR fail
+    this.startBackupPolling();
+  }
+
+  startBackupPolling() {
+    // Stop existing polling if any
+    if (this.notificationSubscription) {
+      this.notificationSubscription.unsubscribe();
+    }
+
+    let previousCount = this.unreadNotificationCount();
+
+    // Poll mỗi 10 giây để check unread count changes
+    this.notificationSubscription = interval(10000)
+      .pipe(
+        startWith(0),
+        switchMap(() => {
+          if (this.showNotificationBadge() && this.isAuthenticated) {
+            return this.notificationService.getUnreadCount();
+          }
+          return [];
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response) {
+            const newCount = response.count;
+            // Nếu count thay đổi, reload notifications để sync với DB
+            if (newCount !== previousCount) {
+              previousCount = newCount;
+              this.unreadNotificationCount.set(newCount);
+              // Reload notifications để đảm bảo sync với DB (work items đã hoàn thành sẽ bị xóa)
+              this.loadNotifications();
+            } else {
+              this.unreadNotificationCount.set(newCount);
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Error in backup polling:', error);
+        }
+      });
   }
 
   get isAuthenticated(): boolean {
@@ -154,6 +428,88 @@ export class AppComponent {
         console.log('Password changed successfully');
       }
     });
+  }
+
+  onNotificationMenuOpened(): void {
+    this.loadNotifications();
+  }
+
+  loadNotifications(): void {
+    if (!this.isAuthenticated) {
+      return;
+    }
+
+    this.isLoadingNotifications.set(true);
+    this.notificationService.getNotifications().subscribe({
+      next: (notifications) => {
+        this.notifications.set(notifications);
+        this.isLoadingNotifications.set(false);
+        // Update unread count - chỉ đếm work items chưa hoàn thành
+        // Backend sẽ tự động filter, nhưng để chắc chắn ta cũng filter ở đây
+        this.loadUnreadCount();
+      },
+      error: (error) => {
+        console.error('Error loading notifications:', error);
+        this.isLoadingNotifications.set(false);
+      }
+    });
+  }
+
+  onNotificationClick(notification: Notification): void {
+    // KHÔNG mark as read khi click - chỉ mark khi work item hoàn thành
+    // Chỉ navigate đến trang tương ứng
+
+    // Navigate based on related entity type
+    if (notification.relatedEntityType === 'WorkItem' && notification.relatedEntityId) {
+      // For WorkItem notifications, we need to get the AssignmentID from the WorkItem
+      // For now, navigate to work items page - user can see their assigned work items
+      // In the future, we could fetch the WorkItem to get AssignmentID and navigate to assignment detail
+      this.router.navigate(['/work-items']);
+    } else if (notification.relatedEntityType === 'File' && notification.relatedEntityId) {
+      // Navigate to files page
+      this.router.navigate(['/files'], { 
+        queryParams: { fileId: notification.relatedEntityId } 
+      });
+    } else {
+      // Default: navigate to work items page
+      this.router.navigate(['/work-items']);
+    }
+  }
+
+  markAllNotificationsAsRead(): void {
+    // Bỏ chức năng này vì notifications chỉ được mark as read khi work item hoàn thành
+    // this.notificationService.markAllAsRead().subscribe({
+    //   next: () => {
+    //     // Update local state
+    //     const updatedNotifications = this.notifications().map(n => ({ ...n, isRead: true }));
+    //     this.notifications.set(updatedNotifications);
+    //     this.unreadNotificationCount.set(0);
+    //   },
+    //   error: (error) => {
+    //     console.error('Error marking all notifications as read:', error);
+    //   }
+    // });
+  }
+
+  formatNotificationTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) {
+      return 'Vừa xong';
+    } else if (diffMins < 60) {
+      return `${diffMins} phút trước`;
+    } else if (diffHours < 24) {
+      return `${diffHours} giờ trước`;
+    } else if (diffDays < 7) {
+      return `${diffDays} ngày trước`;
+    } else {
+      return date.toLocaleDateString('vi-VN');
+    }
   }
 
 }

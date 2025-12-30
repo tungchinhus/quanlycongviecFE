@@ -5,11 +5,13 @@ import { environment } from '../../environments/environment';
 
 export interface SystemSettings {
   fileStoragePath: string;
+  sendEmailNotifications: boolean;
   [key: string]: any; // Cho phép các settings khác trong tương lai
 }
 
 export interface UpdateSettingsRequest {
   fileStoragePath?: string;
+  sendEmailNotifications?: boolean;
   [key: string]: any;
 }
 
@@ -46,7 +48,7 @@ export class SettingsService {
    * Cập nhật đường dẫn lưu file
    */
   updateFileStoragePath(path: string): Observable<SystemSettings> {
-    return this.http.put<SystemSettings>(`${this.apiUrl}/file-storage-path`, { fileStoragePath: path });
+    return this.http.put<SystemSettings>(`${this.apiUrl}/file-storage-path`, { Path: path });
   }
 
   /**
@@ -54,6 +56,29 @@ export class SettingsService {
    */
   validatePath(path: string): Observable<{ valid: boolean; message?: string }> {
     return this.http.post<{ valid: boolean; message?: string }>(`${this.apiUrl}/validate-path`, { path });
+  }
+
+  /**
+   * Lấy tất cả cài đặt hệ thống
+   */
+  getAllSystemSettings(): Observable<SystemSettings> {
+    return this.http.get<SystemSettings>(`${this.apiUrl}/all`);
+  }
+
+  /**
+   * Lấy notification preference
+   */
+  getNotificationPreference(): Observable<{ sendEmailNotifications: boolean }> {
+    return this.http.get<{ sendEmailNotifications: boolean }>(`${this.apiUrl}/notification-preference`);
+  }
+
+  /**
+   * Cập nhật notification preference
+   */
+  updateNotificationPreference(sendEmailNotifications: boolean): Observable<{ sendEmailNotifications: boolean }> {
+    return this.http.put<{ sendEmailNotifications: boolean }>(`${this.apiUrl}/notification-preference`, {
+      sendEmailNotifications
+    });
   }
 }
 

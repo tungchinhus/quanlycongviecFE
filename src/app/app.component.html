@@ -19,9 +19,60 @@
         <button mat-icon-button [matTooltip]="'Trợ giúp'">
           <mat-icon>help_outline</mat-icon>
         </button>
-        <button mat-icon-button [matTooltip]="'Thông báo'">
-          <mat-icon>notifications</mat-icon>
+        <button mat-icon-button [matTooltip]="'Thông báo'" class="notification-button" [matMenuTriggerFor]="notificationMenu" (menuOpened)="onNotificationMenuOpened()">
+          @if (showNotificationBadge() && unreadNotificationCount() > 0) {
+            <mat-icon matBadge="{{ unreadNotificationCount() }}" matBadgeColor="warn">notifications</mat-icon>
+          } @else {
+            <mat-icon>notifications</mat-icon>
+          }
         </button>
+        <mat-menu #notificationMenu="matMenu" class="notification-menu">
+          <div class="notification-list-container">
+            @if (unreadNotificationCount() > 0) {
+              <div class="notification-menu-header">
+                <button mat-button (click)="markAllNotificationsAsRead()" class="mark-all-read-btn" style="display: none;">
+                  <!-- Hidden - không còn dùng -->
+                </button>
+              </div>
+            }
+            @if (isLoadingNotifications()) {
+              <div class="notification-loading">
+                <mat-spinner diameter="30"></mat-spinner>
+                <span>Đang tải...</span>
+              </div>
+            } @else if (notifications().length === 0) {
+              <div class="notification-empty">
+                <mat-icon>notifications_none</mat-icon>
+                <span>Không có thông báo</span>
+              </div>
+            } @else {
+              <mat-list>
+                @for (notification of notifications(); track notification.id) {
+                  <mat-list-item 
+                    class="notification-item"
+                    [class.unread]="!notification.isRead"
+                    (click)="onNotificationClick(notification)">
+                    <div class="notification-content">
+                      <div class="notification-header">
+                        <div class="notification-text">
+                          <div class="notification-title-row">
+                            <div class="notification-message">{{ notification.message }}</div>
+                            @if (!notification.isRead) {
+                              <div class="notification-dot"></div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </mat-list-item>
+                  @if (!$last) {
+                    <mat-divider></mat-divider>
+                  }
+                }
+              </mat-list>
+            }
+          </div>
+        </mat-menu>
         <button mat-icon-button [matMenuTriggerFor]="userMenu" [matTooltip]="'Tài khoản'">
           <mat-icon>account_circle</mat-icon>
         </button>
@@ -175,6 +226,18 @@
               <mat-icon>admin_panel_settings</mat-icon>
             </div>
             <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
+          </a>
+          <a [routerLink]="hasAdminRole() ? '/page-permissions' : null"
+             [routerLinkActive]="hasAdminRole() ? 'active' : ''"
+             [matTooltip]="sidenavService.isCollapsed() ? 'Phân quyền chức năng' : ''"
+             matTooltipPosition="right"
+             [class.disabled]="!hasAdminRole()"
+             [class.nav-item]="true"
+             (click)="handleNavClick($event)">
+            <div class="nav-icon">
+              <mat-icon>security</mat-icon>
+            </div>
+            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Phân quyền chức năng</span>
           </a>
           <a [routerLink]="hasAdminRole() ? '/settings' : null"
              [routerLinkActive]="hasAdminRole() ? 'active' : ''"
