@@ -659,6 +659,101 @@ export class AssignmentDetailDialogComponent implements OnInit {
     return isOwner;
   }
 
+  // Kiểm tra xem assignment đã có work items được sử dụng chưa
+  hasUsedWorkItems(): boolean {
+    if (!this.assignment || !this.assignment.workItems || this.assignment.workItems.length === 0) {
+      return false;
+    }
+    
+    // Kiểm tra xem có work item nào đã được cập nhật chưa
+    // Work item được coi là đã sử dụng nếu có bất kỳ trường nào: StartDate, ExpectedFinish, ActualFinish, PersonConfirmation, Notes, File_ID
+    return this.assignment.workItems.some(wi => 
+      wi.startDate != null ||
+      wi.expectedFinish != null ||
+      wi.actualFinish != null ||
+      wi.personConfirmation != null ||
+      (wi.notes != null && wi.notes.trim() !== '') ||
+      (wi.file_ID != null && wi.file_ID.trim() !== '')
+    );
+  }
+
+  // Kiểm tra xem có thể xóa assignment không
+  canDeleteAssignment(): boolean {
+    // Chỉ cho phép xóa nếu chưa có work items được sử dụng
+    return !this.hasUsedWorkItems();
+  }
+
+  deleteAssignment() {
+    if (!this.assignment || !this.assignment.assignmentID) {
+      return;
+    }
+
+    // Kiểm tra lại trước khi xóa
+    if (this.hasUsedWorkItems()) {
+      this.snackBar.open(
+        'Không thể xóa gán công việc này vì đã có công việc con được sử dụng (đã có ngày bắt đầu, ngày hoàn thành, xác nhận, ghi chú hoặc file đính kèm).',
+        'Đóng',
+        {
+          duration: 6000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        }
+      );
+      return;
+    }
+
+    const confirmMessage = `Bạn có chắc muốn xóa gán công việc "${this.assignment.machineName || this.assignment.assignmentID}"?\n\nLưu ý: Việc xóa sẽ xóa cả các công việc con và file đính kèm liên quan.`;
+    
+    if (confirm(confirmMessage)) {
+      this.assignmentService.deleteAssignment(this.assignment.assignmentID).subscribe({
+        next: () => {
+          this.snackBar.open('Xóa gán công việc thành công!', 'Đóng', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['success-snackbar']
+          });
+          // Đóng dialog và trả về true để parent component reload data
+          this.dialogRef.close(true);
+        },
+        error: (err) => {
+          console.error('Error deleting assignment:', err);
+          
+          let errorMessage = 'Không thể xóa gán công việc. ';
+          
+          if (err.status === 400) {
+            errorMessage += err.error?.message || 'Gán công việc này đang được sử dụng hoặc có dữ liệu liên quan.';
+          } else if (err.status === 404) {
+            errorMessage += 'Không tìm thấy gán công việc cần xóa.';
+          } else if (err.status === 403) {
+            errorMessage += 'Bạn không có quyền xóa gán công việc này.';
+          } else if (err.status === 500) {
+            const backendError = err.error?.message || err.error?.error || '';
+            if (backendError.includes('being used') || backendError.includes('work item')) {
+              errorMessage += 'Gán công việc này đã có công việc con được sử dụng.';
+            } else if (backendError) {
+              errorMessage += backendError;
+            } else {
+              errorMessage += 'Lỗi server. Vui lòng thử lại sau.';
+            }
+          } else if (err.error?.message) {
+            errorMessage += err.error.message;
+          } else {
+            errorMessage += 'Vui lòng thử lại sau.';
+          }
+          
+          this.snackBar.open(errorMessage, 'Đóng', {
+            duration: 6000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
   onClose() {
     this.dialogRef.close();
   }

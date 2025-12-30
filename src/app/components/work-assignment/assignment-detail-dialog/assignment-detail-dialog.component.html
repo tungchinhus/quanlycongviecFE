@@ -179,6 +179,16 @@
     </div>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
+    <button 
+      *ngIf="assignment"
+      mat-button 
+      color="warn" 
+      (click)="deleteAssignment()" 
+      [disabled]="!canDeleteAssignment()"
+      [matTooltip]="!canDeleteAssignment() ? 'Không thể xóa vì đã có công việc con được sử dụng' : 'Xóa gán công việc này'">
+      <mat-icon>delete</mat-icon>
+      <span>Xóa</span>
+    </button>
     <button mat-button (click)="onClose()">Đóng</button>
     <button 
       *ngIf="filteredWorkItems && filteredWorkItems.length > 0"

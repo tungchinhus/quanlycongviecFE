@@ -1,0 +1,101 @@
+<h2 mat-dialog-title>Tạo Quy Trình Ký Duyệt Mới</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="workflowForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tiêu đề yêu cầu *</mat-label>
+      <input matInput formControlName="requestTitle" required>
+      <mat-error *ngIf="workflowForm.get('requestTitle')?.hasError('required')">
+        Tiêu đề là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Loại yêu cầu *</mat-label>
+      <mat-select formControlName="requestType" required>
+        <mat-option *ngFor="let type of requestTypes" [value]="type.value">
+          {{ type.label }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="workflowForm.get('requestType')?.hasError('required')">
+        Loại yêu cầu là bắt buộc
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>{{ isFileType ? 'Đường dẫn OneDrive' : 'Mã tham chiếu' }}</mat-label>
+      <input 
+        matInput 
+        formControlName="requestReferenceID" 
+        [placeholder]="isFileType ? 'VD: https://onedrive.live.com/... hoặc https://[tenant].sharepoint.com/...' : 'VD: TBKT001, AssignmentID'">
+      <button 
+        *ngIf="isFileType"
+        mat-icon-button 
+        matSuffix 
+        type="button"
+        (click)="openOneDrivePicker()"
+        matTooltip="Chọn file từ OneDrive">
+        <mat-icon>cloud_upload</mat-icon>
+      </button>
+      <button 
+        *ngIf="isFileType"
+        mat-icon-button 
+        matSuffix 
+        type="button"
+        (click)="pasteOneDriveUrl()"
+        matTooltip="Paste đường dẫn OneDrive từ clipboard">
+        <mat-icon>content_paste</mat-icon>
+      </button>
+      <mat-hint align="start">
+        <span *ngIf="!isFileType">Mã ID của đối tượng cần ký duyệt (VD: TBKT001, AssignmentID)</span>
+        <span *ngIf="isFileType">Đường dẫn file được lưu trữ trên OneDrive/SharePoint</span>
+        <mat-icon 
+          [matTooltip]="isFileType ? 'Nhập đường dẫn đầy đủ của file trên OneDrive hoặc SharePoint. Bạn có thể copy đường dẫn từ trình duyệt khi mở file trên OneDrive/SharePoint.' : 'Mã tham chiếu là ID hoặc mã định danh của đối tượng cần ký duyệt. Ví dụ: TBKT_ID cho Technical Sheet, AssignmentID cho Phân Công Công Việc, FileID cho File/Tài Liệu.'" 
+          matTooltipPosition="above"
+          style="font-size: 18px; vertical-align: middle; cursor: help; margin-left: 4px;">info</mat-icon>
+      </mat-hint>
+      <mat-error *ngIf="isFileType && workflowForm.get('requestReferenceID')?.hasError('invalidOneDriveUrl')">
+        Đường dẫn không hợp lệ. Vui lòng nhập đường dẫn OneDrive hoặc SharePoint (VD: https://onedrive.live.com/... hoặc https://[tenant].sharepoint.com/...)
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Người kiểm soát *</mat-label>
+      <mat-select formControlName="controllerEmails" multiple required>
+        <mat-option *ngFor="let user of users" [value]="getUserEmail(user)">
+          {{ getUserDisplayName(user) }} ({{ getUserEmail(user) }})
+        </mat-option>
+      </mat-select>
+      <mat-hint>Chọn một hoặc nhiều người kiểm soát</mat-hint>
+      <mat-error *ngIf="workflowForm.get('controllerEmails')?.hasError('required') || workflowForm.get('controllerEmails')?.hasError('arrayNotEmpty')">
+        Vui lòng chọn ít nhất một người kiểm soát
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Người xét duyệt *</mat-label>
+      <mat-select formControlName="approverEmails" multiple required>
+        <mat-option *ngFor="let user of users" [value]="getUserEmail(user)">
+          {{ getUserDisplayName(user) }} ({{ getUserEmail(user) }})
+        </mat-option>
+      </mat-select>
+      <mat-hint>Chọn một hoặc nhiều người xét duyệt</mat-hint>
+      <mat-error *ngIf="workflowForm.get('approverEmails')?.hasError('required') || workflowForm.get('approverEmails')?.hasError('arrayNotEmpty')">
+        Vui lòng chọn ít nhất một người xét duyệt
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mô tả</mat-label>
+      <textarea matInput formControlName="requestDescription" rows="4" placeholder="Nhập mô tả chi tiết về yêu cầu ký duyệt (tùy chọn)"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!workflowForm.valid">
+    Tạo Quy Trình
+  </button>
+</mat-dialog-actions>
+

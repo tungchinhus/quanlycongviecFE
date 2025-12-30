@@ -22,6 +22,7 @@ import { UserRole } from '../../../constants/enums';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { WorkItem, WorkChange } from '../../../models/machine-assignment.model';
+import { FileDocument } from '../../../models/file.model';
 
 @Component({
   selector: 'app-assignment-form-dialog',
@@ -54,7 +55,10 @@ export class AssignmentFormDialogComponent implements OnInit {
   isLoadingUsers = false;
   currentUser: AuthUser | null = null;
   readonly selectedFiles = signal<File[]>([]);
+  readonly existingFiles = signal<FileDocument[]>([]);
+  readonly filesToDelete = signal<number[]>([]);
   readonly isUploading = signal<boolean>(false);
+  readonly isLoadingFiles = signal<boolean>(false);
   isEditMode: boolean = false;
   assignmentId: number | null = null;
 
@@ -147,6 +151,11 @@ export class AssignmentFormDialogComponent implements OnInit {
         const workChangesText = assignment.workChanges.map((wc: WorkChange) => wc.description).filter((d: string | undefined): d is string => !!d).join('\n');
         this.assignmentForm.patchValue({ workChanges: workChangesText });
       }
+      
+      // Load existing files
+      if (this.assignmentId) {
+        this.loadExistingFiles(this.assignmentId);
+      }
     } else if (this.data?.tbktId) {
       // Create mode: chỉ điền tbktId
       this.assignmentForm.patchValue({
@@ -196,6 +205,28 @@ export class AssignmentFormDialogComponent implements OnInit {
     this.selectedFiles.update(files => files.filter((_, i) => i !== index));
   }
 
+  removeExistingFile(fileId: number) {
+    // Mark file for deletion
+    this.filesToDelete.update(ids => [...ids, fileId]);
+    // Remove from display
+    this.existingFiles.update(files => files.filter(f => f.id !== fileId));
+  }
+
+  loadExistingFiles(assignmentId: number) {
+    this.isLoadingFiles.set(true);
+    this.fileService.getFilesByAssignment(assignmentId).subscribe({
+      next: (files) => {
+        this.existingFiles.set(files);
+        this.isLoadingFiles.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading existing files:', err);
+        this.isLoadingFiles.set(false);
+        // Don't show error to user, just log it
+      }
+    });
+  }
+
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -237,34 +268,33 @@ export class AssignmentFormDialogComponent implements OnInit {
     // Files sẽ được upload sau khi tạo assignment thành công
 
     if (this.isEditMode && this.assignmentId) {
-      // Update assignment
-      this.assignmentService.updateAssignment(this.assignmentId, assignmentData).subscribe({
-        next: () => {
-          // Reload assignment để lấy dữ liệu mới nhất
-          this.assignmentService.getAssignmentById(this.assignmentId!).subscribe({
-            next: (updatedAssignment) => {
-              // Tạo/cập nhật work items và work changes
-              this.createWorkItemsAndChanges(this.assignmentId!, formValue);
-            },
-            error: (err) => {
-              console.error('Error reloading assignment:', err);
-              // Vẫn tiếp tục với work items
-              this.createWorkItemsAndChanges(this.assignmentId!, formValue);
-            }
-          });
-        },
-        error: (err) => {
-          this.isUploading.set(false);
-          console.error('Error updating assignment:', err);
-          const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi cập nhật gán công việc';
-          this.snackBar.open(errorMessage, 'Đóng', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
-        }
-      });
+      // Delete files marked for deletion first
+      const filesToDelete = this.filesToDelete();
+      if (filesToDelete.length > 0) {
+        const deleteObservables = filesToDelete.map(fileId =>
+          this.fileService.deleteFile(fileId).pipe(
+            catchError(error => {
+              console.error(`Error deleting file ${fileId}:`, error);
+              return of(null);
+            })
+          )
+        );
+        
+        forkJoin(deleteObservables).subscribe({
+          next: () => {
+            // Continue with update after deletion
+            this.updateAssignmentAndWorkItems(assignmentData, formValue);
+          },
+          error: (err) => {
+            console.error('Error deleting files:', err);
+            // Continue anyway
+            this.updateAssignmentAndWorkItems(assignmentData, formValue);
+          }
+        });
+      } else {
+        // No files to delete, proceed directly
+        this.updateAssignmentAndWorkItems(assignmentData, formValue);
+      }
     } else {
       // Tạo assignment mới
       this.assignmentService.createAssignment(assignmentData).subscribe({
@@ -287,6 +317,37 @@ export class AssignmentFormDialogComponent implements OnInit {
         }
       });
     }
+  }
+
+  private updateAssignmentAndWorkItems(assignmentData: any, formValue: any) {
+    // Update assignment
+    this.assignmentService.updateAssignment(this.assignmentId!, assignmentData).subscribe({
+      next: () => {
+        // Reload assignment để lấy dữ liệu mới nhất
+        this.assignmentService.getAssignmentById(this.assignmentId!).subscribe({
+          next: (updatedAssignment) => {
+            // Tạo/cập nhật work items và work changes
+            this.createWorkItemsAndChanges(this.assignmentId!, formValue);
+          },
+          error: (err) => {
+            console.error('Error reloading assignment:', err);
+            // Vẫn tiếp tục với work items
+            this.createWorkItemsAndChanges(this.assignmentId!, formValue);
+          }
+        });
+      },
+      error: (err) => {
+        this.isUploading.set(false);
+        console.error('Error updating assignment:', err);
+        const errorMessage = err.error?.message || err.error?.error || 'Lỗi khi cập nhật gán công việc';
+        this.snackBar.open(errorMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   private createWorkItemsAndChanges(assignmentId: number, formValue: any) {

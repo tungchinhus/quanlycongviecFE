@@ -217,6 +217,59 @@
   margin-left: 4px;
 }
 
+/* Existing files styling */
+.existing-files-section {
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.existing-files-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.existing-file {
+  background-color: #e3f2fd !important;
+  border: 1px solid #90caf9 !important;
+}
+
+.existing-file mat-icon {
+  color: #1976d2 !important;
+}
+
+/* New files styling */
+.new-files-section {
+  margin-top: 12px;
+}
+
+.new-files-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.new-file {
+  background-color: #f1f8e9 !important;
+  border: 1px solid #aed581 !important;
+}
+
+.new-file mat-icon {
+  color: #558b2f !important;
+}
+
+/* Loading indicator */
+.loading-files {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #666;
+  font-size: 14px;
+}
+
 .button-spinner {
   display: inline-block;
   margin-right: 8px;

@@ -1,0 +1,336 @@
+<h2 mat-dialog-title>Chi Tiết Quy Trình Ký Duyệt</h2>
+
+<mat-dialog-content>
+  <!-- Thanh trạng thái 3 cấp -->
+  <div class="status-stepper-container">
+    <div class="stepper-wrapper">
+      <!-- Bước 1: Gửi yêu cầu -->
+      <div 
+        class="step-item" 
+        [class.completed]="isStepCompleted(0)"
+        [class.active]="selectedStepIndex === 0"
+        [class.rejected]="isStepRejected(0)"
+        (click)="selectStep(0)">
+        <div class="step-icon">
+          <mat-icon *ngIf="isStepCompleted(0) && !isStepRejected(0)">check_circle</mat-icon>
+          <mat-icon *ngIf="isStepRejected(0)" color="warn">cancel</mat-icon>
+          <mat-icon *ngIf="!isStepCompleted(0) && !isStepRejected(0) && selectedStepIndex === 0">radio_button_checked</mat-icon>
+          <span *ngIf="!isStepCompleted(0) && !isStepRejected(0) && selectedStepIndex !== 0" class="step-number">1</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Gửi Yêu Cầu</div>
+          <div class="step-status" *ngIf="workflow.requestSentDate">
+            {{ workflow.requestSentDate | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+          <div class="step-status" *ngIf="!workflow.requestSentDate">Chưa gửi</div>
+        </div>
+      </div>
+
+      <div class="step-connector" [class.completed]="isStepCompleted(0)"></div>
+
+      <!-- Bước 2: Kiểm soát -->
+      <div 
+        class="step-item" 
+        [class.completed]="isStepCompleted(1)"
+        [class.active]="selectedStepIndex === 1"
+        [class.rejected]="isStepRejected(1)"
+        (click)="selectStep(1)">
+        <div class="step-icon">
+          <mat-icon *ngIf="isStepCompleted(1) && !isStepRejected(1)">check_circle</mat-icon>
+          <mat-icon *ngIf="isStepRejected(1)" color="warn">cancel</mat-icon>
+          <mat-icon *ngIf="!isStepCompleted(1) && !isStepRejected(1) && selectedStepIndex === 1">radio_button_checked</mat-icon>
+          <span *ngIf="!isStepCompleted(1) && !isStepRejected(1) && selectedStepIndex !== 1" class="step-number">2</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Kiểm Soát</div>
+          <div class="step-status" *ngIf="workflow.controlReviewDate">
+            {{ workflow.controlReviewDate | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+          <div class="step-status" *ngIf="!workflow.controlReviewDate && workflow.controlStatus === 'Pending'">
+            Đang chờ
+          </div>
+        </div>
+      </div>
+
+      <div class="step-connector" [class.completed]="isStepCompleted(1)"></div>
+
+      <!-- Bước 3: Xét duyệt -->
+      <div 
+        class="step-item" 
+        [class.completed]="isStepCompleted(2)"
+        [class.active]="selectedStepIndex === 2"
+        [class.rejected]="isStepRejected(2)"
+        (click)="selectStep(2)">
+        <div class="step-icon">
+          <mat-icon *ngIf="isStepCompleted(2) && !isStepRejected(2)">check_circle</mat-icon>
+          <mat-icon *ngIf="isStepRejected(2)" color="warn">cancel</mat-icon>
+          <mat-icon *ngIf="!isStepCompleted(2) && !isStepRejected(2) && selectedStepIndex === 2">radio_button_checked</mat-icon>
+          <span *ngIf="!isStepCompleted(2) && !isStepRejected(2) && selectedStepIndex !== 2" class="step-number">3</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Xét Duyệt</div>
+          <div class="step-status" *ngIf="workflow.approvalDate">
+            {{ workflow.approvalDate | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+          <div class="step-status" *ngIf="!workflow.approvalDate && workflow.approvalStatus === 'Pending'">
+            Đang chờ
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thông tin chi tiết của bước được chọn -->
+  <div class="step-details" *ngIf="selectedStepIndex === 0">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Thông Tin Gửi Yêu Cầu</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="info-row">
+          <strong>Người gửi:</strong>
+          <span>{{ workflow.requesterName || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Email:</strong>
+          <span>{{ workflow.requesterEmail || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Ngày gửi:</strong>
+          <span>{{ workflow.requestSentDate ? (workflow.requestSentDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Trạng thái:</strong>
+          <mat-chip [color]="workflow.requestStatus === 'Sent' ? 'primary' : ''">
+            {{ workflow.requestStatus || 'Pending' }}
+          </mat-chip>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="step-details" *ngIf="selectedStepIndex === 1">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Thông Tin Kiểm Soát</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="info-row">
+          <strong>Người kiểm soát:</strong>
+          <span>{{ workflow.controllerName || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Email:</strong>
+          <span>{{ workflow.controllerEmail || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Trạng thái:</strong>
+          <mat-chip [color]="getControlStatusColor()">
+            {{ getControlStatusLabel() }}
+          </mat-chip>
+        </div>
+        <div class="info-row">
+          <strong>Ngày kiểm soát:</strong>
+          <span>{{ workflow.controlReviewDate ? (workflow.controlReviewDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Ghi chú:</strong>
+          <span>{{ workflow.controlNotes || '-' }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="step-details" *ngIf="selectedStepIndex === 2">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Thông Tin Xét Duyệt</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="info-row">
+          <strong>Người xét duyệt:</strong>
+          <span>{{ workflow.approverName || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Email:</strong>
+          <span>{{ workflow.approverEmail || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Trạng thái:</strong>
+          <mat-chip [color]="getApprovalStatusColor()">
+            {{ getApprovalStatusLabel() }}
+          </mat-chip>
+        </div>
+        <div class="info-row">
+          <strong>Ngày xét duyệt:</strong>
+          <span>{{ workflow.approvalDate ? (workflow.approvalDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+        </div>
+        <div class="info-row">
+          <strong>Ghi chú:</strong>
+          <span>{{ workflow.approvalNotes || '-' }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-divider style="margin: 20px 0;"></mat-divider>
+
+  <mat-tab-group>
+    <mat-tab label="Thông Tin Chung">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-content>
+            <div class="info-row">
+              <strong>ID:</strong>
+              <span>{{ workflow.workflowID }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Tiêu đề:</strong>
+              <span>{{ workflow.requestTitle || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Mô tả:</strong>
+              <span>{{ workflow.requestDescription || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Loại:</strong>
+              <span>{{ workflow.requestType || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Mã tham chiếu:</strong>
+              <span>{{ workflow.requestReferenceID || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Trạng thái:</strong>
+              <mat-chip [color]="getStatusColor(workflow.overallStatus)">
+                {{ getStatusLabel(workflow.overallStatus) }}
+              </mat-chip>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Người Gửi">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-content>
+            <div class="info-row">
+              <strong>Tên:</strong>
+              <span>{{ workflow.requesterName || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Email:</strong>
+              <span>{{ workflow.requesterEmail || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Ngày gửi:</strong>
+              <span>{{ workflow.requestSentDate ? (workflow.requestSentDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Kiểm Soát">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-content>
+            <div class="info-row">
+              <strong>Tên:</strong>
+              <span>{{ workflow.controllerName || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Email:</strong>
+              <span>{{ workflow.controllerEmail || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Trạng thái:</strong>
+              <span>{{ workflow.controlStatus || 'Pending' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Ngày kiểm soát:</strong>
+              <span>{{ workflow.controlReviewDate ? (workflow.controlReviewDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Ghi chú:</strong>
+              <span>{{ workflow.controlNotes || '-' }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Xét Duyệt">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-content>
+            <div class="info-row">
+              <strong>Tên:</strong>
+              <span>{{ workflow.approverName || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Email:</strong>
+              <span>{{ workflow.approverEmail || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Trạng thái:</strong>
+              <span>{{ workflow.approvalStatus || 'Pending' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Ngày xét duyệt:</strong>
+              <span>{{ workflow.approvalDate ? (workflow.approvalDate | date:'dd/MM/yyyy HH:mm') : '-' }}</span>
+            </div>
+            <div class="info-row">
+              <strong>Ghi chú:</strong>
+              <span>{{ workflow.approvalNotes || '-' }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <mat-tab *ngIf="canPerformAction" label="Thực Hiện Hành Động">
+      <div class="tab-content">
+        <form [formGroup]="actionForm">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Hành động</mat-label>
+            <mat-select formControlName="action">
+              <mat-option value="approve">Phê duyệt</mat-option>
+              <mat-option value="reject">Từ chối</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Ghi chú</mat-label>
+            <textarea matInput formControlName="notes" rows="4" placeholder="Nhập ghi chú (tùy chọn)"></textarea>
+          </mat-form-field>
+
+          <div class="action-info">
+            <p *ngIf="userRole === 'controller'">
+              <strong>Bạn đang thực hiện hành động ở cấp Kiểm Soát.</strong><br>
+              Nếu phê duyệt, yêu cầu sẽ được chuyển đến người xét duyệt.
+            </p>
+            <p *ngIf="userRole === 'approver'">
+              <strong>Bạn đang thực hiện hành động ở cấp Xét Duyệt.</strong><br>
+              Nếu phê duyệt, quy trình sẽ hoàn tất.
+            </p>
+          </div>
+        </form>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Đóng</button>
+  <button 
+    *ngIf="canPerformAction" 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSubmit()" 
+    [disabled]="!actionForm.valid">
+    {{ actionForm.get('action')?.value === 'approve' ? 'Phê Duyệt' : 'Từ Chối' }}
+  </button>
+</mat-dialog-actions>
+

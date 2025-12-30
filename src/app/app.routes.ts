@@ -45,6 +45,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'approval-workflow',
+    loadComponent: () => import('./components/approval-workflow/approval-workflow-list/approval-workflow-list.component').then(m => m.ApprovalWorkflowListComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'work-items',
     loadComponent: () => import('./components/work-item/work-item-list/work-item-list.component').then(m => m.WorkItemListComponent),
     canActivate: [authGuard]

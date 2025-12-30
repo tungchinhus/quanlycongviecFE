@@ -185,18 +185,48 @@
         <span class="file-upload-hint">(Có thể chọn nhiều file)</span>
       </div>
 
+      @if (isLoadingFiles()) {
+        <div class="loading-files">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Đang tải danh sách file...</span>
+        </div>
+      }
+
+      @if (existingFiles().length > 0) {
+        <div class="existing-files-section">
+          <h4>File đã upload:</h4>
+          <div class="selected-files-list">
+            @for (file of existingFiles(); track file.id) {
+              <mat-chip-row (removed)="removeExistingFile(file.id)" class="file-chip existing-file">
+                <mat-icon matChipAvatar>insert_drive_file</mat-icon>
+                <span class="file-name" [matTooltip]="file.fileName">{{ file.fileName }}</span>
+                <span class="file-size">({{ formatFileSize(file.fileSize) }})</span>
+                <button matChipRemove [attr.aria-label]="'remove ' + file.fileName">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          </div>
+        </div>
+      }
+
       @if (selectedFiles().length > 0) {
-        <div class="selected-files-list">
-          @for (file of selectedFiles(); track $index) {
-            <mat-chip-row (removed)="removeFile($index)" class="file-chip">
-              <mat-icon matChipAvatar>insert_drive_file</mat-icon>
-              <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
-              <span class="file-size">({{ formatFileSize(file.size) }})</span>
-              <button matChipRemove [attr.aria-label]="'remove ' + file.name">
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </mat-chip-row>
+        <div class="new-files-section">
+          @if (existingFiles().length > 0) {
+            <h4>File mới chọn:</h4>
           }
+          <div class="selected-files-list">
+            @for (file of selectedFiles(); track $index) {
+              <mat-chip-row (removed)="removeFile($index)" class="file-chip new-file">
+                <mat-icon matChipAvatar>insert_drive_file</mat-icon>
+                <span class="file-name" [matTooltip]="file.name">{{ file.name }}</span>
+                <span class="file-size">({{ formatFileSize(file.size) }})</span>
+                <button matChipRemove [attr.aria-label]="'remove ' + file.name">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          </div>
         </div>
       }
     </div>

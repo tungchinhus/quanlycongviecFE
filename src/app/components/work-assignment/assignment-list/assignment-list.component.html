@@ -76,7 +76,9 @@
             <button 
               *ngIf="hasNewAssignment(sheet)"
               mat-menu-item 
-              (click)="openAssignmentDialog(sheet)">
+              (click)="openAssignmentDialog(sheet)"
+              [disabled]="!canEditAssignment(sheet)"
+              [matTooltip]="!canEditAssignment(sheet) ? 'Không thể chỉnh sửa vì đã có công việc con được sử dụng' : ''">
               <mat-icon>edit</mat-icon>
               <span>Chỉnh sửa</span>
             </button>

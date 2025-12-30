@@ -1,0 +1,130 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Quy Trình Ký Duyệt</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <button mat-raised-button color="primary" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon>
+        Tạo Quy Trình Ký Duyệt Mới
+      </button>
+      
+      <mat-form-field appearance="outline" class="status-filter">
+        <mat-label>Lọc theo trạng thái</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onStatusChange()">
+          <mat-option *ngFor="let option of statusOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <table mat-table [dataSource]="workflows" class="workflow-table">
+      <ng-container matColumnDef="workflowID">
+        <th mat-header-cell *matHeaderCellDef>ID</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.workflowID }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="requestTitle">
+        <th mat-header-cell *matHeaderCellDef>Tiêu Đề</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.requestTitle || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="requestType">
+        <th mat-header-cell *matHeaderCellDef>Loại</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.requestType || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="requestReferenceID">
+        <th mat-header-cell *matHeaderCellDef>Tham Chiếu</th>
+        <td mat-cell *matCellDef="let workflow" class="reference-cell">
+          <span 
+            *ngIf="!isUrl(workflow.requestReferenceID)" 
+            class="reference-text"
+            [matTooltip]="workflow.requestReferenceID || ''">
+            {{ workflow.requestReferenceID || '-' }}
+          </span>
+          <a 
+            *ngIf="isUrl(workflow.requestReferenceID)" 
+            [href]="workflow.requestReferenceID" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="reference-link"
+            [matTooltip]="workflow.requestReferenceID"
+            (click)="$event.stopPropagation()">
+            {{ workflow.requestReferenceID }}
+          </a>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="requesterName">
+        <th mat-header-cell *matHeaderCellDef>Người Gửi</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.requesterName || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="controllerName">
+        <th mat-header-cell *matHeaderCellDef>Kiểm Soát</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.controllerName || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="approverName">
+        <th mat-header-cell *matHeaderCellDef>Xét Duyệt</th>
+        <td mat-cell *matCellDef="let workflow">{{ workflow.approverName || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="overallStatus">
+        <th mat-header-cell *matHeaderCellDef>Trạng Thái</th>
+        <td mat-cell *matCellDef="let workflow">
+          <mat-chip [color]="getStatusColor(workflow.overallStatus)">
+            {{ getStatusLabel(workflow.overallStatus) }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="createdAt">
+        <th mat-header-cell *matHeaderCellDef>Ngày Tạo</th>
+        <td mat-cell *matCellDef="let workflow">
+          {{ workflow.createdAt ? (workflow.createdAt | date:'dd/MM/yyyy HH:mm') : '-' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Thao Tác</th>
+        <td mat-cell *matCellDef="let workflow">
+          <button 
+            *ngIf="canPerformAction(workflow)"
+            mat-icon-button 
+            [matTooltip]="'Thực hiện hành động'"
+            (click)="openActionDialog(workflow)" 
+            color="primary">
+            <mat-icon>check_circle</mat-icon>
+          </button>
+          <button 
+            mat-icon-button 
+            [matTooltip]="'Xem chi tiết'"
+            (click)="openActionDialog(workflow)" 
+            color="accent">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button 
+            *ngIf="workflow.overallStatus === 'Draft' || workflow.overallStatus === 'PendingControl'"
+            mat-icon-button 
+            [matTooltip]="'Xóa'"
+            (click)="deleteWorkflow(workflow)" 
+            color="warn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div *ngIf="workflows.length === 0" class="no-data">
+      <mat-icon>inbox</mat-icon>
+      <p>Chưa có quy trình ký duyệt nào</p>
+    </div>
+  </mat-card-content>
+</mat-card>
+

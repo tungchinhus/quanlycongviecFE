@@ -116,54 +116,46 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Load users trước, sau đó mới load files
+    // Đảm bảo assignmentId được lấy đúng từ đầu
+    if (this.workItem) {
+      this.assignmentId = this.getAssignmentId(this.workItem);
+      console.log('ngOnInit - assignmentId:', this.assignmentId, 'workItem:', this.workItem);
+      
+      // Populate form với data từ workItem ngay lập tức
+      const formValues = {
+        workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
+        startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
+        expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
+        actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
+        personConfirmation: this.workItem.personConfirmation || false,
+        notes: this.workItem.notes || ''
+      };
+      
+      this.workItemForm.patchValue(formValues);
+      
+      // Lưu giá trị ban đầu để so sánh thay đổi
+      this.initialFormValues = this.getFormValuesForComparison(formValues);
+      
+      // Load files ngay lập tức (không đợi users)
+      if (this.assignmentId) {
+        this.loadFiles();
+      } else {
+        console.warn('Cannot load files: assignmentId is null');
+      }
+    }
+    
+    // Load users song song (không block việc load files)
     this.loadUsers().subscribe({
       next: () => {
-        // Sau khi users đã load xong, mới load files
-        if (this.workItem) {
-          // Populate form với data từ workItem
-          const formValues = {
-            workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
-            startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
-            expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
-            actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
-            personConfirmation: this.workItem.personConfirmation || false,
-            notes: this.workItem.notes || ''
-          };
-          
-          this.workItemForm.patchValue(formValues);
-          
-          // Lưu giá trị ban đầu để so sánh thay đổi
-          this.initialFormValues = this.getFormValuesForComparison(formValues);
-
-          // Load files nếu có assignmentID
-          this.assignmentId = this.getAssignmentId(this.workItem);
-          if (this.assignmentId) {
-            this.loadFiles();
-          }
+        // Sau khi users đã load xong, reload files để phân loại đúng
+        if (this.workItem && this.assignmentId) {
+          console.log('Users loaded, reloading files to re-separate');
+          this.loadFiles();
         }
       },
       error: (err) => {
         console.error('Error loading users:', err);
-        // Vẫn load files ngay cả khi load users lỗi
-        if (this.workItem) {
-          const formValues = {
-            workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
-            startDate: this.workItem.startDate ? new Date(this.workItem.startDate) : null,
-            expectedFinish: this.workItem.expectedFinish ? new Date(this.workItem.expectedFinish) : null,
-            actualFinish: this.workItem.actualFinish ? new Date(this.workItem.actualFinish) : null,
-            personConfirmation: this.workItem.personConfirmation || false,
-            notes: this.workItem.notes || ''
-          };
-          
-          this.workItemForm.patchValue(formValues);
-          this.initialFormValues = this.getFormValuesForComparison(formValues);
-
-          this.assignmentId = this.getAssignmentId(this.workItem);
-          if (this.assignmentId) {
-            this.loadFiles();
-          }
-        }
+        // Vẫn tiếp tục, files đã được load trước đó
       }
     });
     
@@ -227,18 +219,35 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   loadFiles() {
-    if (!this.assignmentId) return;
+    if (!this.assignmentId) {
+      console.warn('Cannot load files: assignmentId is null or undefined');
+      return;
+    }
     
+    console.log('Loading files for assignmentId:', this.assignmentId);
     this.fileService.getFilesByAssignment(this.assignmentId).subscribe({
       next: (files) => {
+        console.log('Files loaded from API:', files);
         // Tách files thành 2 nhóm: file giao việc và file của user
         this.separateFiles(files);
         
         // Set files để hiển thị (bao gồm cả file giao việc và file của user)
         this.files = [...this.assignmentFiles, ...this.userFiles];
+        console.log('Files after separation:', {
+          assignmentFiles: this.assignmentFiles.length,
+          userFiles: this.userFiles.length,
+          total: this.files.length
+        });
       },
       error: (err) => {
         console.error('Error loading files:', err);
+        // Hiển thị thông báo lỗi cho user
+        this.snackBar.open('Lỗi khi tải danh sách file. Vui lòng thử lại.', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
@@ -248,19 +257,27 @@ export class WorkItemDialogComponent implements OnInit {
     this.assignmentFiles = [];
     this.userFiles = [];
     
+    if (!files || files.length === 0) {
+      console.log('No files to separate');
+      return;
+    }
+    
     if (!this.workItem) {
+      console.warn('No workItem, cannot separate files');
       this.files = files;
       return;
     }
 
     const assignment = this.workItem.assignment;
     if (!assignment) {
+      console.warn('No assignment in workItem, cannot separate files');
       this.files = files;
       return;
     }
 
     // Lấy ID của người giao việc (designer)
     const designerId = assignment.designer;
+    console.log('Separating files - designerId:', designerId, 'currentUser:', this.currentUser);
     
     // Tìm user designer từ danh sách users để lấy userName
     let designerUser: AuthUser | undefined;
@@ -285,8 +302,11 @@ export class WorkItemDialogComponent implements OnInit {
       if (designerUser.userId) designerIdentifiers.push(designerUser.userId.toString());
     }
     
+    console.log('Designer identifiers:', designerIdentifiers);
+    
     files.forEach(file => {
       const uploadedBy = file.uploadedBy || file.uploadBy;
+      console.log(`Processing file: ${file.fileName}, uploadedBy: ${uploadedBy}`);
       
       // Kiểm tra nếu là file của designer (người giao việc)
       let isDesignerFile = false;
@@ -294,11 +314,15 @@ export class WorkItemDialogComponent implements OnInit {
       // Nếu không có uploadedBy, coi như file giao việc (an toàn)
       if (!uploadedBy) {
         isDesignerFile = true;
+        console.log(`  -> File has no uploadedBy, treating as designer file`);
       } else if (designerIdentifiers.length > 0) {
         // So sánh với tất cả các identifier của designer
         isDesignerFile = designerIdentifiers.some(id => 
           id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
         );
+        if (isDesignerFile) {
+          console.log(`  -> File is designer file (matched: ${uploadedBy})`);
+        }
       }
 
       // Kiểm tra nếu là file của user hiện tại (chỉ khi có currentUser)
@@ -312,9 +336,14 @@ export class WorkItemDialogComponent implements OnInit {
           this.currentUser.name
         ].filter(id => id);
         
+        console.log(`  -> Current user identifiers:`, currentUserIdentifiers);
+        
         isCurrentUserFile = currentUserIdentifiers.some(id => 
           id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
         );
+        if (isCurrentUserFile) {
+          console.log(`  -> File is current user file (matched: ${uploadedBy})`);
+        }
       }
 
       // Chỉ hiển thị:
@@ -322,17 +351,22 @@ export class WorkItemDialogComponent implements OnInit {
       // - File chính user đang đăng nhập upload
       if (isCurrentUserFile) {
         this.userFiles.push(file);
+        console.log(`  -> Added to userFiles`);
       } else if (isDesignerFile) {
         this.assignmentFiles.push(file);
+        console.log(`  -> Added to assignmentFiles`);
+      } else {
+        console.log(`  -> File ignored (not designer or current user)`);
       }
       // Các file khác (người thứ 3) sẽ bị bỏ qua theo yêu cầu
     });
     
-    console.log('Separated files:', {
+    console.log('Separated files result:', {
       assignmentFiles: this.assignmentFiles.length,
       userFiles: this.userFiles.length,
       designerId,
-      designerUser: designerUser?.userName
+      designerUser: designerUser?.userName,
+      currentUser: this.currentUser?.userName
     });
   }
 
@@ -447,12 +481,28 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   private getAssignmentId(workItem?: WorkItemWithAssignment | null): number | null {
-    if (!workItem) return null;
+    if (!workItem) {
+      console.warn('getAssignmentId: workItem is null or undefined');
+      return null;
+    }
+    
     // Chuẩn hóa lấy assignmentId dù backend trả camelCase hay PascalCase
     const idFromWorkItem = (workItem as any).assignmentId || workItem.assignmentID;
     const idFromAssignment = workItem.assignment?.assignmentID || (workItem.assignment as any)?.assignmentId;
     const finalId = idFromWorkItem || idFromAssignment;
-    return finalId && Number(finalId) > 0 ? Number(finalId) : null;
+    
+    console.log('getAssignmentId - workItem:', {
+      assignmentID: workItem.assignmentID,
+      assignmentId: (workItem as any).assignmentId,
+      assignment: workItem.assignment,
+      idFromWorkItem,
+      idFromAssignment,
+      finalId
+    });
+    
+    const result = finalId && Number(finalId) > 0 ? Number(finalId) : null;
+    console.log('getAssignmentId result:', result);
+    return result;
   }
 
   deleteFile(file: FileDocument) {

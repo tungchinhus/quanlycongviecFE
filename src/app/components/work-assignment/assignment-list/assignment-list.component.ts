@@ -21,6 +21,7 @@ import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../mo
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
 import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignment-form-dialog.component';
+import { AssignmentDetailDialogComponent } from '../assignment-detail-dialog/assignment-detail-dialog.component';
 
 interface ColumnVisibility {
   [key: string]: boolean;
@@ -246,13 +247,40 @@ export class AssignmentListComponent implements OnInit {
   }
 
   viewTechnicalSheet(sheet: TechnicalSheet) {
-    // Có thể mở dialog để xem chi tiết technical sheet hoặc điều hướng đến trang chi tiết
-    this.snackBar.open(`Xem chi tiết đề nghị: ${sheet.tbkt_ID}`, 'Đóng', {
-      duration: 2000,
-      horizontalPosition: 'center',
-      verticalPosition: 'top'
-    });
-    // TODO: Implement view technical sheet detail dialog or navigation
+    // Tìm assignment liên quan đến technical sheet này
+    const relatedAssignment = this.assignments.find(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    
+    if (relatedAssignment && relatedAssignment.assignmentID) {
+      // Mở dialog xem chi tiết assignment
+      const dialogRef = this.dialog.open(AssignmentDetailDialogComponent, {
+        width: '90%',
+        maxWidth: '1200px',
+        minWidth: '320px',
+        disableClose: false,
+        data: { 
+          assignmentId: relatedAssignment.assignmentID
+        }
+      });
+
+      // Reload data sau khi dialog đóng (khi xóa assignment thành công)
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          // Reload cả technical sheets và assignments
+          this.loadTechnicalSheets();
+        }
+      });
+    } else {
+      // Nếu chưa có assignment, hiển thị thông báo
+      this.snackBar.open(`Đề nghị "${sheet.tbkt_ID}" chưa có gán công việc. Vui lòng tạo gán công việc trước.`, 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+    }
   }
 
   openAssignmentDialog(sheet: TechnicalSheet) {
@@ -306,6 +334,35 @@ export class AssignmentListComponent implements OnInit {
 
   hasNewAssignment(sheet: TechnicalSheet): boolean {
     return this.getNewAssignment(sheet) !== null;
+  }
+
+  // Kiểm tra xem assignment đã có work items được sử dụng chưa
+  hasUsedWorkItems(sheet: TechnicalSheet): boolean {
+    const relatedAssignment = this.assignments.find(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    
+    if (!relatedAssignment || !relatedAssignment.workItems || relatedAssignment.workItems.length === 0) {
+      return false;
+    }
+    
+    // Kiểm tra xem có work item nào đã được cập nhật chưa
+    // Work item được coi là đã sử dụng nếu có bất kỳ trường nào: StartDate, ExpectedFinish, ActualFinish, PersonConfirmation, Notes, File_ID
+    return relatedAssignment.workItems.some(wi => 
+      wi.startDate != null ||
+      wi.expectedFinish != null ||
+      wi.actualFinish != null ||
+      wi.personConfirmation != null ||
+      (wi.notes != null && wi.notes.trim() !== '') ||
+      (wi.file_ID != null && wi.file_ID.trim() !== '')
+    );
+  }
+
+  // Kiểm tra xem có thể chỉnh sửa assignment không
+  canEditAssignment(sheet: TechnicalSheet): boolean {
+    // Chỉ cho phép chỉnh sửa nếu chưa có work items được sử dụng
+    return !this.hasUsedWorkItems(sheet);
   }
 
   canDeleteTechnicalSheet(sheet: TechnicalSheet): boolean {
