@@ -17,6 +17,7 @@ import { WorkItemService } from '../../../services/work-item.service';
 import { FileDocument } from '../../../models/file.model';
 import { AuthService, AuthUser } from '../../../services/auth.service';
 import { UsersService } from '../../../services/users.service';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-work-item-review-dialog',
@@ -62,6 +63,7 @@ export class WorkItemReviewDialogComponent implements OnInit {
     private workItemService: WorkItemService,
     private authService: AuthService,
     private usersService: UsersService,
+    private notificationService: NotificationService,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: { 
       workItem: WorkItemWithAssignment;
@@ -492,6 +494,18 @@ export class WorkItemReviewDialogComponent implements OnInit {
           horizontalPosition: 'center',
           verticalPosition: 'top'
         });
+        // Reload unread count as fallback if SignalR is not connected
+        // This ensures notification badge updates even if SignalR fails
+        setTimeout(() => {
+          this.notificationService.getUnreadCount().subscribe({
+            next: () => {
+              // Unread count reloaded
+            },
+            error: () => {
+              // Error reloading unread count - silently fail
+            }
+          });
+        }, 500);
         this.dialogRef.close(true);
       },
       error: (err) => {

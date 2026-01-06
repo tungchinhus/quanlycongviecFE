@@ -118,9 +118,6 @@ export class AppComponent implements OnInit, OnDestroy {
       const showBadge = this.showNotificationBadge();
       const count = this.unreadNotificationCount();
       const shouldShow = showBadge && count > 0;
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:98',message:'Badge state effect',data:{showBadge,count,shouldShow},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       // Force change detection when badge state changes
       this.cdr.detectChanges();
     });
@@ -132,6 +129,16 @@ export class AppComponent implements OnInit, OnDestroy {
       this.loadNotificationPreference();
       this.startSignalRConnection();
     }
+    
+    // Listen for custom unreadCountChanged event (fallback when SignalR is not connected)
+    window.addEventListener('unreadCountChanged', ((event: CustomEvent) => {
+      if (event.detail?.count !== undefined) {
+        this.unreadNotificationCount.set(event.detail.count);
+        this.cdr.detectChanges();
+      } else {
+        this.loadUnreadCount();
+      }
+    }) as EventListener);
   }
 
   ngOnDestroy() {
@@ -143,19 +150,10 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   loadNotificationPreference() {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:123',message:'loadNotificationPreference called',data:{isAuthenticated:this.isAuthenticated},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     this.settingsService.getNotificationPreference().subscribe({
       next: (pref) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:126',message:'Notification preference loaded',data:{sendEmailNotifications:pref.sendEmailNotifications},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // Only show badge if email notifications are disabled
         this.showNotificationBadge.set(!pref.sendEmailNotifications);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:129',message:'Badge visibility set',data:{showBadge:!pref.sendEmailNotifications,sendEmailNotifications:pref.sendEmailNotifications},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         if (!pref.sendEmailNotifications) {
           // Sync notifications for existing work items (only once per session)
           this.syncNotificationsIfNeeded();
@@ -163,9 +161,6 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:135',message:'Error loading preference',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.error('Error loading notification preference:', error);
         // Default to showing badge if we can't load preference
         this.showNotificationBadge.set(true);
@@ -176,21 +171,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   syncNotificationsIfNeeded() {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:144',message:'syncNotificationsIfNeeded called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // Check if we've already synced in this session
     const syncKey = 'notifications_synced';
     const lastSync = sessionStorage.getItem(syncKey);
     const user = this.authService.user();
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:150',message:'User check',data:{hasUser:!!user,firebaseUid:user?.firebaseUid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (!user) {
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:152',message:'No user, returning early',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
@@ -198,26 +184,14 @@ export class AppComponent implements OnInit, OnDestroy {
     const userSyncKey = `${syncKey}_${user.firebaseUid}`;
     const userLastSync = sessionStorage.getItem(userSyncKey);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:159',message:'Sync check',data:{userSyncKey,hasLastSync:!!userLastSync},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // Only sync once per user per session
     if (userLastSync) {
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:161',message:'Already synced, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:164',message:'Calling sync API',data:{firebaseUid:user.firebaseUid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     // Sync notifications in background (don't block UI)
     this.notificationService.syncMyNotifications().subscribe({
       next: (response) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:166',message:'Sync API success',data:{created:response.created,skipped:response.skipped},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         console.log('Notifications synced:', response);
         // Mark as synced for this user
         sessionStorage.setItem(userSyncKey, new Date().toISOString());
@@ -225,9 +199,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.loadUnreadCount();
       },
       error: (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:173',message:'Sync API error',data:{error:error.message,status:error.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         console.error('Error syncing notifications:', error);
         // Still mark as attempted to avoid repeated failures
         sessionStorage.setItem(userSyncKey, new Date().toISOString());
@@ -236,25 +207,13 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   loadUnreadCount() {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:180',message:'loadUnreadCount called',data:{showBadge:this.showNotificationBadge()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     this.notificationService.getUnreadCount().subscribe({
       next: (response) => {
         this.unreadNotificationCount.set(response.count);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:183',message:'Unread count loaded',data:{count:response.count,showBadge:this.showNotificationBadge(),shouldShow:this.showNotificationBadge() && response.count > 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         // Force change detection
         this.cdr.detectChanges();
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:186',message:'After change detection',data:{count:this.unreadNotificationCount(),showBadge:this.showNotificationBadge()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
       },
       error: (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.component.ts:186',message:'Error loading unread count',data:{error:error.message,status:error.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         console.error('Error loading unread count:', error);
       }
     });

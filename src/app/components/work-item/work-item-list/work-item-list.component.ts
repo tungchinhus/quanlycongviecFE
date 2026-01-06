@@ -19,6 +19,7 @@ import { WorkItemReviewDialogComponent } from '../work-item-review-dialog/work-i
 import { WorkItemReviewDetailDialogComponent } from '../work-item-review-detail-dialog/work-item-review-detail-dialog.component';
 import { WorkItemService } from '../../../services/work-item.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-work-item-list',
@@ -50,7 +51,8 @@ export class WorkItemListComponent implements OnInit {
     private authService: AuthService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private workItemService: WorkItemService
+    private workItemService: WorkItemService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -144,6 +146,18 @@ export class WorkItemListComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadWorkItems();
+        // Fallback: Reload unread count after confirmation (in case SignalR is not connected)
+        setTimeout(() => {
+          this.notificationService.getUnreadCount().subscribe({
+            next: (response) => {
+              // Dispatch custom event to notify app.component to update unread count
+              window.dispatchEvent(new CustomEvent('unreadCountChanged', { detail: { count: response.count } }));
+            },
+            error: () => {
+              // Error reloading unread count - silently fail
+            }
+          });
+        }, 500);
       }
     });
   }
