@@ -15,6 +15,7 @@ export interface MachineAssignment {
   designer?: string;
   teamLeader?: string;
   status?: AssignmentStatus | number; // 1: New, 2: InProgress, 3: Completed
+  isLocked?: boolean; // Khóa để ngăn user thiết kế sửa sau khi xác nhận hoàn thành
   filePath?: string; // Đường dẫn file (nếu có nhiều file thì nối bằng ";")
   filePaths?: string[]; // Danh sách đường dẫn file (tương thích)
   technicalSheet?: TechnicalSheet;

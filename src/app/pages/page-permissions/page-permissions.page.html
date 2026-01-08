@@ -36,17 +36,11 @@
           </div>
         } @else {
           <table mat-table [dataSource]="pages()" class="permissions-table">
-            <!-- Page Name Column -->
-            <ng-container matColumnDef="pageName">
-              <th mat-header-cell *matHeaderCellDef>Tên Trang</th>
+            <!-- Router URL Column -->
+            <ng-container matColumnDef="pageRoute">
+              <th mat-header-cell *matHeaderCellDef>Router URL</th>
               <td mat-cell *matCellDef="let page">
-                <div class="page-info">
-                  <strong>{{ page.pageName }}</strong>
-                  <span class="page-route">{{ page.pageRoute }}</span>
-                  @if (page.description) {
-                    <span class="page-description">{{ page.description }}</span>
-                  }
-                </div>
+                <span class="page-route">{{ page.pageRoute }}</span>
               </td>
             </ng-container>
 

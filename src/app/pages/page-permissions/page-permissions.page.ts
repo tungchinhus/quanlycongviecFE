@@ -56,7 +56,7 @@ export class PagePermissionsPage implements OnInit {
   permissionForm: FormGroup;
   userIdControl!: FormControl<number | null>;
 
-  displayedColumns: string[] = ['pageName', 'canView', 'canCreate', 'canEdit', 'canDelete'];
+  displayedColumns: string[] = ['pageRoute', 'canView', 'canCreate', 'canEdit', 'canDelete'];
 
   constructor() {
     this.userIdControl = this.fb.control<number | null>(null, Validators.required);

@@ -58,9 +58,16 @@
 
 .assigned-user-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 4px 0;
+}
+
+.user-work-types {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
 }
 
 .assigned-user-item .user-name {
@@ -71,6 +78,22 @@
 .assigned-user-item .work-types {
   color: var(--thibidi-text-secondary);
   font-size: 0.9em;
+  display: inline;
+}
+
+.work-type-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.completed-icon {
+  color: #4caf50; /* Màu xanh lá */
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-left: 2px;
 }
 
 .work-items-section {

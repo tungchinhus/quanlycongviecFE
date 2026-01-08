@@ -266,15 +266,21 @@ export class TBKTManagementComponent implements OnInit {
     <mat-dialog-content>
       <form [formGroup]="tbktForm" class="tbkt-form">
         <div class="form-row">
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline" class="tbkt-field">
             <mat-label>Số TBKT *</mat-label>
-            <input matInput formControlName="tbkt_ID" placeholder="Nhập số TBKT" [readonly]="isEditMode" required>
+            <input matInput formControlName="tbkt_ID" placeholder="Nhập số TBKT" [readonly]="isEditMode" required (input)="onTbktInput($event)">
+            <mat-hint *ngIf="!isEditMode && nextTbktId">Gợi ý tiếp theo: {{ nextTbktId }}</mat-hint>
             <mat-error *ngIf="tbktForm.get('tbkt_ID')?.hasError('required')">
               Số TBKT là bắt buộc
             </mat-error>
             <mat-error *ngIf="tbktForm.get('tbkt_ID')?.hasError('maxlength')">
               Số TBKT không được vượt quá 50 ký tự
             </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="tbkt-field uppercase-field">
+            <mat-label>TBKT (In hoa)</mat-label>
+            <input matInput [value]="uppercaseTbktId" readonly>
           </mat-form-field>
         </div>
 
@@ -355,6 +361,15 @@ export class TBKTManagementComponent implements OnInit {
 
     .form-row mat-form-field {
       flex: 1;
+    }
+
+    .tbkt-field {
+      flex: 1;
+    }
+
+    .uppercase-field input {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .full-width {

@@ -121,6 +121,19 @@ export class WorkItemDialogComponent implements OnInit {
       this.assignmentId = this.getAssignmentId(this.workItem);
       console.log('ngOnInit - assignmentId:', this.assignmentId, 'workItem:', this.workItem);
       
+      // Kiểm tra nếu assignment bị locked - disable form trong edit mode
+      // Nhưng cho phép chỉnh sửa nếu workitem chưa xác nhận (user thiết kế cần chỉnh sửa khi chưa xác nhận)
+      const isLocked = this.workItem.assignment?.isLocked === true;
+      const isNotConfirmed = !this.workItem.personConfirmation;
+      const isDesignWorkItem = this.workItem.workType === 'Core Design' || this.workItem.workType === 'Casing Design';
+      
+      // Chỉ disable form nếu assignment bị locked VÀ workitem đã được xác nhận
+      // Cho phép chỉnh sửa nếu workitem chưa xác nhận (đặc biệt cho user thiết kế)
+      if (isLocked && this.mode === 'edit' && !isNotConfirmed) {
+        // Disable tất cả các field khi assignment bị locked và workitem đã xác nhận
+        this.workItemForm.disable();
+      }
+      
       // Populate form với data từ workItem ngay lập tức
       const formValues = {
         workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
@@ -674,6 +687,21 @@ export class WorkItemDialogComponent implements OnInit {
       return;
     }
 
+    // Kiểm tra nếu assignment bị locked VÀ workitem đã được xác nhận
+    // Cho phép save nếu workitem chưa xác nhận (user thiết kế cần chỉnh sửa khi chưa xác nhận)
+    const isLocked = this.workItem?.assignment?.isLocked === true;
+    const isNotConfirmed = !this.workItem?.personConfirmation;
+    
+    if (isLocked && !isNotConfirmed) {
+      this.snackBar.open('Assignment đã bị khóa. Vui lòng liên hệ user kiểm soát để mở khóa.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     if (!this.workItemForm.valid || !this.workItem) {
       this.snackBar.open('Vui lòng điền đầy đủ thông tin', 'Đóng', {
         duration: 3000,
@@ -812,6 +840,16 @@ export class WorkItemDialogComponent implements OnInit {
   }
 
   canSave(): boolean {
+    // Cho phép save nếu workitem chưa xác nhận, bất kể assignment có bị khóa hay không
+    // User thiết kế cần có thể chỉnh sửa và xác nhận khi chưa xác nhận
+    const isNotConfirmed = !this.workItem?.personConfirmation;
+    const isLocked = this.workItem?.assignment?.isLocked === true;
+    
+    // Nếu assignment bị locked VÀ workitem đã được xác nhận, không cho phép save
+    if (isLocked && !isNotConfirmed) {
+      return false;
+    }
+    
     // Nếu là create mode, check form valid
     if (this.mode === 'create') {
       return this.workItemForm.valid;

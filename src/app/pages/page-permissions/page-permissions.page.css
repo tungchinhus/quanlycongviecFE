@@ -67,9 +67,14 @@
 }
 
 .page-route {
-  font-size: 12px;
-  color: #666;
-  font-family: monospace;
+  font-size: 13px;
+  color: #1976d2;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  background-color: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
 }
 
 .page-description {

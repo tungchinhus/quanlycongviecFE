@@ -35,12 +35,25 @@
           <span class="label">Người được giao:</span>
           <div class="value assigned-users-list">
             <div *ngFor="let userInfo of getAssignedUsersWithWorkTypes()" class="assigned-user-item">
-              <span class="user-name">{{ userInfo.userName }}</span>
-              <span class="work-types">
-                (<span *ngFor="let workType of userInfo.workTypes; let last = last">
-                  {{ workType }}<span *ngIf="!last">, </span>
-                </span>)
-              </span>
+              <div class="user-work-types">
+                <span class="user-name">{{ userInfo.userName }}</span>
+                <span class="work-types">
+                  (
+                  <ng-container *ngFor="let workTypeInfo of userInfo.workTypes; let last = last">
+                    <span class="work-type-item">
+                      {{ workTypeInfo.name }}
+                      <span *ngIf="!last">, </span>
+                    </span>
+                  </ng-container>
+                  )
+                  <mat-icon 
+                    *ngIf="areAllWorkTypesCompleted(userInfo.workTypes)" 
+                    class="completed-icon"
+                    [matTooltip]="'Hoàn thành'">
+                    check_circle
+                  </mat-icon>
+                </span>
+              </div>
             </div>
           </div>
         </div>

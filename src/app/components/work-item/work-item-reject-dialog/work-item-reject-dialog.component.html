@@ -1,0 +1,41 @@
+<div class="work-item-reject-dialog">
+  <h2 mat-dialog-title>Từ Chối Công Việc</h2>
+  
+  <mat-dialog-content>
+    <p class="dialog-message">Bạn có chắc chắn muốn từ chối công việc này? Vui lòng nhập lý do từ chối.</p>
+    
+    <form [formGroup]="rejectForm" class="reject-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Lý do từ chối *</mat-label>
+        <textarea 
+          matInput 
+          formControlName="notes" 
+          rows="4"
+          placeholder="Nhập lý do từ chối công việc..."
+          maxlength="500">
+        </textarea>
+        <mat-hint align="end">{{ rejectForm.get('notes')?.value?.length || 0 }}/500</mat-hint>
+        <mat-error *ngIf="rejectForm.get('notes')?.hasError('required')">
+          Lý do từ chối là bắt buộc
+        </mat-error>
+        <mat-error *ngIf="rejectForm.get('notes')?.hasError('maxlength')">
+          Lý do từ chối không được vượt quá 500 ký tự
+        </mat-error>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onClose()" [disabled]="isRejecting()">Hủy</button>
+    <button 
+      mat-raised-button 
+      color="warn" 
+      (click)="onReject()" 
+      [disabled]="isRejecting() || rejectForm.invalid">
+      <mat-spinner *ngIf="isRejecting()" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isRejecting()">cancel</mat-icon>
+      <span>{{ isRejecting() ? 'Đang từ chối...' : 'Từ Chối' }}</span>
+    </button>
+  </mat-dialog-actions>
+</div>
+

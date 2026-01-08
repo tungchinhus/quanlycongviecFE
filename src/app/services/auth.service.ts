@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, setPersistence, browserLocalPersistence, browserSessionPersistence } from '@angular/fire/auth';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, of } from 'rxjs';
 import { map, switchMap, catchError, tap } from 'rxjs/operators';
@@ -174,13 +174,20 @@ export class AuthService {
   /**
    * Đăng nhập với username/email và password qua Firebase
    * Flow: Login Firebase -> Lấy ID Token -> Gửi lên backend -> Nhận JWT token và user info
+   * @param usernameOrEmail Username hoặc email
+   * @param password Mật khẩu
+   * @param rememberMe Nếu true, sử dụng browserLocalPersistence (lưu vĩnh viễn), nếu false dùng browserSessionPersistence (chỉ session hiện tại)
    */
-  loginWithEmailAndPassword(usernameOrEmail: string, password: string): Observable<AuthUser> {
+  loginWithEmailAndPassword(usernameOrEmail: string, password: string, rememberMe: boolean = false): Observable<AuthUser> {
     // Resolve email từ username hoặc email
     return this.resolveEmailFromUsernameOrEmail(usernameOrEmail).pipe(
       switchMap((email) => {
-        // Bước 1: Đăng nhập với Firebase (email/password)
-        return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
+        // Bước 0: Set persistence mode dựa trên rememberMe flag
+        const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+        return from(setPersistence(this.auth, persistence)).pipe(
+          switchMap(() => {
+            // Bước 1: Đăng nhập với Firebase (email/password)
+            return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
           switchMap((userCredential) => {
             const firebaseUser = userCredential.user;
             // Bước 2: Lấy ID Token từ Firebase (force refresh để đảm bảo có custom claims mới nhất)
@@ -244,6 +251,13 @@ export class AuthService {
                         // Lưu user vào signal và localStorage
                         this.currentUserSignal.set(authUser);
                         localStorage.setItem('user_session', JSON.stringify(authUser));
+                        
+                        // Nếu rememberMe được bật, lưu username/email để khôi phục sau
+                        if (rememberMe) {
+                          localStorage.setItem('remembered_username', usernameOrEmail);
+                        } else {
+                          localStorage.removeItem('remembered_username');
+                        }
                       
                       // Đồng bộ user và roles xuống local DB để đảm bảo danh sách Users hiển thị đúng
                       this.syncUserToLocalDB(authUser, true).subscribe({
@@ -326,6 +340,12 @@ export class AuthService {
             throw enhancedError;
           })
         );
+          }),
+          catchError((error) => {
+            console.error('Error setting persistence:', error);
+            throw error;
+          })
+        );
       })
     );
   }
@@ -339,8 +359,16 @@ export class AuthService {
         this.currentUserSignal.set(null);
         localStorage.removeItem('user_session');
         localStorage.removeItem('token'); // Xóa JWT token khi đăng xuất
+        // Không xóa remembered_username để giữ lại cho lần đăng nhập sau
       })
     );
+  }
+
+  /**
+   * Lấy username/email đã được lưu (nếu có)
+   */
+  getRememberedUsername(): string | null {
+    return localStorage.getItem('remembered_username');
   }
 
   /**

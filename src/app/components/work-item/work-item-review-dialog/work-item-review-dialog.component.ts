@@ -9,6 +9,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { WorkItemWithAssignment, WorkItem } from '../../../models/machine-assignment.model';
@@ -24,6 +27,7 @@ import { NotificationService } from '../../../services/notification.service';
   standalone: true,
   imports: [
     CommonModule,
+    ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
@@ -32,7 +36,9 @@ import { NotificationService } from '../../../services/notification.service';
     MatChipsModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
   templateUrl: './work-item-review-dialog.component.html',
   styleUrls: ['./work-item-review-dialog.component.css']
@@ -47,6 +53,7 @@ export class WorkItemReviewDialogComponent implements OnInit {
   isConfirming = signal<boolean>(false);
   currentUser: any = null;
   users: AuthUser[] = [];
+  confirmForm: FormGroup;
 
   // Mapping workType sang tiếng Việt
   private workTypeMap: { [key: string]: string } = {
@@ -58,6 +65,7 @@ export class WorkItemReviewDialogComponent implements OnInit {
   };
 
   constructor(
+    private fb: FormBuilder,
     private dialogRef: MatDialogRef<WorkItemReviewDialogComponent>,
     private fileService: FileService,
     private workItemService: WorkItemService,
@@ -71,6 +79,9 @@ export class WorkItemReviewDialogComponent implements OnInit {
   ) {
     this.reviewWorkItem = data.workItem;
     this.currentUser = this.authService.user();
+    this.confirmForm = this.fb.group({
+      notes: ['', [Validators.maxLength(500)]]
+    });
   }
 
   ngOnInit() {
@@ -464,6 +475,11 @@ export class WorkItemReviewDialogComponent implements OnInit {
   }
 
   onConfirm() {
+    if (this.confirmForm.invalid) {
+      this.confirmForm.markAllAsTouched();
+      return;
+    }
+
     if (!this.reviewWorkItem.workItemID) {
       this.snackBar.open('Không tìm thấy công việc cần xác nhận', 'Đóng', {
         duration: 3000,
@@ -474,17 +490,18 @@ export class WorkItemReviewDialogComponent implements OnInit {
       return;
     }
 
-    // Hiển thị dialog xác nhận trước khi lưu
-    if (!confirm('Bạn có chắc chắn muốn xác nhận công việc này?')) {
-      return;
-    }
-
     this.isConfirming.set(true);
     
     // Tự động set personConfirmation = true khi bấm nút xác nhận
-    const updateData = {
+    const updateData: any = {
       personConfirmation: true
     };
+
+    // Thêm notes nếu có
+    const notes = this.confirmForm.value.notes?.trim();
+    if (notes) {
+      updateData.notes = notes;
+    }
 
     this.workItemService.updateWorkItem(this.reviewWorkItem.workItemID, updateData).subscribe({
       next: () => {

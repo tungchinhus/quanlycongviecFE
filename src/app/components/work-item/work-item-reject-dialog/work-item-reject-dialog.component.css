@@ -1,0 +1,37 @@
+.work-item-reject-dialog {
+  width: 100%;
+  min-width: 400px;
+}
+
+.work-item-reject-dialog h2 {
+  margin: 0;
+  padding: 16px 24px;
+}
+
+.work-item-reject-dialog mat-dialog-content {
+  padding: 24px;
+}
+
+.dialog-message {
+  margin-bottom: 24px;
+  color: var(--thibidi-text-primary);
+}
+
+.reject-form {
+  width: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+}
+
+.button-spinner {
+  display: inline-block;
+  margin-right: 8px;
+}
+

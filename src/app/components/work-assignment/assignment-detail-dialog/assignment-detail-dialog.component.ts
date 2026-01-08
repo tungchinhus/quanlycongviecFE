@@ -287,39 +287,89 @@ export class AssignmentDetailDialogComponent implements OnInit {
     return workTypeMap[workType] || workType;
   }
 
-  getAssignedUsersWithWorkTypes(): Array<{ userName: string; workTypes: string[] }> {
+  /**
+   * Tính trạng thái của một WorkItem (khâu) dựa trên dữ liệu
+   * @param workItem WorkItem cần tính trạng thái
+   * @returns 'Mới' | 'Đang xử lý' | 'Hoàn thành'
+   */
+  getWorkItemStatus(workItem: WorkItem | undefined): 'Mới' | 'Đang xử lý' | 'Hoàn thành' {
+    if (!workItem) {
+      return 'Mới';
+    }
+
+    // Kiểm tra xem có dữ liệu nào được cập nhật không
+    const hasAnyUpdate = workItem.startDate != null ||
+                         workItem.expectedFinish != null ||
+                         workItem.actualFinish != null ||
+                         workItem.personConfirmation != null ||
+                         (workItem.notes != null && workItem.notes.trim() !== '') ||
+                         (workItem.file_ID != null && workItem.file_ID.trim() !== '');
+
+    // Nếu không có cập nhật nào, trạng thái là Mới
+    if (!hasAnyUpdate) {
+      return 'Mới';
+    }
+
+    // Kiểm tra xem đã hoàn thành chưa
+    // Theo yêu cầu business: chỉ cần personConfirmation = true là coi như HOÀN THÀNH,
+    // không bắt buộc phải có actualFinish
+    const isCompleted = workItem.personConfirmation === true;
+
+    if (isCompleted) {
+      return 'Hoàn thành';
+    }
+
+    // Nếu có cập nhật nhưng chưa hoàn thành, trạng thái là Đang xử lý
+    return 'Đang xử lý';
+  }
+
+  getAssignedUsersWithWorkTypes(): Array<{ userName: string; workTypes: Array<{ name: string; workType: string; isCompleted: boolean }> }> {
     if (!this.assignment || !this.assignment.workItems) {
       return [];
     }
     
-    // Nhóm work items theo personName
-    const userWorkMap = new Map<string, Set<string>>();
+    // Nhóm work items theo personName, kèm theo trạng thái
+    const userWorkMap = new Map<string, Map<string, { name: string; workType: string; isCompleted: boolean }>>();
     
     this.assignment.workItems.forEach(item => {
       if (item.personName) {
         const userName = this.getPersonName(item.personName);
         if (userName) {
           if (!userWorkMap.has(userName)) {
-            userWorkMap.set(userName, new Set<string>());
+            userWorkMap.set(userName, new Map());
           }
           const workTypeName = this.getWorkTypeName(item.workType);
-          if (workTypeName) {
-            userWorkMap.get(userName)!.add(workTypeName);
+          if (workTypeName && item.workType) {
+            const status = this.getWorkItemStatus(item);
+            const isCompleted = status === 'Hoàn thành';
+            userWorkMap.get(userName)!.set(item.workType, {
+              name: workTypeName,
+              workType: item.workType,
+              isCompleted: isCompleted
+            });
           }
         }
       }
     });
     
     // Chuyển đổi Map thành mảng
-    const result: Array<{ userName: string; workTypes: string[] }> = [];
-    userWorkMap.forEach((workTypes, userName) => {
+    const result: Array<{ userName: string; workTypes: Array<{ name: string; workType: string; isCompleted: boolean }> }> = [];
+    userWorkMap.forEach((workTypesMap, userName) => {
       result.push({
         userName: userName,
-        workTypes: Array.from(workTypes)
+        workTypes: Array.from(workTypesMap.values())
       });
     });
     
     return result;
+  }
+
+  // Kiểm tra tất cả các workType của một user đã hoàn thành chưa
+  areAllWorkTypesCompleted(workTypes: Array<{ name: string; workType: string; isCompleted: boolean }> | null | undefined): boolean {
+    if (!workTypes || workTypes.length === 0) {
+      return false;
+    }
+    return workTypes.every(w => w.isCompleted);
   }
 
   isCurrentUserAssigner(): boolean {

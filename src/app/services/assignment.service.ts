@@ -36,6 +36,10 @@ export class AssignmentService {
     return this.http.get<TechnicalSheet>(`${environment.apiUrl}/technical-sheets/${tbktId}`);
   }
 
+  getNextTechnicalSheetId(): Observable<{ nextTbktId: string }> {
+    return this.http.get<{ nextTbktId: string }>(`${environment.apiUrl}/technical-sheets/next-id`);
+  }
+
   createTechnicalSheet(sheet: Partial<TechnicalSheet>): Observable<TechnicalSheet> {
     return this.http.post<TechnicalSheet>(`${environment.apiUrl}/technical-sheets`, sheet);
   }
@@ -120,6 +124,18 @@ export class AssignmentService {
   // Get assignments grouped by TBKT (for TBKT list view)
   getAssignmentsGroupedByTBKT(): Observable<MachineAssignment[]> {
     return this.http.get<MachineAssignment[]>(`${this.apiUrl}?includeTechnicalSheet=true`);
+  }
+
+  // Unlock assignment để cho phép user thiết kế update workitem
+  // Chỉ user kiểm soát (Manager) mới có quyền unlock
+  unlockAssignment(id: number): Observable<{ message: string; assignmentID: number; isLocked: boolean }> {
+    return this.http.put<{ message: string; assignmentID: number; isLocked: boolean }>(`${this.apiUrl}/${id}/unlock`, {});
+  }
+
+  // Lock assignment (tùy chọn - có thể dùng để khóa thủ công)
+  // Chỉ user kiểm soát (Manager) mới có quyền lock
+  lockAssignment(id: number): Observable<{ message: string; assignmentID: number; isLocked: boolean }> {
+    return this.http.put<{ message: string; assignmentID: number; isLocked: boolean }>(`${this.apiUrl}/${id}/lock`, {});
   }
 }
 

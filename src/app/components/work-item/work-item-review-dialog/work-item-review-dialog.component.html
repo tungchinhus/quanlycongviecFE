@@ -175,17 +175,38 @@
           </span>
         </div>
       </div>
+
+      <!-- Form ghi chú khi xác nhận -->
+      <div class="info-section" *ngIf="!reviewWorkItem.personConfirmation">
+        <h3 class="section-title">Ghi Chú Xác Nhận</h3>
+        <form [formGroup]="confirmForm" class="confirm-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Ghi chú (tùy chọn)</mat-label>
+            <textarea 
+              matInput 
+              formControlName="notes" 
+              rows="3"
+              placeholder="Nhập ghi chú khi xác nhận công việc..."
+              maxlength="500">
+            </textarea>
+            <mat-hint align="end">{{ confirmForm.get('notes')?.value?.length || 0 }}/500</mat-hint>
+            <mat-error *ngIf="confirmForm.get('notes')?.hasError('maxlength')">
+              Ghi chú không được vượt quá 500 ký tự
+            </mat-error>
+          </mat-form-field>
+        </form>
+      </div>
     </div>
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button (click)="onClose()">Đóng</button>
+    <button mat-button (click)="onClose()" [disabled]="isConfirming()">Đóng</button>
     <button 
       *ngIf="!reviewWorkItem.personConfirmation"
       mat-raised-button 
       color="primary" 
       (click)="onConfirm()" 
-      [disabled]="isConfirming() || !isDesignWorkItemCompleted()"
+      [disabled]="isConfirming() || !isDesignWorkItemCompleted() || confirmForm.invalid"
       [matTooltip]="!isDesignWorkItemCompleted() ? 'Thiết kế chưa hoàn thành. Vui lòng đợi người thiết kế xác nhận hoàn thành trước.' : ''">
       <mat-spinner *ngIf="isConfirming()" diameter="20" class="button-spinner"></mat-spinner>
       <mat-icon *ngIf="!isConfirming()">check_circle</mat-icon>

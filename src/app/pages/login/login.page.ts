@@ -44,10 +44,18 @@ export class LoginPage implements OnDestroy {
   errorMessage = '';
 
   constructor() {
+    // Khôi phục username/email đã lưu nếu có
+    const rememberedUsername = this.authService.getRememberedUsername();
+    
     this.loginForm = this.fb.group({
-      usernameOrEmail: ['', [Validators.required]],
+      usernameOrEmail: [rememberedUsername || '', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+
+    // Nếu có username đã lưu, tự động bật rememberMe
+    if (rememberedUsername) {
+      this.rememberMe = true;
+    }
 
     // Nếu đã đăng nhập, chuyển hướng về Dashboard
     if (this.authService.isAuthenticated()) {
@@ -75,7 +83,8 @@ export class LoginPage implements OnDestroy {
       // Hỗ trợ cả username và email:
       // - Nếu là email format → dùng trực tiếp
       // - Nếu là username → query từ backend để lấy email, sau đó đăng nhập Firebase
-      this.authService.loginWithEmailAndPassword(usernameOrEmail, password)
+      // Truyền rememberMe flag để quyết định persistence mode
+      this.authService.loginWithEmailAndPassword(usernameOrEmail, password, this.rememberMe)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
         next: (user) => {
