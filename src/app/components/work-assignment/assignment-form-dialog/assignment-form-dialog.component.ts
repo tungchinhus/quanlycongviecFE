@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { AssignmentService } from '../../../services/assignment.service';
 import { UsersService } from '../../../services/users.service';
 import { AuthUser, AuthService } from '../../../services/auth.service';
@@ -21,8 +22,9 @@ import { FileService } from '../../../services/file.service';
 import { UserRole } from '../../../constants/enums';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { WorkItem, WorkChange } from '../../../models/machine-assignment.model';
+import { WorkItem, WorkChange, TechnicalSheet } from '../../../models/machine-assignment.model';
 import { FileDocument } from '../../../models/file.model';
+import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
 
 @Component({
   selector: 'app-assignment-form-dialog',
@@ -44,7 +46,11 @@ import { FileDocument } from '../../../models/file.model';
     MatTooltipModule,
     MatCheckboxModule
   ],
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    { provide: DateAdapter, useClass: CustomDateAdapter },
+    { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
+    { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
+  ],
   templateUrl: './assignment-form-dialog.component.html',
   styleUrls: ['./assignment-form-dialog.component.css']
 })
@@ -157,12 +163,15 @@ export class AssignmentFormDialogComponent implements OnInit {
         this.loadExistingFiles(this.assignmentId);
       }
     } else if (this.data?.tbktId) {
-      // Create mode: chỉ điền tbktId
+      // Create mode: điền tbktId và lấy thông tin từ TechnicalSheet
       this.assignmentForm.patchValue({
         tbktId: this.data.tbktId
       });
       // Disable field tbktId vì đã được chọn từ danh sách
       this.assignmentForm.get('tbktId')?.disable();
+      
+      // Lấy thông tin từ TechnicalSheet và điền vào form
+      this.loadTechnicalSheetData(this.data.tbktId);
     }
   }
 
@@ -189,6 +198,98 @@ export class AssignmentFormDialogComponent implements OnInit {
         this.isLoadingUsers = false;
       }
     });
+  }
+
+  loadTechnicalSheetData(tbktId: string | number) {
+    // Lấy thông tin từ TechnicalSheet và điền vào form
+    this.assignmentService.getTechnicalSheet(tbktId).subscribe({
+      next: (technicalSheet) => {
+        // Tạo Tên Máy từ thông tin TBKT
+        const machineName = this.generateMachineName(technicalSheet);
+        
+        // Xử lý Ngày Giao
+        let deliveryDateValue: Date | null = null;
+        if (technicalSheet.drawingDate) {
+          if (typeof technicalSheet.drawingDate === 'string') {
+            deliveryDateValue = new Date(technicalSheet.drawingDate);
+          } else if (technicalSheet.drawingDate instanceof Date) {
+            deliveryDateValue = technicalSheet.drawingDate;
+          }
+          // Kiểm tra nếu date không hợp lệ
+          if (deliveryDateValue && isNaN(deliveryDateValue.getTime())) {
+            deliveryDateValue = null;
+          }
+        }
+        
+        // Điền các trường tương ứng từ TechnicalSheet vào form
+        this.assignmentForm.patchValue({
+          // Tên Máy: Tạo tự động từ Công Suất, Số Pha, Điện Áp
+          machineName: machineName,
+          // ĐĐH/Giấy đề nghị từ SalesOrder (SO)
+          requestDocument: technicalSheet.salesOrder?.trim() || '',
+          // Yêu Cầu SP(Tiêu Chuẩn) - để trống hoặc có thể lấy từ Notes nếu cần
+          standardRequirement: '',
+          // Yêu Cầu khác từ StandardCode (TIÊU CHUẨN) - giá trị tiêu chuẩn phải nằm ở đây
+          additionalRequest: technicalSheet.standardCode?.trim() || '',
+          // Ngày Giao từ DrawingDate (NGÀY GIAO)
+          deliveryDate: deliveryDateValue
+        });
+      },
+      error: (err) => {
+        console.error('Error loading TechnicalSheet data:', err);
+        // Hiển thị thông báo nhẹ nhàng cho user
+        this.snackBar.open('Không thể tải thông tin từ đề nghị TBKT. Vui lòng điền thủ công.', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['warning-snackbar']
+        });
+      }
+    });
+  }
+
+  /**
+   * Tạo Tên Máy tự động từ thông tin TechnicalSheet
+   * Format: "MBA {Số Pha} pha {Công Suất}kVA, {Điện Áp}"
+   * Ví dụ: "MBA 3 pha 250kVA, 35±2x2.5%/0,4kV Dyn11"
+   */
+  private generateMachineName(technicalSheet: TechnicalSheet): string {
+    const parts: string[] = [];
+    
+    // Phần đầu: "MBA"
+    parts.push('MBA');
+    
+    // Số Pha
+    if (technicalSheet.phase) {
+      const phase = String(technicalSheet.phase).trim();
+      if (phase) {
+        parts.push(`${phase} pha`);
+      }
+    }
+    
+    // Công Suất
+    if (technicalSheet.power_kVA) {
+      parts.push(`${technicalSheet.power_kVA}kVA`);
+    }
+    
+    // Điện Áp
+    if (technicalSheet.voltageSpec) {
+      const voltage = String(technicalSheet.voltageSpec).trim();
+      if (voltage) {
+        // Thêm dấu phẩy trước nếu đã có phần trước đó
+        if (parts.length > 1) {
+          parts.push(',');
+        }
+        parts.push(voltage);
+      }
+    }
+    
+    // Nếu không có thông tin gì, trả về chuỗi rỗng để user tự nhập
+    if (parts.length === 1 && parts[0] === 'MBA') {
+      return '';
+    }
+    
+    return parts.join(' ').trim();
   }
 
   onFileSelected(event: Event) {

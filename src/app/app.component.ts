@@ -467,7 +467,11 @@ export class AppComponent implements OnInit, OnDestroy {
     } else if (diffDays < 7) {
       return `${diffDays} ngày trước`;
     } else {
-      return date.toLocaleDateString('vi-VN');
+      // Format as DD/MM/YYYY
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      return `${('00' + day).slice(-2)}/${('00' + month).slice(-2)}/${year}`;
     }
   }
 

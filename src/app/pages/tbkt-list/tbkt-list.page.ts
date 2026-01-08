@@ -137,7 +137,12 @@ export class TBKTListPage implements OnInit {
     if (!date) return '';
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('vi-VN');
+    
+    // Format as DD/MM/YYYY
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+    return `${('00' + day).slice(-2)}/${('00' + month).slice(-2)}/${year}`;
   }
 }
 

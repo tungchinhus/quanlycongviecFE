@@ -32,7 +32,7 @@ export class AssignmentService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  getTechnicalSheet(tbktId: number): Observable<TechnicalSheet> {
+  getTechnicalSheet(tbktId: number | string): Observable<TechnicalSheet> {
     return this.http.get<TechnicalSheet>(`${environment.apiUrl}/technical-sheets/${tbktId}`);
   }
 

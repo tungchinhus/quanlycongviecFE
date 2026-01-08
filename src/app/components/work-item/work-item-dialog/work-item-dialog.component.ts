@@ -105,11 +105,37 @@ export class WorkItemDialogComponent implements OnInit {
     this.currentUserName = this.currentUser?.name || this.currentUser?.userName || '';
 
     // Loại công việc luôn disabled (chỉ hiển thị)
+    // Lấy deliveryDate từ assignment để validate
+    const deliveryDate = this.workItem?.assignment?.deliveryDate 
+      ? (typeof this.workItem.assignment.deliveryDate === 'string' 
+          ? new Date(this.workItem.assignment.deliveryDate) 
+          : this.workItem.assignment.deliveryDate)
+      : null;
+    
     this.workItemForm = this.fb.group({
       workType: [{ value: '', disabled: true }], // Luôn disabled
-      startDate: [{ value: null, disabled: this.mode === 'view' }],
-      expectedFinish: [{ value: null, disabled: this.mode === 'view' }],
-      actualFinish: [{ value: null, disabled: this.mode === 'view' }],
+      startDate: [{ 
+        value: null, 
+        disabled: this.mode === 'view' 
+      }, [
+        this.dateBeforeDeliveryValidator(deliveryDate),
+        this.dateBeforeExpectedFinishValidator()
+      ]],
+      expectedFinish: [{ 
+        value: null, 
+        disabled: this.mode === 'view' 
+      }, [
+        this.dateBeforeDeliveryValidator(deliveryDate),
+        this.dateAfterStartDateValidator(),
+        this.dateBeforeActualFinishValidator()
+      ]],
+      actualFinish: [{ 
+        value: null, 
+        disabled: this.mode === 'view' 
+      }, [
+        this.dateBeforeDeliveryValidator(deliveryDate),
+        this.dateAfterExpectedFinishValidator()
+      ]],
       personConfirmation: [{ value: false, disabled: this.mode === 'view' }],
       notes: [{ value: '', disabled: this.mode === 'view' }]
     });
@@ -134,6 +160,38 @@ export class WorkItemDialogComponent implements OnInit {
         this.workItemForm.disable();
       }
       
+      // Cập nhật validators với deliveryDate từ assignment
+      const deliveryDate = this.workItem.assignment?.deliveryDate 
+        ? (typeof this.workItem.assignment.deliveryDate === 'string' 
+            ? new Date(this.workItem.assignment.deliveryDate) 
+            : this.workItem.assignment.deliveryDate)
+        : null;
+      
+      // Cập nhật validators cho các date fields
+      if (deliveryDate) {
+        this.workItemForm.get('startDate')?.setValidators([
+          this.dateBeforeDeliveryValidator(deliveryDate),
+          this.dateBeforeExpectedFinishValidator()
+        ]);
+        this.workItemForm.get('expectedFinish')?.setValidators([
+          this.dateBeforeDeliveryValidator(deliveryDate),
+          this.dateAfterStartDateValidator(),
+          this.dateBeforeActualFinishValidator()
+        ]);
+        this.workItemForm.get('actualFinish')?.setValidators([
+          this.dateBeforeDeliveryValidator(deliveryDate),
+          this.dateAfterExpectedFinishValidator()
+        ]);
+      } else {
+        // Nếu không có deliveryDate, vẫn validate thứ tự ngày
+        this.workItemForm.get('startDate')?.setValidators([this.dateBeforeExpectedFinishValidator()]);
+        this.workItemForm.get('expectedFinish')?.setValidators([
+          this.dateAfterStartDateValidator(),
+          this.dateBeforeActualFinishValidator()
+        ]);
+        this.workItemForm.get('actualFinish')?.setValidators([this.dateAfterExpectedFinishValidator()]);
+      }
+      
       // Populate form với data từ workItem ngay lập tức
       const formValues = {
         workType: this.getWorkTypeDisplayName(this.workItem.workType || ''),
@@ -145,6 +203,25 @@ export class WorkItemDialogComponent implements OnInit {
       };
       
       this.workItemForm.patchValue(formValues);
+      
+      // Setup cross-field validation: khi một field thay đổi, validate lại field liên quan
+      this.workItemForm.get('startDate')?.valueChanges.subscribe(() => {
+        this.workItemForm.get('expectedFinish')?.updateValueAndValidity({ emitEvent: false });
+      });
+      
+      this.workItemForm.get('expectedFinish')?.valueChanges.subscribe(() => {
+        this.workItemForm.get('startDate')?.updateValueAndValidity({ emitEvent: false });
+        this.workItemForm.get('actualFinish')?.updateValueAndValidity({ emitEvent: false });
+      });
+      
+      this.workItemForm.get('actualFinish')?.valueChanges.subscribe(() => {
+        this.workItemForm.get('expectedFinish')?.updateValueAndValidity({ emitEvent: false });
+      });
+      
+      // Trigger validation lại sau khi patchValue
+      this.workItemForm.get('startDate')?.updateValueAndValidity({ emitEvent: false });
+      this.workItemForm.get('expectedFinish')?.updateValueAndValidity({ emitEvent: false });
+      this.workItemForm.get('actualFinish')?.updateValueAndValidity({ emitEvent: false });
       
       // Lưu giá trị ban đầu để so sánh thay đổi
       this.initialFormValues = this.getFormValuesForComparison(formValues);
@@ -887,6 +964,187 @@ export class WorkItemDialogComponent implements OnInit {
     );
     
     return isOwner;
+  }
+
+  /**
+   * Custom validator: Kiểm tra ngày nhập vào phải nhỏ hơn ngày giao bảng thiết kế tổng
+   */
+  private dateBeforeDeliveryValidator(deliveryDate: Date | null): any {
+    return (control: any) => {
+      if (!control.value || !deliveryDate) {
+        return null; // Không validate nếu không có giá trị hoặc không có deliveryDate
+      }
+      
+      const inputDate = new Date(control.value);
+      const delivery = new Date(deliveryDate);
+      
+      // Reset time để so sánh chỉ ngày
+      inputDate.setHours(0, 0, 0, 0);
+      delivery.setHours(0, 0, 0, 0);
+      
+      if (isNaN(inputDate.getTime())) {
+        return null; // Không validate nếu date không hợp lệ
+      }
+      
+      // Ngày nhập vào phải nhỏ hơn ngày giao (trước ngày giao)
+      if (inputDate >= delivery) {
+        return { dateAfterDelivery: true };
+      }
+      
+      return null;
+    };
+  }
+
+  /**
+   * Validator: Kiểm tra Ngày Bắt Đầu <= Dự Kiến Hoàn Thành
+   */
+  private dateBeforeExpectedFinishValidator(): any {
+    return (control: any) => {
+      if (!control.value) {
+        return null;
+      }
+      
+      const startDate = new Date(control.value);
+      const expectedFinish = this.workItemForm?.get('expectedFinish')?.value;
+      
+      if (!expectedFinish) {
+        return null; // Không validate nếu expectedFinish chưa có giá trị
+      }
+      
+      const expectedDate = new Date(expectedFinish);
+      
+      // Reset time để so sánh chỉ ngày
+      startDate.setHours(0, 0, 0, 0);
+      expectedDate.setHours(0, 0, 0, 0);
+      
+      if (isNaN(startDate.getTime()) || isNaN(expectedDate.getTime())) {
+        return null;
+      }
+      
+      // Ngày Bắt Đầu phải <= Dự Kiến Hoàn Thành
+      if (startDate > expectedDate) {
+        return { startDateAfterExpectedFinish: true };
+      }
+      
+      return null;
+    };
+  }
+
+  /**
+   * Validator: Kiểm tra Dự Kiến Hoàn Thành >= Ngày Bắt Đầu
+   */
+  private dateAfterStartDateValidator(): any {
+    return (control: any) => {
+      if (!control.value) {
+        return null;
+      }
+      
+      const expectedFinish = new Date(control.value);
+      const startDate = this.workItemForm?.get('startDate')?.value;
+      
+      if (!startDate) {
+        return null; // Không validate nếu startDate chưa có giá trị
+      }
+      
+      const start = new Date(startDate);
+      
+      // Reset time để so sánh chỉ ngày
+      expectedFinish.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      
+      if (isNaN(expectedFinish.getTime()) || isNaN(start.getTime())) {
+        return null;
+      }
+      
+      // Dự Kiến Hoàn Thành phải >= Ngày Bắt Đầu
+      if (expectedFinish < start) {
+        return { expectedFinishBeforeStartDate: true };
+      }
+      
+      return null;
+    };
+  }
+
+  /**
+   * Validator: Kiểm tra Dự Kiến Hoàn Thành <= Hoàn Thành Thực Tế
+   */
+  private dateBeforeActualFinishValidator(): any {
+    return (control: any) => {
+      if (!control.value) {
+        return null;
+      }
+      
+      const expectedFinish = new Date(control.value);
+      const actualFinish = this.workItemForm?.get('actualFinish')?.value;
+      
+      if (!actualFinish) {
+        return null; // Không validate nếu actualFinish chưa có giá trị
+      }
+      
+      const actual = new Date(actualFinish);
+      
+      // Reset time để so sánh chỉ ngày
+      expectedFinish.setHours(0, 0, 0, 0);
+      actual.setHours(0, 0, 0, 0);
+      
+      if (isNaN(expectedFinish.getTime()) || isNaN(actual.getTime())) {
+        return null;
+      }
+      
+      // Dự Kiến Hoàn Thành phải <= Hoàn Thành Thực Tế
+      if (expectedFinish > actual) {
+        return { expectedFinishAfterActualFinish: true };
+      }
+      
+      return null;
+    };
+  }
+
+  /**
+   * Validator: Kiểm tra Hoàn Thành Thực Tế >= Dự Kiến Hoàn Thành
+   */
+  private dateAfterExpectedFinishValidator(): any {
+    return (control: any) => {
+      if (!control.value) {
+        return null;
+      }
+      
+      const actualFinish = new Date(control.value);
+      const expectedFinish = this.workItemForm?.get('expectedFinish')?.value;
+      
+      if (!expectedFinish) {
+        return null; // Không validate nếu expectedFinish chưa có giá trị
+      }
+      
+      const expected = new Date(expectedFinish);
+      
+      // Reset time để so sánh chỉ ngày
+      actualFinish.setHours(0, 0, 0, 0);
+      expected.setHours(0, 0, 0, 0);
+      
+      if (isNaN(actualFinish.getTime()) || isNaN(expected.getTime())) {
+        return null;
+      }
+      
+      // Hoàn Thành Thực Tế phải >= Dự Kiến Hoàn Thành
+      if (actualFinish < expected) {
+        return { actualFinishBeforeExpectedFinish: true };
+      }
+      
+      return null;
+    };
+  }
+
+  /**
+   * Get delivery date for display
+   */
+  getDeliveryDate(): Date | null {
+    if (!this.workItem?.assignment?.deliveryDate) {
+      return null;
+    }
+    
+    const deliveryDate = this.workItem.assignment.deliveryDate;
+    return typeof deliveryDate === 'string' ? new Date(deliveryDate) : deliveryDate;
   }
 }
 

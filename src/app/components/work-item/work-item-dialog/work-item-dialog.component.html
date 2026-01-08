@@ -41,6 +41,12 @@
         <input matInput [matDatepicker]="startPicker" formControlName="startDate">
         <mat-datepicker-toggle matIconSuffix [for]="startPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
         <mat-datepicker #startPicker></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('startDate')?.hasError('dateAfterDelivery') && getDeliveryDate()">
+          Ngày bắt đầu phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
+        </mat-error>
+        <mat-error *ngIf="workItemForm.get('startDate')?.hasError('startDateAfterExpectedFinish')">
+          Ngày bắt đầu phải nhỏ hơn hoặc bằng dự kiến hoàn thành
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field-flex">
@@ -48,6 +54,15 @@
         <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish">
         <mat-datepicker-toggle matIconSuffix [for]="expectedPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
         <mat-datepicker #expectedPicker></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('expectedFinish')?.hasError('dateAfterDelivery') && getDeliveryDate()">
+          Dự kiến hoàn thành phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
+        </mat-error>
+        <mat-error *ngIf="workItemForm.get('expectedFinish')?.hasError('expectedFinishBeforeStartDate')">
+          Dự kiến hoàn thành phải lớn hơn hoặc bằng ngày bắt đầu
+        </mat-error>
+        <mat-error *ngIf="workItemForm.get('expectedFinish')?.hasError('expectedFinishAfterActualFinish')">
+          Dự kiến hoàn thành phải nhỏ hơn hoặc bằng hoàn thành thực tế
+        </mat-error>
       </mat-form-field>
     </div>
 
@@ -58,6 +73,12 @@
         <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish">
         <mat-datepicker-toggle matIconSuffix [for]="actualPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
         <mat-datepicker #actualPicker></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('actualFinish')?.hasError('dateAfterDelivery') && getDeliveryDate()">
+          Hoàn thành thực tế phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
+        </mat-error>
+        <mat-error *ngIf="workItemForm.get('actualFinish')?.hasError('actualFinishBeforeExpectedFinish')">
+          Hoàn thành thực tế phải lớn hơn hoặc bằng dự kiến hoàn thành
+        </mat-error>
       </mat-form-field>
     </div>
 

@@ -10,7 +10,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { MatNativeDateModule, MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
+import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../config/date-format.config';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -40,7 +41,11 @@ import { UserRole } from '../../constants/enums';
     MatDialogModule,
     MatSnackBarModule
   ],
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    { provide: DateAdapter, useClass: CustomDateAdapter },
+    { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
+    { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
+  ],
   templateUrl: './tbkt-management.component.html',
   styleUrls: ['./tbkt-management.component.css']
 })
@@ -198,7 +203,12 @@ export class TBKTManagementComponent implements OnInit {
     if (!date) return '-';
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return '-';
-    return d.toLocaleDateString('vi-VN');
+    
+    // Format as DD/MM/YYYY
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+    return `${('00' + day).slice(-2)}/${('00' + month).slice(-2)}/${year}`;
   }
 
   refresh(): void {
@@ -257,7 +267,11 @@ export class TBKTManagementComponent implements OnInit {
     MatProgressSpinnerModule,
     MatSnackBarModule
   ],
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    { provide: DateAdapter, useClass: CustomDateAdapter },
+    { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
+    { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
+  ],
   template: `
     <h2 mat-dialog-title>
       {{ isEditMode ? 'Sửa Đề Nghị TBKT' : 'Thêm Đề Nghị TBKT Mới' }}
@@ -268,19 +282,26 @@ export class TBKTManagementComponent implements OnInit {
         <div class="form-row">
           <mat-form-field appearance="outline" class="tbkt-field">
             <mat-label>Số TBKT *</mat-label>
-            <input matInput formControlName="tbkt_ID" placeholder="Nhập số TBKT" [readonly]="isEditMode" required (input)="onTbktInput($event)">
-            <mat-hint *ngIf="!isEditMode && nextTbktId">Gợi ý tiếp theo: {{ nextTbktId }}</mat-hint>
-            <mat-error *ngIf="tbktForm.get('tbkt_ID')?.hasError('required')">
+            <input matInput formControlName="tbktNumber" placeholder="Nhập số TBKT" [readonly]="isEditMode" required (input)="onTbktNumberInput($event)" type="text" inputmode="numeric">
+            <mat-hint *ngIf="!isEditMode && nextTbktNumber()">Gợi ý tiếp theo: {{ nextTbktNumber() }}</mat-hint>
+            <mat-error *ngIf="tbktForm.get('tbktNumber')?.hasError('required')">
               Số TBKT là bắt buộc
             </mat-error>
-            <mat-error *ngIf="tbktForm.get('tbkt_ID')?.hasError('maxlength')">
-              Số TBKT không được vượt quá 50 ký tự
+            <mat-error *ngIf="tbktForm.get('tbktNumber')?.hasError('pattern')">
+              Chỉ được nhập số
             </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="tbkt-field uppercase-field">
-            <mat-label>TBKT (In hoa)</mat-label>
-            <input matInput [value]="uppercaseTbktId" readonly>
+            <mat-label>TBKT (In hoa) *</mat-label>
+            <input matInput formControlName="tbktLetter" placeholder="Nhập chữ cái" required (input)="onTbktLetterInput($event)" type="text">
+            <mat-hint *ngIf="!isEditMode && nextTbktLetter()">Gợi ý tiếp theo: {{ nextTbktLetter() }}</mat-hint>
+            <mat-error *ngIf="tbktForm.get('tbktLetter')?.hasError('required')">
+              Chữ cái TBKT là bắt buộc
+            </mat-error>
+            <mat-error *ngIf="tbktForm.get('tbktLetter')?.hasError('pattern')">
+              Chỉ được nhập chữ cái
+            </mat-error>
           </mat-form-field>
         </div>
 
@@ -397,6 +418,9 @@ export class TBKTFormDialogComponent {
   readonly saving = signal(false);
   readonly isEditMode: boolean;
   readonly currentUser: AuthUser | null = null;
+  readonly nextTbktId = signal<string | null>(null);
+  readonly nextTbktNumber = signal<string | null>(null);
+  readonly nextTbktLetter = signal<string | null>(null);
 
   tbktForm: FormGroup;
 
@@ -405,9 +429,15 @@ export class TBKTFormDialogComponent {
     this.currentUser = this.authService.user();
 
     const sheet = data?.sheet || {};
+    
+    // Split tbkt_ID into number and letter parts
+    const tbktIdStr = String(sheet.tbkt_ID || '');
+    const tbktNumber = tbktIdStr.replace(/[^0-9]/g, ''); // Extract only numbers
+    const tbktLetter = tbktIdStr.replace(/[^A-Za-z]/g, '').toUpperCase(); // Extract only letters and uppercase
 
     this.tbktForm = this.fb.group({
-      tbkt_ID: [sheet.tbkt_ID || '', [Validators.required, Validators.maxLength(50)]],
+      tbktNumber: [tbktNumber, [Validators.required, Validators.pattern(/^[0-9]*$/)]],
+      tbktLetter: [tbktLetter, [Validators.required, Validators.pattern(/^[A-Za-z]*$/)]],
       phase: [sheet.phase || '', Validators.maxLength(10)],
       power_kVA: [sheet.power_kVA || null],
       voltageSpec: [sheet.voltageSpec || '', Validators.maxLength(255)],
@@ -416,6 +446,51 @@ export class TBKTFormDialogComponent {
       drawingDate: [sheet.drawingDate ? new Date(sheet.drawingDate) : null],
       notes: [sheet.notes || '']
     });
+
+    // Load next TBKT ID suggestion only when adding new (not editing)
+    if (!this.isEditMode) {
+      this.assignmentService.getNextTechnicalSheetId().subscribe({
+        next: (result) => {
+          this.nextTbktId.set(result.nextTbktId);
+          // Split the suggestion into number and letter parts
+          const suggestedId = String(result.nextTbktId || '');
+          const suggestedNumber = suggestedId.replace(/[^0-9]/g, '');
+          const suggestedLetter = suggestedId.replace(/[^A-Za-z]/g, '').toUpperCase();
+          this.nextTbktNumber.set(suggestedNumber || null);
+          this.nextTbktLetter.set(suggestedLetter || null);
+        },
+        error: (err) => {
+          console.error('Error getting next TBKT ID:', err);
+          // Don't show error to user, just log it
+        }
+      });
+    }
+  }
+
+  onTbktNumberInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+    // Remove any non-numeric characters
+    value = value.replace(/[^0-9]/g, '');
+    // Update the form control value
+    this.tbktForm.patchValue({ tbktNumber: value }, { emitEvent: false });
+    // Update the input field directly to prevent non-numeric characters
+    if (input.value !== value) {
+      input.value = value;
+    }
+  }
+
+  onTbktLetterInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+    // Remove any non-letter characters and convert to uppercase
+    value = value.replace(/[^A-Za-z]/g, '').toUpperCase();
+    // Update the form control value
+    this.tbktForm.patchValue({ tbktLetter: value }, { emitEvent: false });
+    // Update the input field directly to prevent non-letter characters
+    if (input.value !== value) {
+      input.value = value;
+    }
   }
 
   onSave(): void {
@@ -429,8 +504,13 @@ export class TBKTFormDialogComponent {
     // Proposer is always the current logged-in user's FirebaseUID (as string)
     const proposerFirebaseUID = this.currentUser?.firebaseUid;
 
+    // Combine number and letter parts to form tbkt_ID
+    const tbktNumber = String(formValue.tbktNumber || '').trim();
+    const tbktLetter = String(formValue.tbktLetter || '').trim().toUpperCase();
+    const combinedTbktId = tbktNumber + tbktLetter;
+
     const sheetData: Partial<TechnicalSheet> = {
-      tbkt_ID: formValue.tbkt_ID,
+      tbkt_ID: combinedTbktId,
       phase: formValue.phase || undefined,
       power_kVA: formValue.power_kVA || undefined,
       voltageSpec: formValue.voltageSpec || undefined,

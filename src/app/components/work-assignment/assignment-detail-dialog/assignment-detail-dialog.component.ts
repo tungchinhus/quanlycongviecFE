@@ -10,10 +10,11 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { MatNativeDateModule, MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
 import { AssignmentService } from '../../../services/assignment.service';
 import { MachineAssignment, WorkItem } from '../../../models/machine-assignment.model';
 import { UsersService } from '../../../services/users.service';
@@ -45,7 +46,11 @@ import { environment } from '../../../../environments/environment';
     MatProgressSpinnerModule,
     MatTooltipModule
   ],
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    { provide: DateAdapter, useClass: CustomDateAdapter },
+    { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
+    { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
+  ],
   templateUrl: './assignment-detail-dialog.component.html',
   styleUrls: ['./assignment-detail-dialog.component.css']
 })
