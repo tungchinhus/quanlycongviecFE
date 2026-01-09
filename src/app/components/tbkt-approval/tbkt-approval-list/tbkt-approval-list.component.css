@@ -1,30 +1,44 @@
-.tbkt-management-container {
+.tbkt-approval-container {
   padding: 24px;
   max-width: 100%;
 }
 
-.tbkt-header {
-  margin-bottom: 16px;
+.approval-header {
+  margin-bottom: 24px;
 }
 
-.tbkt-header h1 {
-  margin: 0;
+.approval-header h1 {
+  margin: 0 0 8px 0;
   font-size: 24px;
   font-weight: 500;
   color: var(--thibidi-text-primary, #333);
 }
 
-.search-bar {
+.approval-header .subtitle {
+  margin: 0;
+  color: var(--thibidi-text-secondary, #666);
+  font-size: 14px;
+}
+
+.search-filter-bar {
   display: flex;
+  gap: 16px;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
 .search-field {
   flex: 1;
-  min-width: 300px;
+  min-width: 250px;
+}
+
+.filter-field {
+  min-width: 180px;
+}
+
+.search-filter-bar button {
+  flex-shrink: 0;
 }
 
 .loading-container {
@@ -63,7 +77,7 @@
   margin: 0;
 }
 
-.tbkt-table-card {
+.approval-table-card {
   margin-top: 16px;
 }
 
@@ -71,11 +85,11 @@
   overflow-x: auto;
 }
 
-.tbkt-table {
+.approval-table {
   width: 100%;
 }
 
-.tbkt-table th {
+.approval-table th {
   background-color: var(--thibidi-primary, #1976d2);
   color: white;
   font-weight: 500;
@@ -83,16 +97,16 @@
   text-align: left;
 }
 
-.tbkt-table td {
+.approval-table td {
   padding: 12px 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.tbkt-table tr:nth-child(even) {
+.approval-table tr:nth-child(even) {
   background-color: rgba(0, 0, 0, 0.02);
 }
 
-.tbkt-table tr:hover {
+.approval-table tr:hover {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
@@ -104,6 +118,28 @@
 
 .tbkt-id-cell {
   font-family: 'Courier New', monospace;
+}
+
+.approval-date {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Approval Status Styles */
+.status-approved {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.status-rejected {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.status-pending {
+  color: #f57c00;
+  font-weight: 600;
 }
 
 .empty-container {
@@ -129,58 +165,36 @@
   font-size: 16px;
 }
 
-::ng-deep .error-snackbar {
-  background-color: #c62828 !important;
-  color: white !important;
-}
-
-/* Approval Status Styles */
-.status-completed {
-  color: #2e7d32;
-  font-weight: 600;
-}
-
-.status-rejected {
-  color: #c62828;
-  font-weight: 600;
-}
-
-.status-pending-managerl1 {
-  color: #f57c00;
-  font-weight: 600;
-}
-
-.status-pending-manager {
-  color: #1976d2;
-  font-weight: 600;
-}
-
-.status-processing {
-  color: #666;
-  font-weight: 500;
-}
-
-.status-incomplete {
-  color: #999;
-  font-style: italic;
-}
-
 @media (max-width: 768px) {
-  .tbkt-management-container {
+  .tbkt-approval-container {
     padding: 16px;
   }
 
-  .tbkt-header h1 {
+  .approval-header h1 {
     font-size: 20px;
   }
 
-  .tbkt-table {
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-field,
+  .filter-field {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .search-filter-bar button {
+    align-self: flex-start;
+  }
+
+  .approval-table {
     font-size: 12px;
   }
 
-  .tbkt-table th,
-  .tbkt-table td {
+  .approval-table th,
+  .approval-table td {
     padding: 8px 4px;
   }
 }
-

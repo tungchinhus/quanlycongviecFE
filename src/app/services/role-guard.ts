@@ -3,8 +3,8 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { AuthService, UserRole } from './auth.service';
 
 export interface RoleGuardData {
-  roles?: UserRole[]; // all required
-  anyOf?: UserRole[]; // at least one required
+  roles?: (UserRole | string)[]; // all required
+  anyOf?: (UserRole | string)[]; // at least one required
   redirectTo?: string | UrlTree;
 }
 

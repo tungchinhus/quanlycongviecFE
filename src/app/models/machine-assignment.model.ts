@@ -40,6 +40,18 @@ export interface TechnicalSheet {
   archivedDate?: Date | string; // Ngày lưu trữ
   requesterElectrical?: string; // KS Điện
   requesterMechanical?: string; // KS Cơ
+  
+  // Approval workflow fields - ManagerL1 approval
+  managerL1ApprovalStatus?: string; // Pending, Approved, Rejected
+  managerL1ApproverFirebaseUID?: string;
+  managerL1ApprovalDate?: Date | string;
+  managerL1ApprovalNotes?: string;
+  
+  // Approval workflow fields - Manager approval
+  managerApprovalStatus?: string; // Pending, Approved, Rejected
+  managerApproverFirebaseUID?: string;
+  managerApprovalDate?: Date | string;
+  managerApprovalNotes?: string;
 }
 
 export interface AssignmentApproval {

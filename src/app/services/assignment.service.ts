@@ -113,12 +113,29 @@ export class AssignmentService {
 
   // Get all TechnicalSheets
   // @param firebaseUID - Optional. Nếu không truyền, backend sẽ tự động lấy từ token
-  getAllTechnicalSheets(firebaseUID?: string): Observable<TechnicalSheet[]> {
+  // @param needsApproval - Optional. Nếu true, chỉ lấy TechnicalSheet đã hoàn thành cần approval
+  getAllTechnicalSheets(firebaseUID?: string, needsApproval?: boolean): Observable<TechnicalSheet[]> {
     let url = `${environment.apiUrl}/technical-sheets`;
+    const params: string[] = [];
     if (firebaseUID) {
-      url += `?firebaseUID=${encodeURIComponent(firebaseUID)}`;
+      params.push(`firebaseUID=${encodeURIComponent(firebaseUID)}`);
+    }
+    if (needsApproval === true) {
+      params.push(`needsApproval=true`);
+    }
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
     }
     return this.http.get<TechnicalSheet[]>(url);
+  }
+
+  // Approve or reject TechnicalSheet
+  approveTechnicalSheet(tbktId: string, approvalLevel: 'ManagerL1' | 'Manager', action: 'approve' | 'reject', notes?: string): Observable<TechnicalSheet> {
+    return this.http.post<TechnicalSheet>(`${environment.apiUrl}/technical-sheets/${tbktId}/approve`, {
+      approvalLevel,
+      action,
+      notes
+    });
   }
 
   // Get assignments grouped by TBKT (for TBKT list view)

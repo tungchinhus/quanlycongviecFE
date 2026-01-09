@@ -163,11 +163,13 @@
             </div>
             <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Giao Việc</span>
           </a>
-          <a routerLink="/approvals"
-             routerLinkActive="active"
+          <a [routerLink]="(hasManagerRole() || hasAdminRole()) ? '/approvals' : null"
+             [routerLinkActive]="(hasManagerRole() || hasAdminRole()) ? 'active' : ''"
              [matTooltip]="sidenavService.isCollapsed() ? 'Ký Duyệt' : ''"
              matTooltipPosition="right"
-             class="nav-item">
+             [class.disabled]="!hasManagerRole() && !hasAdminRole()"
+             [class.nav-item]="true"
+             (click)="handleNavClick($event)">
             <div class="nav-icon">
               <mat-icon>check_circle</mat-icon>
             </div>

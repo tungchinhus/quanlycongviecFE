@@ -349,15 +349,15 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.authService.hasAnyRole([UserRole.Manager, 'ManagerL1', 'ManagerL2', 'Manager']);
   }
 
-  hasManagerL1OrAdminRole(): boolean {
-    return this.authService.hasAnyRole(['ManagerL1', UserRole.Administrator, 'Administrator', 'Admin']);
-  }
-
   handleNavClick(event: Event): void {
-    if (!this.hasAdminRole()) {
+    if (!this.hasAdminRole() && !this.hasManagerRole()) {
       event.preventDefault();
       event.stopPropagation();
     }
+  }
+
+  hasManagerL1OrAdminRole(): boolean {
+    return this.authService.hasAnyRole(['ManagerL1', UserRole.Administrator, 'Administrator', 'Admin']);
   }
 
   logout(): void {

@@ -41,8 +41,9 @@ export const routes: Routes = [
   },
   {
     path: 'approvals',
-    loadComponent: () => import('./components/approval/approval-list/approval-list.component').then(m => m.ApprovalListComponent),
-    canActivate: [authGuard]
+    loadComponent: () => import('./components/tbkt-approval/tbkt-approval-list/tbkt-approval-list.component').then(m => m.TBKTApprovalListComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { anyOf: [UserRole.Administrator, 'Administrator', 'Admin', UserRole.Manager, 'Manager', 'ManagerL1'] }
   },
   {
     path: 'approval-workflow',

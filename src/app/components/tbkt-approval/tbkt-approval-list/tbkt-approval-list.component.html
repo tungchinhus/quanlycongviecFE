@@ -1,0 +1,143 @@
+<div class="tbkt-approval-container">
+  <!-- Header -->
+  <div class="approval-header">
+    <h1>Ký Duyệt Bảng Thiết Kế Tổng</h1>
+    <p class="subtitle">Duyệt các bảng thiết kế tổng đã hoàn thành</p>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="search-filter-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Tìm kiếm</mat-label>
+      <input 
+        matInput 
+        [value]="searchTerm()" 
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Tìm kiếm theo TBKT, Ngày lưu trữ, Trạng thái...">
+      <mat-icon matPrefix>search</mat-icon>
+      <button 
+        *ngIf="searchTerm()"
+        mat-icon-button 
+        matSuffix 
+        (click)="onSearchChange('')"
+        [attr.aria-label]="'Xóa tìm kiếm'">
+        <mat-icon>clear</mat-icon>
+      </button>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Trạng thái</mat-label>
+      <mat-select 
+        [value]="filterStatus()" 
+        (selectionChange)="onFilterStatusChange($event.value)">
+        <mat-option value="all">Tất cả</mat-option>
+        <mat-option value="approved">Đã duyệt</mat-option>
+        <mat-option value="pending">Chờ duyệt</mat-option>
+        <mat-option value="rejected">Từ chối</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="refresh()">Thử lại</button>
+    </div>
+  }
+
+  <!-- TBKT Approval Table -->
+  @if (filteredList().length > 0 && !loading() && !error()) {
+    <mat-card class="approval-table-card">
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="filteredList()" class="approval-table">
+          <!-- TBKT Column -->
+          <ng-container matColumnDef="tbkt_ID">
+            <th mat-header-cell *matHeaderCellDef class="tbkt-id-header">TBKT</th>
+            <td mat-cell *matCellDef="let element" class="tbkt-id-cell">{{ element.tbkt_ID || '-' }}</td>
+          </ng-container>
+
+          <!-- Archived Date Column -->
+          <ng-container matColumnDef="archivedDate">
+            <th mat-header-cell *matHeaderCellDef>Ngày lưu trữ</th>
+            <td mat-cell *matCellDef="let element">{{ formatDate(element.archivedDate) }}</td>
+          </ng-container>
+
+          <!-- ManagerL1 Approval Status Column -->
+          <ng-container matColumnDef="managerL1ApprovalStatus">
+            <th mat-header-cell *matHeaderCellDef>Trạng thái ManagerL1</th>
+            <td mat-cell *matCellDef="let element">
+              <span [class]="getApprovalStatusClass(element, 'ManagerL1')">
+                {{ getApprovalStatus(element, 'ManagerL1') }}
+              </span>
+              @if (element.managerL1ApprovalDate) {
+                <div class="approval-date">{{ formatDate(element.managerL1ApprovalDate) }}</div>
+              }
+            </td>
+          </ng-container>
+
+          <!-- Manager Approval Status Column -->
+          <ng-container matColumnDef="managerApprovalStatus">
+            <th mat-header-cell *matHeaderCellDef>Trạng thái Manager</th>
+            <td mat-cell *matCellDef="let element">
+              <span [class]="getApprovalStatusClass(element, 'Manager')">
+                {{ getApprovalStatus(element, 'Manager') }}
+              </span>
+              @if (element.managerApprovalDate) {
+                <div class="approval-date">{{ formatDate(element.managerApprovalDate) }}</div>
+              }
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+            <td mat-cell *matCellDef="let element">
+              <button 
+                *ngIf="canApprove(element)"
+                mat-raised-button 
+                color="primary"
+                [matTooltip]="getApprovalButtonText(element)"
+                (click)="openApprovalDialog(element)">
+                <mat-icon>check_circle</mat-icon>
+                {{ getApprovalButtonText(element) }}
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </mat-card>
+  }
+
+  <!-- Empty State -->
+  @if (filteredList().length === 0 && !loading() && !error()) {
+    <div class="empty-container">
+      <mat-icon>inbox</mat-icon>
+      @if (searchTerm() || filterStatus() !== 'all') {
+        <p>Không tìm thấy kết quả phù hợp với bộ lọc</p>
+        <button mat-raised-button color="primary" (click)="clearFilters()">
+          <mat-icon>filter_alt_off</mat-icon>
+          Xóa bộ lọc
+        </button>
+      } @else {
+        <p>Không có bảng thiết kế tổng nào cần duyệt</p>
+        <button mat-icon-button (click)="refresh()" matTooltip="Làm mới">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      }
+    </div>
+  }
+</div>
