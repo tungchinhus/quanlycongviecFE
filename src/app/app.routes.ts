@@ -6,13 +6,19 @@ import { UserRole } from './constants/enums';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/dashboard',
+    loadComponent: () => import('./components/dashboard-redirect/dashboard-redirect.component').then(m => m.DashboardRedirectComponent),
     pathMatch: 'full'
   },
   {
     path: 'dashboard',
     loadComponent: () => import('./pages/dashboard/dashboard.page').then(m => m.DashboardPage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'manager-dashboard',
+    loadComponent: () => import('./pages/manager-dashboard/manager-dashboard.page').then(m => m.ManagerDashboardPage),
+    canActivate: [authGuard, roleGuard],
+    data: { anyOf: [UserRole.Administrator, UserRole.Manager, 'Manager', 'ManagerL1'] }
   },
   {
     path: 'login',
@@ -106,7 +112,7 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '/dashboard'
+    loadComponent: () => import('./components/dashboard-redirect/dashboard-redirect.component').then(m => m.DashboardRedirectComponent)
   }
 ];
 

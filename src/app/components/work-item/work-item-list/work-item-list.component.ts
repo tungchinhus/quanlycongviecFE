@@ -45,7 +45,7 @@ import { NotificationService } from '../../../services/notification.service';
 })
 export class WorkItemListComponent implements OnInit {
   workItems: WorkItemWithAssignment[] = [];
-  displayedColumns: string[] = ['machineName', 'startDate', 'expectedFinish', 'actualFinish', 'personConfirmation', 'actions'];
+  displayedColumns: string[] = ['machineName', 'startDate', 'expectedFinish', 'personConfirmation', 'actions'];
   isLoading = false;
   
   // Properties thay vì methods để tránh gọi lại mỗi change detection cycle
@@ -289,7 +289,28 @@ export class WorkItemListComponent implements OnInit {
     });
   }
 
+  // Kiểm tra xem workitem đã được cập nhật đầy đủ chưa
+  isWorkItemUpdated(item: WorkItemWithAssignment): boolean {
+    // Kiểm tra các trường bắt buộc đã được điền
+    const hasStartDate = item.startDate != null && item.startDate !== '';
+    const hasExpectedFinish = item.expectedFinish != null && item.expectedFinish !== '';
+    
+    // Workitem được coi là đã cập nhật nếu có ít nhất ngày bắt đầu và dự kiến hoàn thành
+    return hasStartDate && hasExpectedFinish;
+  }
+
   completeWorkItem(item: WorkItemWithAssignment) {
+    // Kiểm tra nếu workitem chưa được cập nhật đầy đủ
+    if (!this.isWorkItemUpdated(item)) {
+      this.snackBar.open('Vui lòng cập nhật đầy đủ thông tin công việc (Ngày bắt đầu, Dự kiến hoàn thành) trước khi đánh dấu hoàn thành', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     // Hiển thị confirm dialog
     const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',

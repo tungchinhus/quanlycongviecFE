@@ -30,7 +30,7 @@ export class PermissionsService {
   readonly permissions = this.permissionsSignal.asReadonly();
 
   /**
-   * Lấy danh sách tất cả permissions từ DB (PostgreSQL database)
+   * Lấy danh sách tất cả permissions từ DB (SQL Server database)
    * API GET /api/permissions chỉ trả về permissions có trong database
    * Không hardcode, không mock data
    */

@@ -35,18 +35,6 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="actualFinish">
-        <th mat-header-cell *matHeaderCellDef>Hoàn Thành Thực Tế</th>
-        <td mat-cell *matCellDef="let item">
-          <span *ngIf="item.actualFinish; else notFinished">
-            {{ item.actualFinish | date:'dd/MM/yyyy' }}
-          </span>
-          <ng-template #notFinished>
-            <mat-chip color="warn">Chưa hoàn thành</mat-chip>
-          </ng-template>
-        </td>
-      </ng-container>
-
       <ng-container matColumnDef="personConfirmation">
         <th mat-header-cell *matHeaderCellDef>Xác Nhận</th>
         <td mat-cell *matCellDef="let item">
@@ -97,7 +85,12 @@
                 <mat-icon>edit</mat-icon>
                 <span>Chỉnh sửa</span>
               </button>
-              <button mat-menu-item (click)="completeWorkItem(item)" *ngIf="!item.personConfirmation">
+              <button 
+                mat-menu-item 
+                (click)="completeWorkItem(item)" 
+                *ngIf="!item.personConfirmation"
+                [disabled]="!isWorkItemUpdated(item)"
+                [matTooltip]="!isWorkItemUpdated(item) ? 'Vui lòng cập nhật đầy đủ thông tin công việc (Ngày bắt đầu, Dự kiến hoàn thành) trước khi đánh dấu hoàn thành' : ''">
                 <mat-icon>check_circle</mat-icon>
                 <span>Hoàn Thành</span>
               </button>

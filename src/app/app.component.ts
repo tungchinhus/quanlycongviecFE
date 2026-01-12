@@ -360,6 +360,21 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.authService.hasAnyRole(['ManagerL1', UserRole.Administrator, 'Administrator', 'Admin']);
   }
 
+  /**
+   * Kiểm tra nếu user là Manager hoặc ManagerL1
+   * Dùng để quyết định hiển thị dashboard nào
+   */
+  isManagerOrManagerL1(): boolean {
+    return this.authService.hasAnyRole([
+      UserRole.Manager,
+      'Manager',
+      'ManagerL1',
+      UserRole.Administrator,
+      'Administrator',
+      'Admin'
+    ]);
+  }
+
   logout(): void {
     // Đăng xuất từ Firebase và xóa session
     this.authService.logout().subscribe({

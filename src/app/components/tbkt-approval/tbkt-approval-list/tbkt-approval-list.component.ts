@@ -69,8 +69,22 @@ export class TBKTApprovalListComponent implements OnInit {
 
   ngOnInit(): void {
     // Kiểm tra role của user
-    const isManagerL1User = this.authService.hasAnyRole(['ManagerL1']);
-    const isManagerUser = this.authService.hasAnyRole([UserRole.Manager, 'Manager']) && !isManagerL1User;
+    const currentUser = this.authService.user();
+    const userRoles = currentUser?.roles || [];
+    
+    // Kiểm tra ManagerL1 - kiểm tra cả case-sensitive và case-insensitive
+    const isManagerL1User = this.authService.hasAnyRole(['ManagerL1']) || 
+                            userRoles.some(r => r && r.toString().toLowerCase() === 'managerl1');
+    
+    // Kiểm tra Manager - nhưng không phải ManagerL1
+    // Manager có thể là "Manager", "ManagerL2", "ManagerL3", etc. nhưng không phải "ManagerL1"
+    const isManagerUser = (this.authService.hasAnyRole([UserRole.Manager, 'Manager']) || 
+                          userRoles.some(r => {
+                            const roleStr = r?.toString() || '';
+                            return roleStr.toLowerCase().startsWith('manager') && 
+                                   roleStr.toLowerCase() !== 'managerl1';
+                          })) && !isManagerL1User;
+    
     const isAdminUser = this.authService.hasAnyRole([
       UserRole.Administrator,
       'Administrator',
@@ -191,37 +205,54 @@ export class TBKTApprovalListComponent implements OnInit {
   }
 
   canApprove(sheet: TechnicalSheet): boolean {
+    const tbktId = String(sheet.tbkt_ID || '').trim();
+    
+    // TBKT phải có archivedDate (đã hoàn thành) mới có thể approve
     if (!sheet.archivedDate) {
       return false; // Chưa hoàn thành, không thể approve
     }
 
-    // Kiểm tra xem tất cả assignments của TBKT đã hoàn thành chưa (status = 3)
-    const tbktId = String(sheet.tbkt_ID || '').trim();
-    const isAllAssignmentsCompleted = this.tbktCompletionMap.get(tbktId) ?? false;
+    // Kiểm tra nếu đã bị từ chối ở bất kỳ cấp nào thì không thể approve lại
+    if (sheet.managerL1ApprovalStatus === 'Rejected' || sheet.managerApprovalStatus === 'Rejected') {
+      return false;
+    }
+
+    // QUAN TRỌNG: Kiểm tra xem tất cả assignments (workitems) của TBKT đã hoàn thành chưa
+    // Tất cả các khâu của máy (workitems) phải hoàn thành hết mới cho phép ký duyệt
+    const isAllAssignmentsCompleted = this.tbktCompletionMap.get(tbktId);
+    const hasAssignments = this.tbktCompletionMap.has(tbktId);
     
-    if (!isAllAssignmentsCompleted) {
+    // Nếu TBKT có assignments, tất cả phải hoàn thành (status = Completed/3) mới cho phép approve
+    if (hasAssignments && isAllAssignmentsCompleted !== true) {
       return false; // Chưa hoàn thành tất cả assignments, không thể approve
     }
 
+    // Nếu TBKT không có assignments nào, vẫn cho phép approve nếu có archivedDate
+    // (trường hợp đặc biệt: TBKT không có workitems nhưng đã được đánh dấu hoàn thành)
+
+    let result = false;
+    let reason = '';
+
     if (this.isManagerL1()) {
       // ManagerL1 có thể approve khi chưa có approval hoặc đang pending
-      return !sheet.managerL1ApprovalStatus || sheet.managerL1ApprovalStatus === 'Pending';
-    }
-
-    if (this.isManager()) {
+      result = !sheet.managerL1ApprovalStatus || sheet.managerL1ApprovalStatus === 'Pending';
+      reason = result ? 'ManagerL1 can approve' : `ManagerL1 cannot approve (status: ${sheet.managerL1ApprovalStatus})`;
+    } else if (this.isManager()) {
       // Manager chỉ có thể approve sau khi ManagerL1 đã approve
-      return sheet.managerL1ApprovalStatus === 'Approved' && 
+      result = sheet.managerL1ApprovalStatus === 'Approved' && 
              (!sheet.managerApprovalStatus || sheet.managerApprovalStatus === 'Pending');
-    }
-
-    if (this.isAdmin()) {
+      reason = result ? 'Manager can approve' : `Manager cannot approve (L1: ${sheet.managerL1ApprovalStatus}, Manager: ${sheet.managerApprovalStatus})`;
+    } else if (this.isAdmin()) {
       // Admin có thể approve ở bất kỳ cấp nào
-      return (!sheet.managerL1ApprovalStatus || sheet.managerL1ApprovalStatus === 'Pending') ||
+      result = (!sheet.managerL1ApprovalStatus || sheet.managerL1ApprovalStatus === 'Pending') ||
              (sheet.managerL1ApprovalStatus === 'Approved' && 
               (!sheet.managerApprovalStatus || sheet.managerApprovalStatus === 'Pending'));
+      reason = result ? 'Admin can approve' : 'Admin cannot approve';
+    } else {
+      reason = `No matching role (isManagerL1: ${this.isManagerL1()}, isManager: ${this.isManager()}, isAdmin: ${this.isAdmin()})`;
     }
 
-    return false;
+    return result;
   }
 
   getApprovalLevel(sheet: TechnicalSheet): 'ManagerL1' | 'Manager' | null {

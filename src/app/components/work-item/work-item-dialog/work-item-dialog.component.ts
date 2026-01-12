@@ -69,6 +69,9 @@ export class WorkItemDialogComponent implements OnInit {
   assignmentFiles: FileDocument[] = []; // File giao việc (file của designer)
   userFiles: FileDocument[] = []; // File của user hiện tại
   
+  // Ngày tối thiểu cho date picker (hôm nay)
+  readonly minDate = new Date();
+  
   // Lưu giá trị ban đầu để so sánh thay đổi
   private initialFormValues: any = null;
   private hasChanges = signal<boolean>(false);
@@ -118,6 +121,7 @@ export class WorkItemDialogComponent implements OnInit {
         value: null, 
         disabled: this.mode === 'view' 
       }, [
+        this.dateNotInPastValidator(),
         this.dateBeforeDeliveryValidator(deliveryDate),
         this.dateBeforeExpectedFinishValidator()
       ]],
@@ -125,6 +129,7 @@ export class WorkItemDialogComponent implements OnInit {
         value: null, 
         disabled: this.mode === 'view' 
       }, [
+        this.dateNotInPastValidator(),
         this.dateBeforeDeliveryValidator(deliveryDate),
         this.dateAfterStartDateValidator(),
         this.dateBeforeActualFinishValidator()
@@ -133,6 +138,7 @@ export class WorkItemDialogComponent implements OnInit {
         value: null, 
         disabled: this.mode === 'view' 
       }, [
+        this.dateNotInPastValidator(),
         this.dateBeforeDeliveryValidator(deliveryDate),
         this.dateAfterExpectedFinishValidator()
       ]],
@@ -170,26 +176,36 @@ export class WorkItemDialogComponent implements OnInit {
       // Cập nhật validators cho các date fields
       if (deliveryDate) {
         this.workItemForm.get('startDate')?.setValidators([
+          this.dateNotInPastValidator(),
           this.dateBeforeDeliveryValidator(deliveryDate),
           this.dateBeforeExpectedFinishValidator()
         ]);
         this.workItemForm.get('expectedFinish')?.setValidators([
+          this.dateNotInPastValidator(),
           this.dateBeforeDeliveryValidator(deliveryDate),
           this.dateAfterStartDateValidator(),
           this.dateBeforeActualFinishValidator()
         ]);
         this.workItemForm.get('actualFinish')?.setValidators([
+          this.dateNotInPastValidator(),
           this.dateBeforeDeliveryValidator(deliveryDate),
           this.dateAfterExpectedFinishValidator()
         ]);
       } else {
         // Nếu không có deliveryDate, vẫn validate thứ tự ngày
-        this.workItemForm.get('startDate')?.setValidators([this.dateBeforeExpectedFinishValidator()]);
+        this.workItemForm.get('startDate')?.setValidators([
+          this.dateNotInPastValidator(),
+          this.dateBeforeExpectedFinishValidator()
+        ]);
         this.workItemForm.get('expectedFinish')?.setValidators([
+          this.dateNotInPastValidator(),
           this.dateAfterStartDateValidator(),
           this.dateBeforeActualFinishValidator()
         ]);
-        this.workItemForm.get('actualFinish')?.setValidators([this.dateAfterExpectedFinishValidator()]);
+        this.workItemForm.get('actualFinish')?.setValidators([
+          this.dateNotInPastValidator(),
+          this.dateAfterExpectedFinishValidator()
+        ]);
       }
       
       // Populate form với data từ workItem ngay lập tức
@@ -964,6 +980,35 @@ export class WorkItemDialogComponent implements OnInit {
     );
     
     return isOwner;
+  }
+
+  /**
+   * Validator: Kiểm tra ngày không được là quá khứ
+   */
+  private dateNotInPastValidator(): any {
+    return (control: any) => {
+      if (!control.value) {
+        return null; // Không validate nếu không có giá trị
+      }
+      
+      const inputDate = new Date(control.value);
+      const today = new Date();
+      
+      // Reset time để so sánh chỉ ngày
+      inputDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      
+      if (isNaN(inputDate.getTime())) {
+        return null; // Không validate nếu date không hợp lệ
+      }
+      
+      // Ngày nhập vào phải >= hôm nay
+      if (inputDate < today) {
+        return { dateInPast: true };
+      }
+      
+      return null;
+    };
   }
 
   /**

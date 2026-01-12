@@ -125,8 +125,8 @@ export class UsersService {
   }
 
   /**
-   * Load users từ API (PostgreSQL database)
-   * API GET /api/users chỉ trả về users có trong PostgreSQL database
+   * Load users từ API (SQL Server database)
+   * API GET /api/users chỉ trả về users có trong SQL Server database
    * Không còn lấy từ Firebase custom claims, không hardcode, không tự động tạo user
    * @param forceRefresh - Nếu true, thêm timestamp để bypass cache
    */

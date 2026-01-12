@@ -33,7 +33,7 @@ export class RolesService {
   readonly userRoles = this.userRolesSignal.asReadonly();
 
   /**
-   * Lấy danh sách tất cả roles từ DB (PostgreSQL database)
+   * Lấy danh sách tất cả roles từ DB (SQL Server database)
    * Luôn fetch mới từ API, không dùng cache, không hardcode
    * API GET /api/roles chỉ trả về roles có trong database
    * Thêm cache-busting để đảm bảo luôn lấy data mới nhất
@@ -103,7 +103,7 @@ export class RolesService {
   }
 
   /**
-   * Lấy danh sách roles dạng string[] từ DB (PostgreSQL database)
+   * Lấy danh sách roles dạng string[] từ DB (SQL Server database)
    * Load tất cả roles từ DB, không filter theo enum, không hardcode
    * Để hỗ trợ các roles mới như ManagerL1, ManagerL2, ManagerL3
    * 

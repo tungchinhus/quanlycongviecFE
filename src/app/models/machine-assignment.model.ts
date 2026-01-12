@@ -52,6 +52,9 @@ export interface TechnicalSheet {
   managerApproverFirebaseUID?: string;
   managerApprovalDate?: Date | string;
   managerApprovalNotes?: string;
+  
+  // Lịch sử approvals từ bảng TechnicalSheetApproval (mới)
+  technicalSheetApprovals?: TechnicalSheetApproval[];
 }
 
 export interface AssignmentApproval {
@@ -61,6 +64,18 @@ export interface AssignmentApproval {
   approverName?: string;
   approvalDate?: Date | string; // API trả về ISO 8601 string
   notes?: string;
+}
+
+export interface TechnicalSheetApproval {
+  approvalID: number;
+  tbkt_ID: string;
+  approvalLevel: string; // 'ManagerL1' hoặc 'Manager'
+  approvalStatus: string; // 'Pending', 'Approved', 'Rejected'
+  approverFirebaseUID: string;
+  approverName: string;
+  approvalDate: Date | string; // API trả về ISO 8601 string
+  notes?: string;
+  createdAt: Date | string;
 }
 
 export interface WorkChange {

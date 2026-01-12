@@ -133,16 +133,32 @@
         </div>
 
         <div class="nav-list">
-          <a routerLink="/dashboard" 
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>dashboard</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
-          </a>
+          <!-- Dashboard thường - chỉ hiển thị cho user không phải Manager/ManagerL1 -->
+          @if (!isManagerOrManagerL1()) {
+            <a routerLink="/dashboard" 
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>dashboard</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
+            </a>
+          }
+          <!-- Dashboard Quản lý - chỉ hiển thị cho Manager/ManagerL1 -->
+          @if (isManagerOrManagerL1()) {
+            <a routerLink="/manager-dashboard" 
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>bar_chart</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
+            </a>
+          }
           <a routerLink="/files" 
              routerLinkActive="active"
              [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"

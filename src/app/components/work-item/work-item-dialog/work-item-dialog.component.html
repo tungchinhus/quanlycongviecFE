@@ -38,9 +38,12 @@
     <div class="form-row-grid">
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Ngày Bắt Đầu</mat-label>
-        <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+        <input matInput [matDatepicker]="startPicker" formControlName="startDate" [min]="minDate">
         <mat-datepicker-toggle matIconSuffix [for]="startPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
-        <mat-datepicker #startPicker></mat-datepicker>
+        <mat-datepicker #startPicker [startAt]="minDate"></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('startDate')?.hasError('dateInPast')">
+          Ngày bắt đầu không được là quá khứ
+        </mat-error>
         <mat-error *ngIf="workItemForm.get('startDate')?.hasError('dateAfterDelivery') && getDeliveryDate()">
           Ngày bắt đầu phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
         </mat-error>
@@ -51,9 +54,12 @@
 
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Dự Kiến Hoàn Thành</mat-label>
-        <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish">
+        <input matInput [matDatepicker]="expectedPicker" formControlName="expectedFinish" [min]="minDate">
         <mat-datepicker-toggle matIconSuffix [for]="expectedPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
-        <mat-datepicker #expectedPicker></mat-datepicker>
+        <mat-datepicker #expectedPicker [startAt]="minDate"></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('expectedFinish')?.hasError('dateInPast')">
+          Dự kiến hoàn thành không được là quá khứ
+        </mat-error>
         <mat-error *ngIf="workItemForm.get('expectedFinish')?.hasError('dateAfterDelivery') && getDeliveryDate()">
           Dự kiến hoàn thành phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
         </mat-error>
@@ -70,9 +76,12 @@
     <div class="form-row-single">
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Hoàn Thành Thực Tế</mat-label>
-        <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish">
+        <input matInput [matDatepicker]="actualPicker" formControlName="actualFinish" [min]="minDate">
         <mat-datepicker-toggle matIconSuffix [for]="actualPicker" *ngIf="!isViewMode()"></mat-datepicker-toggle>
-        <mat-datepicker #actualPicker></mat-datepicker>
+        <mat-datepicker #actualPicker [startAt]="minDate"></mat-datepicker>
+        <mat-error *ngIf="workItemForm.get('actualFinish')?.hasError('dateInPast')">
+          Hoàn thành thực tế không được là quá khứ
+        </mat-error>
         <mat-error *ngIf="workItemForm.get('actualFinish')?.hasError('dateAfterDelivery') && getDeliveryDate()">
           Hoàn thành thực tế phải nhỏ hơn ngày giao bảng thiết kế tổng ({{ getDeliveryDate() | date:'dd/MM/yyyy' }})
         </mat-error>

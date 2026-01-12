@@ -31,8 +31,9 @@ export class SignalRService {
     this.hubConnection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: () => {
-          // Return Bearer token from localStorage
-          return token || '';
+          // Return Bearer token from localStorage (remove "Bearer " prefix if present)
+          if (!token) return '';
+          return token.startsWith('Bearer ') ? token.substring(7) : token;
         }
       })
       .withAutomaticReconnect({
