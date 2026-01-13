@@ -3,6 +3,25 @@
     <mat-card-title>Danh Sách Giao Việc</mat-card-title>
   </mat-card-header>
   <mat-card-content>
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="hasError() && !isLoading()" class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <h3>Không thể tải dữ liệu</h3>
+      <p>{{ errorMessage() }}</p>
+      <button mat-raised-button color="primary" (click)="loadTechnicalSheets()">
+        <mat-icon>refresh</mat-icon>
+        Thử lại
+      </button>
+    </div>
+
+    <!-- Content (only show when not loading and no error) -->
+    <div *ngIf="!isLoading() && !hasError()">
     <div class="toolbar">
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Tìm kiếm</mat-label>
@@ -107,6 +126,7 @@
     <div *ngIf="filteredData().length === 0" class="no-data">
       <mat-icon>assignment</mat-icon>
       <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có đề nghị nào' }}</p>
+    </div>
     </div>
   </mat-card-content>
 </mat-card>

@@ -133,8 +133,8 @@
         </div>
 
         <div class="nav-list">
-          <!-- Dashboard thường - chỉ hiển thị cho user không phải Manager/ManagerL1 -->
-          @if (!isManagerOrManagerL1()) {
+          <!-- Dashboard thường - chỉ hiển thị cho user không phải Manager/ManagerL1 và có quyền xem -->
+          @if (!isManagerOrManagerL1() && canViewPage('/dashboard')) {
             <a routerLink="/dashboard" 
                routerLinkActive="active"
                [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
@@ -146,8 +146,8 @@
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
             </a>
           }
-          <!-- Dashboard Quản lý - chỉ hiển thị cho Manager/ManagerL1 -->
-          @if (isManagerOrManagerL1()) {
+          <!-- Dashboard Quản lý - chỉ hiển thị cho Manager/ManagerL1 và có quyền xem -->
+          @if (isManagerOrManagerL1() && canViewPage('/manager-dashboard')) {
             <a routerLink="/manager-dashboard" 
                routerLinkActive="active"
                [matTooltip]="sidenavService.isCollapsed() ? 'Dashboard' : ''"
@@ -159,116 +159,126 @@
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Dashboard</span>
             </a>
           }
-          <a routerLink="/files" 
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>folder</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý File</span>
-          </a>
-          <a routerLink="/assignments"
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Giao Việc' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>assignment</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Giao Việc</span>
-          </a>
-          <a [routerLink]="(hasManagerRole() || hasAdminRole()) ? '/approvals' : null"
-             [routerLinkActive]="(hasManagerRole() || hasAdminRole()) ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Ký Duyệt' : ''"
-             matTooltipPosition="right"
-             [class.disabled]="!hasManagerRole() && !hasAdminRole()"
-             [class.nav-item]="true"
-             (click)="handleNavClick($event)">
-            <div class="nav-icon">
-              <mat-icon>check_circle</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Ký Duyệt</span>
-          </a>
-          <a routerLink="/work-items"
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Công Việc' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>work</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
-          </a>
-          <a routerLink="/excel-reader"
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Tra Cứu Thông Số MBA' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>table_chart</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tra Cứu Thông Số MBA</span>
-          </a>
-          <a routerLink="/tbkt-management"
-             routerLinkActive="active"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Quản Lý Đề Nghị TBKT' : ''"
-             matTooltipPosition="right"
-             class="nav-item">
-            <div class="nav-icon">
-              <mat-icon>description</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản Lý Đề Nghị TBKT</span>
-          </a>
-          <a [routerLink]="hasAdminRole() ? '/users' : null"
-             [routerLinkActive]="hasAdminRole() ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý người dùng' : ''"
-             matTooltipPosition="right"
-             [class.disabled]="!hasAdminRole()"
-             [class.nav-item]="true"
-             (click)="handleNavClick($event)">
-            <div class="nav-icon">
-              <mat-icon>people</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý User</span>
-          </a>
-          <a [routerLink]="hasAdminRole() ? '/roles' : null"
-             [routerLinkActive]="hasAdminRole() ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý Roles' : ''"
-             matTooltipPosition="right"
-             [class.disabled]="!hasAdminRole()"
-             [class.nav-item]="true"
-             (click)="handleNavClick($event)">
-            <div class="nav-icon">
-              <mat-icon>admin_panel_settings</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
-          </a>
-          <a [routerLink]="hasAdminRole() ? '/page-permissions' : null"
-             [routerLinkActive]="hasAdminRole() ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Phân quyền chức năng' : ''"
-             matTooltipPosition="right"
-             [class.disabled]="!hasAdminRole()"
-             [class.nav-item]="true"
-             (click)="handleNavClick($event)">
-            <div class="nav-icon">
-              <mat-icon>security</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Phân quyền chức năng</span>
-          </a>
-          <a [routerLink]="hasAdminRole() ? '/settings' : null"
-             [routerLinkActive]="hasAdminRole() ? 'active' : ''"
-             [matTooltip]="sidenavService.isCollapsed() ? 'Cài đặt hệ thống' : ''"
-             matTooltipPosition="right"
-             [class.disabled]="!hasAdminRole()"
-             [class.nav-item]="true"
-             (click)="handleNavClick($event)">
-            <div class="nav-icon">
-              <mat-icon>settings</mat-icon>
-            </div>
-            <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Cài đặt</span>
-          </a>
+          @if (canViewPage('/files')) {
+            <a routerLink="/files" 
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý File' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>folder</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý File</span>
+            </a>
+          }
+          @if (canViewPage('/assignments')) {
+            <a routerLink="/assignments"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Giao Việc' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>assignment</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Giao Việc</span>
+            </a>
+          }
+          @if ((hasManagerRole() || hasAdminRole()) && canViewPage('/approvals')) {
+            <a routerLink="/approvals"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Ký Duyệt' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Ký Duyệt</span>
+            </a>
+          }
+          @if (canViewPage('/work-items')) {
+            <a routerLink="/work-items"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Công Việc' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>work</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
+            </a>
+          }
+          @if (canViewPage('/excel-reader')) {
+            <a routerLink="/excel-reader"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Tra Cứu Thông Số MBA' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>table_chart</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tra Cứu Thông Số MBA</span>
+            </a>
+          }
+          @if (canViewPage('/tbkt-management')) {
+            <a routerLink="/tbkt-management"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản Lý Đề Nghị TBKT' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>description</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản Lý Đề Nghị TBKT</span>
+            </a>
+          }
+          @if (hasAdminRole() && canViewPage('/users')) {
+            <a routerLink="/users"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý người dùng' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>people</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý User</span>
+            </a>
+          }
+          @if (hasAdminRole() && canViewPage('/roles')) {
+            <a routerLink="/roles"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Quản lý Roles' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>admin_panel_settings</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản lý Roles</span>
+            </a>
+          }
+          @if (hasAdminRole() && canViewPage('/page-permissions')) {
+            <a routerLink="/page-permissions"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Phân quyền chức năng' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>security</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Phân quyền chức năng</span>
+            </a>
+          }
+          @if (hasAdminRole() && canViewPage('/settings')) {
+            <a routerLink="/settings"
+               routerLinkActive="active"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Cài đặt hệ thống' : ''"
+               matTooltipPosition="right"
+               class="nav-item">
+              <div class="nav-icon">
+                <mat-icon>settings</mat-icon>
+              </div>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Cài đặt</span>
+            </a>
+          }
           <div class="nav-spacer"></div>
         </div>
       </mat-sidenav>

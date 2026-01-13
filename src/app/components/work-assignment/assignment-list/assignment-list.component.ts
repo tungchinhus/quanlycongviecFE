@@ -16,6 +16,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AssignmentService } from '../../../services/assignment.service';
 import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
@@ -56,7 +57,8 @@ export type TaskStatus = typeof TASK_STATUS[keyof typeof TASK_STATUS];
     MatCheckboxModule,
     MatMenuModule,
     MatDividerModule,
-    MatSelectModule
+    MatSelectModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './assignment-list.component.html',
   styleUrls: ['./assignment-list.component.css']
@@ -73,6 +75,9 @@ export class AssignmentListComponent implements OnInit {
   readonly columnVisibility = signal<ColumnVisibility>({});
   isUserRole: boolean = false;
   isAdminOrManager: boolean = false;
+  readonly isLoading = signal<boolean>(false);
+  readonly hasError = signal<boolean>(false);
+  readonly errorMessage = signal<string>('');
   
   // Status options cho dropdown
   readonly statusOptions = [
@@ -92,6 +97,19 @@ export class AssignmentListComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Kiểm tra xem user đã đăng nhập chưa
+    if (!this.authService.isAuthenticated()) {
+      this.hasError.set(true);
+      this.errorMessage.set('Bạn chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.');
+      this.snackBar.open('Vui lòng đăng nhập để xem danh sách giao việc.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    
     this.loadTechnicalSheets();
   }
 
@@ -210,6 +228,24 @@ export class AssignmentListComponent implements OnInit {
     // Nếu là Admin/Manager, không truyền firebaseUID để xem tất cả
     // Nếu không phải Admin/Manager, truyền firebaseUID để chỉ xem của mình
     const currentUser = this.authService.user();
+    
+    if (!currentUser) {
+      this.hasError.set(true);
+      this.errorMessage.set('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+      this.isLoading.set(false);
+      this.snackBar.open('Vui lòng đăng nhập lại để tiếp tục.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.errorMessage.set('');
+    
     const firebaseUID = this.isAdminOrManager ? undefined : currentUser?.firebaseUid;
     
     console.log('Loading TechnicalSheets - isAdminOrManager:', this.isAdminOrManager, 'firebaseUID:', firebaseUID);
@@ -220,13 +256,33 @@ export class AssignmentListComponent implements OnInit {
         this.technicalSheets.set(sheets || []);
         this.updateFilteredTechnicalSheets();
         console.log('Updated filteredTechnicalSheets:', this.filteredTechnicalSheets.length);
+        this.isLoading.set(false);
+        this.hasError.set(false);
       },
       error: (err) => {
         console.error('Error loading technical sheets:', err);
         this.technicalSheets.set([]);
         this.filteredTechnicalSheets = [];
-        this.snackBar.open('Không thể tải danh sách đề nghị. Vui lòng thử lại sau.', 'Đóng', {
-          duration: 3000,
+        this.isLoading.set(false);
+        this.hasError.set(true);
+        
+        let errorMsg = 'Không thể tải danh sách đề nghị. ';
+        
+        if (err.status === 401 || err.status === 403) {
+          errorMsg += 'Bạn không có quyền truy cập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        } else if (err.status === 404) {
+          errorMsg += 'Không tìm thấy dữ liệu.';
+        } else if (err.status === 500) {
+          errorMsg += 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+        } else if (err.status === 0 || err.status === undefined) {
+          errorMsg += 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+        } else {
+          errorMsg += `Lỗi: ${err.status} - ${err.message || 'Vui lòng thử lại sau.'}`;
+        }
+        
+        this.errorMessage.set(errorMsg);
+        this.snackBar.open(errorMsg, 'Đóng', {
+          duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'top',
           panelClass: ['error-snackbar']
@@ -237,11 +293,18 @@ export class AssignmentListComponent implements OnInit {
     // Load assignments để kiểm tra xem technical sheet nào đã có assignment
     this.assignmentService.getAllAssignments().subscribe({
       next: (assignments) => {
-        this.assignments = assignments;
+        this.assignments = assignments || [];
+        // Reload filtered data sau khi assignments được load
+        this.updateFilteredTechnicalSheets();
       },
       error: (err) => {
         console.error('Error loading assignments:', err);
-        // Không hiển thị lỗi vì đây chỉ để kiểm tra trạng thái
+        // Vẫn hiển thị lỗi nhưng không chặn việc hiển thị technical sheets
+        // Chỉ log để debug, không set hasError vì technical sheets vẫn có thể hiển thị
+        if (err.status === 401 || err.status === 403) {
+          console.warn('Không có quyền xem assignments, nhưng vẫn có thể xem technical sheets');
+        }
+        this.assignments = [];
       }
     });
   }

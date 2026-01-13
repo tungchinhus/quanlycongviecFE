@@ -17,6 +17,7 @@ import { AuthService } from './services/auth.service';
 import { NotificationService, Notification } from './services/notification.service';
 import { SettingsService } from './services/settings.service';
 import { SignalRService } from './services/signalr.service';
+import { PagePermissionService, UserPagePermission } from './services/page-permission.service';
 import { ChangePasswordDialogComponent } from './components/change-password-dialog/change-password-dialog.component';
 import { UserRole } from './constants/enums';
 import { filter, Subscription, interval } from 'rxjs';
@@ -54,6 +55,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private settingsService = inject(SettingsService);
   private signalRService = inject(SignalRService);
+  private pagePermissionService = inject(PagePermissionService);
   
   isLoginPage = false;
   currentYear = new Date().getFullYear();
@@ -62,6 +64,26 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly notifications = signal<Notification[]>([]);
   readonly isLoadingNotifications = signal<boolean>(false);
   private notificationSubscription?: Subscription;
+  
+  // Page permissions cache
+  private userPagePermissions = signal<UserPagePermission[]>([]);
+  private permissionsLoaded = signal<boolean>(false);
+  
+  // Mapping từ router path sang page route trong database
+  private readonly routeToPageRouteMap: { [key: string]: string } = {
+    '/dashboard': '/dashboard',
+    '/manager-dashboard': '/dashboard',
+    '/files': '/files',
+    '/assignments': '/assignments',
+    '/approvals': '/approvals',
+    '/work-items': '/work-items',
+    '/excel-reader': '/excel-reader',
+    '/tbkt-management': '/tbkt-list',
+    '/users': '/users',
+    '/roles': '/roles',
+    '/page-permissions': '/page-permissions',
+    '/settings': '/settings'
+  };
 
   // Check if user is Admin or Manager
   get isAdminOrManager(): boolean {
@@ -86,18 +108,19 @@ export class AppComponent implements OnInit, OnDestroy {
     // Kiểm tra route ban đầu
     this.isLoginPage = this.router.url === '/login';
 
-    // Lắng nghe thay đổi auth state để load notifications khi user login
+    // Lắng nghe thay đổi auth state để load notifications và permissions khi user login
     effect(() => {
       const user = this.authService.user();
       if (user && this.isAuthenticated) {
-        // User đã authenticated, load notifications và start SignalR
+        // User đã authenticated, load notifications, permissions và start SignalR
         // Use setTimeout to ensure DOM is ready
         setTimeout(() => {
           this.loadNotificationPreference();
           this.startSignalRConnection();
+          this.loadUserPagePermissions();
         }, 100);
       } else {
-        // User chưa authenticated, stop SignalR
+        // User chưa authenticated, stop SignalR và clear permissions
         this.signalRService.stopConnection();
         if (this.notificationSubscription) {
           this.notificationSubscription.unsubscribe();
@@ -105,6 +128,8 @@ export class AppComponent implements OnInit, OnDestroy {
         }
         this.unreadNotificationCount.set(0);
         this.showNotificationBadge.set(false);
+        this.userPagePermissions.set([]);
+        this.permissionsLoaded.set(false);
         // Clear sync flag when user logs out
         const syncKey = 'notifications_synced';
         if (user) {
@@ -128,6 +153,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.isAuthenticated) {
       this.loadNotificationPreference();
       this.startSignalRConnection();
+      this.loadUserPagePermissions();
     }
     
     // Listen for custom unreadCountChanged event (fallback when SignalR is not connected)
@@ -139,6 +165,61 @@ export class AppComponent implements OnInit, OnDestroy {
         this.loadUnreadCount();
       }
     }) as EventListener);
+  }
+  
+  /**
+   * Load page permissions của user hiện tại
+   */
+  loadUserPagePermissions(): void {
+    if (!this.isAuthenticated || this.permissionsLoaded()) {
+      return;
+    }
+    
+    this.pagePermissionService.getMyPagePermissions().subscribe({
+      next: (permissions) => {
+        this.userPagePermissions.set(permissions);
+        this.permissionsLoaded.set(true);
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading user page permissions:', error);
+        // Nếu lỗi, vẫn set loaded để tránh retry liên tục
+        this.permissionsLoaded.set(true);
+      }
+    });
+  }
+  
+  /**
+   * Kiểm tra xem user có quyền xem một page route không
+   * @param route Router path (ví dụ: '/dashboard', '/files')
+   * @returns true nếu user có quyền xem, false nếu không
+   */
+  canViewPage(route: string): boolean {
+    // Admin luôn có quyền xem tất cả
+    if (this.hasAdminRole()) {
+      return true;
+    }
+    
+    // Nếu chưa load permissions, cho phép tạm thời (sẽ được update sau khi load xong)
+    if (!this.permissionsLoaded()) {
+      return true;
+    }
+    
+    // Map router path sang page route trong database
+    const pageRoute = this.routeToPageRouteMap[route] || route;
+    
+    // Tìm permission cho page route này
+    const permission = this.userPagePermissions().find(
+      p => p.pageRoute === pageRoute
+    );
+    
+    // Nếu không có permission record, mặc định cho phép (backward compatibility)
+    if (!permission) {
+      return true;
+    }
+    
+    // Kiểm tra canView
+    return permission.canView;
   }
 
   ngOnDestroy() {
