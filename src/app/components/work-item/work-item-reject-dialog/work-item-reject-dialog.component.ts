@@ -1,4 +1,4 @@
-import { Component, Inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -8,7 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { WorkItemWithAssignment } from '../../../models/machine-assignment.model';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { WorkItemWithAssignment, WorkItem } from '../../../models/machine-assignment.model';
 import { WorkItemService } from '../../../services/work-item.service';
 import { NotificationService } from '../../../services/notification.service';
 
@@ -24,14 +25,16 @@ import { NotificationService } from '../../../services/notification.service';
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ],
   templateUrl: './work-item-reject-dialog.component.html',
   styleUrls: ['./work-item-reject-dialog.component.css']
 })
-export class WorkItemRejectDialogComponent {
+export class WorkItemRejectDialogComponent implements OnInit {
   rejectForm: FormGroup;
   isRejecting = signal<boolean>(false);
+  designWorkItem: WorkItem | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -48,7 +51,66 @@ export class WorkItemRejectDialogComponent {
     });
   }
 
+  ngOnInit() {
+    this.findDesignWorkItem();
+  }
+
+  findDesignWorkItem() {
+    const assignment = this.data.workItem.assignment;
+    if (!assignment) {
+      return;
+    }
+    
+    const reviewWorkType = this.data.workItem.workType;
+    let designWorkType: string | null = null;
+    
+    if (reviewWorkType === 'Core Review') {
+      designWorkType = 'Core Design';
+    } else if (reviewWorkType === 'Casing Review') {
+      designWorkType = 'Casing Design';
+    }
+    
+    if (designWorkType && assignment.workItems) {
+      this.designWorkItem = assignment.workItems.find(
+        item => item.workType === designWorkType
+      ) || null;
+    } else if (designWorkType && this.data.workItem.assignmentID) {
+      // Load work items if not available
+      this.workItemService.getWorkItemsByAssignment(this.data.workItem.assignmentID).subscribe({
+        next: (workItems) => {
+          this.designWorkItem = workItems.find(
+            item => item.workType === designWorkType
+          ) || null;
+        },
+        error: (err) => {
+        }
+      });
+    }
+  }
+
+  // Kiểm tra xem design work item đã được xác nhận chưa
+  isDesignWorkItemConfirmed(): boolean {
+    if (!this.designWorkItem) {
+      return false;
+    }
+    const confirmationValue: any = this.designWorkItem.personConfirmation;
+    return confirmationValue === true || 
+           confirmationValue === 1 || 
+           (typeof confirmationValue === 'string' && confirmationValue === '1');
+  }
+
   onReject() {
+    // Kiểm tra nếu design workitem chưa xác nhận thì không cho phép từ chối
+    if (!this.isDesignWorkItemConfirmed()) {
+      this.snackBar.open('Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     if (this.rejectForm.invalid) {
       this.rejectForm.markAllAsTouched();
       return;
@@ -94,7 +156,6 @@ export class WorkItemRejectDialogComponent {
       },
       error: (err) => {
         this.isRejecting.set(false);
-        console.error('Error rejecting work item:', err);
         let errorMessage = 'Lỗi khi từ chối công việc';
         
         if (err.error?.message) {

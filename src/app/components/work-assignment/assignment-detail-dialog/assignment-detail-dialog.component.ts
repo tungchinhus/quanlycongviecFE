@@ -25,6 +25,7 @@ import { FileDocument } from '../../../models/file.model';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { parseDateSafe, formatDateOnly } from '../../../utils/date.util';
 
 @Component({
   selector: 'app-assignment-detail-dialog',
@@ -158,9 +159,9 @@ export class AssignmentDetailDialogComponent implements OnInit {
     this.workItemForms.clear();
     this.filteredWorkItems.forEach(item => {
       const form = this.fb.group({
-        startDate: [item.startDate ? new Date(item.startDate) : null],
-        expectedFinish: [item.expectedFinish ? new Date(item.expectedFinish) : null],
-        actualFinish: [item.actualFinish ? new Date(item.actualFinish) : null],
+        startDate: [parseDateSafe(item.startDate)],
+        expectedFinish: [parseDateSafe(item.expectedFinish)],
+        actualFinish: [parseDateSafe(item.actualFinish)],
         notes: [item.notes || '']
       });
       this.workItemForms.set(item.workItemID, form);
@@ -184,14 +185,16 @@ export class AssignmentDetailDialogComponent implements OnInit {
       const formValue = form.value;
       const updateData: any = {};
       
+      // Sử dụng formatDateOnly để gửi chỉ date (YYYY-MM-DD) không có time và timezone
+      // Tránh lỗi timezone khi backend parse date
       if (formValue.startDate) {
-        updateData.startDate = new Date(formValue.startDate).toISOString();
+        updateData.startDate = formatDateOnly(new Date(formValue.startDate));
       }
       if (formValue.expectedFinish) {
-        updateData.expectedFinish = new Date(formValue.expectedFinish).toISOString();
+        updateData.expectedFinish = formatDateOnly(new Date(formValue.expectedFinish));
       }
       if (formValue.actualFinish) {
-        updateData.actualFinish = new Date(formValue.actualFinish).toISOString();
+        updateData.actualFinish = formatDateOnly(new Date(formValue.actualFinish));
       }
       if (formValue.notes !== undefined) {
         updateData.notes = formValue.notes;

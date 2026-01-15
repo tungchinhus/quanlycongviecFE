@@ -191,6 +191,14 @@
       <mat-icon *ngIf="!isConfirming()">check_circle</mat-icon>
       <span>{{ isConfirming() ? 'Đang xác nhận...' : 'Xác Nhận' }}</span>
     </button>
+    <button 
+      *ngIf="shouldShowUnlockButton()"
+      mat-raised-button 
+      color="accent" 
+      (click)="unlockAssignment()">
+      <mat-icon>lock_open</mat-icon>
+      <span>Mở khóa</span>
+    </button>
   </mat-dialog-actions>
 </div>
 

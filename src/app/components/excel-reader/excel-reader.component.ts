@@ -479,7 +479,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         });
         
       } catch (error) {
-        console.error('Error reading Excel file:', error);
         const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
         this.snackBar.open(`Lỗi khi đọc file: ${errorMessage}`, 'Đóng', {
           duration: 5000,
@@ -637,7 +636,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       });
       
     } catch (error) {
-      console.error('Error reading data with selected columns:', error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       this.snackBar.open(`Lỗi khi đọc dữ liệu: ${errorMessage}`, 'Đóng', {
         duration: 5000,
@@ -815,11 +813,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
       }
     });
     
-    // Log mapping để debug
-    console.log('Excel Columns:', excelColumns);
-    console.log('Column Mapping:', columnMapping);
-    console.log('Unmapped columns:', excelColumns.filter(col => !usedColumns.has(col)));
-    
     // Map dữ liệu
     const mappedData = data.map((row, rowIndex) => {
       const mappedRow: ExcelData = {};
@@ -832,17 +825,8 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         }
       });
       
-      // Log sample rows để debug
-      if (rowIndex < 3) {
-        console.log(`Row ${rowIndex + 1} - Original:`, row);
-        console.log(`Row ${rowIndex + 1} - Mapped:`, mappedRow);
-      }
-      
       return mappedRow;
     });
-    
-    console.log('Total mapped rows:', mappedData.length);
-    console.log('Sample mapped data (first 3 rows):', mappedData.slice(0, 3));
     
     return mappedData;
   }
@@ -1468,15 +1452,9 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         return tbktA.localeCompare(tbktB);
       });
       
-      // Log để debug
-      console.log('Tổng số nhóm:', sortedGroups.length);
-      console.log('Các nhóm:', sortedGroups);
-      
       sortedGroups.forEach(key => {
         const [congSuat, tbkt] = key.split('_');
         const groupData = groupedData[key];
-        
-        console.log(`Nhóm: Công suất=${congSuat}, TBKT=${tbkt}, Số dòng=${groupData.length}`);
         
         // Tính toán thống kê cho toàn bộ nhóm (không phân loại máy)
         const stats = this.calculateStatistics(groupData, congSuat, tbkt, mapping);
@@ -1484,8 +1462,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         // Thêm 1 dòng thống kê cho mỗi nhóm
         statisticsRows.push(stats);
       });
-      
-      console.log('Tổng số dòng thống kê:', statisticsRows.length);
       
       // Gọi backend API để xử lý Excel với chart
       this.isLoading.set(true);
@@ -1569,10 +1545,8 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         });
       } catch (apiError) {
         this.isLoading.set(false);
-        console.error('Error calling backend API:', apiError);
         
         // Fallback: thử xử lý trực tiếp nếu backend không khả dụng
-        console.warn('Backend API không khả dụng, sử dụng fallback (chart có thể bị mất)');
         this.snackBar.open(
           'Backend API không khả dụng. Đang sử dụng phương pháp dự phòng (chart có thể bị mất).', 
           'Đóng', 
@@ -1588,7 +1562,6 @@ export class ExcelReaderComponent implements OnInit, AfterViewInit {
         throw apiError;
       }
     } catch (error) {
-      console.error('Error exporting to Excel:', error);
       const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
       this.snackBar.open(`Lỗi khi xuất file: ${errorMessage}`, 'Đóng', {
         duration: 5000,

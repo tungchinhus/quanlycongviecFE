@@ -22,7 +22,6 @@ export class SignalRService {
     const token = localStorage.getItem('token');
     
     if (!user || !token) {
-      console.warn('Cannot start SignalR: User not authenticated');
       return;
     }
 
@@ -48,25 +47,20 @@ export class SignalRService {
 
     // Handle connection events
     this.hubConnection.onclose((error) => {
-      console.log('SignalR connection closed', error);
       this.reconnectAttempts = 0;
     });
 
     this.hubConnection.onreconnecting((error) => {
-      console.log('SignalR reconnecting...', error);
       this.reconnectAttempts++;
     });
 
     this.hubConnection.onreconnected((connectionId) => {
-      console.log('SignalR reconnected', connectionId);
       this.reconnectAttempts = 0;
     });
 
     try {
       await this.hubConnection.start();
-      console.log('SignalR connection started');
     } catch (error) {
-      console.error('Error starting SignalR connection:', error);
     }
   }
 

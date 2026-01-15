@@ -248,19 +248,14 @@ export class AssignmentListComponent implements OnInit {
     
     const firebaseUID = this.isAdminOrManager ? undefined : currentUser?.firebaseUid;
     
-    console.log('Loading TechnicalSheets - isAdminOrManager:', this.isAdminOrManager, 'firebaseUID:', firebaseUID);
-    
     this.assignmentService.getAllTechnicalSheets(firebaseUID).subscribe({
       next: (sheets) => {
-        console.log('Received TechnicalSheets:', sheets.length, sheets);
         this.technicalSheets.set(sheets || []);
         this.updateFilteredTechnicalSheets();
-        console.log('Updated filteredTechnicalSheets:', this.filteredTechnicalSheets.length);
         this.isLoading.set(false);
         this.hasError.set(false);
       },
       error: (err) => {
-        console.error('Error loading technical sheets:', err);
         this.technicalSheets.set([]);
         this.filteredTechnicalSheets = [];
         this.isLoading.set(false);
@@ -298,12 +293,8 @@ export class AssignmentListComponent implements OnInit {
         this.updateFilteredTechnicalSheets();
       },
       error: (err) => {
-        console.error('Error loading assignments:', err);
         // Vẫn hiển thị lỗi nhưng không chặn việc hiển thị technical sheets
         // Chỉ log để debug, không set hasError vì technical sheets vẫn có thể hiển thị
-        if (err.status === 401 || err.status === 403) {
-          console.warn('Không có quyền xem assignments, nhưng vẫn có thể xem technical sheets');
-        }
         this.assignments = [];
       }
     });
@@ -562,8 +553,6 @@ export class AssignmentListComponent implements OnInit {
           this.loadTechnicalSheets();
         },
         error: (err) => {
-          console.error('Error deleting technical sheet:', err);
-          
           let errorMessage = 'Không thể xóa đề nghị. ';
           
           if (err.status === 500) {

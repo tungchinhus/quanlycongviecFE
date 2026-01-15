@@ -31,7 +31,8 @@
       mat-raised-button 
       color="warn" 
       (click)="onReject()" 
-      [disabled]="isRejecting() || rejectForm.invalid">
+      [disabled]="isRejecting() || rejectForm.invalid || !isDesignWorkItemConfirmed()"
+      [matTooltip]="!isDesignWorkItemConfirmed() ? 'Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.' : ''">
       <mat-spinner *ngIf="isRejecting()" diameter="20" class="button-spinner"></mat-spinner>
       <mat-icon *ngIf="!isRejecting()">cancel</mat-icon>
       <span>{{ isRejecting() ? 'Đang từ chối...' : 'Từ Chối' }}</span>

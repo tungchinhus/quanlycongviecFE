@@ -182,7 +182,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error loading user page permissions:', error);
         // Nếu lỗi, vẫn set loaded để tránh retry liên tục
         this.permissionsLoaded.set(true);
       }
@@ -242,7 +241,6 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error loading notification preference:', error);
         // Default to showing badge if we can't load preference
         this.showNotificationBadge.set(true);
         this.syncNotificationsIfNeeded();
@@ -273,14 +271,12 @@ export class AppComponent implements OnInit, OnDestroy {
     // Sync notifications in background (don't block UI)
     this.notificationService.syncMyNotifications().subscribe({
       next: (response) => {
-        console.log('Notifications synced:', response);
         // Mark as synced for this user
         sessionStorage.setItem(userSyncKey, new Date().toISOString());
         // Reload unread count after sync
         this.loadUnreadCount();
       },
       error: (error) => {
-        console.error('Error syncing notifications:', error);
         // Still mark as attempted to avoid repeated failures
         sessionStorage.setItem(userSyncKey, new Date().toISOString());
       }
@@ -295,7 +291,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error loading unread count:', error);
       }
     });
   }
@@ -309,7 +304,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Listen for new notifications
     this.signalRService.onNotificationReceived((notification) => {
-      console.log('New notification received:', notification);
       // Reload notifications if menu is open
       if (this.notifications().length > 0) {
         this.loadNotifications();
@@ -320,7 +314,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Listen for notification removed (work item completed)
     this.signalRService.onNotificationRemoved((data) => {
-      console.log('Notification removed:', data);
       // Remove from local list if exists
       const updatedNotifications = this.notifications().filter(
         n => !(n.relatedEntityType === 'WorkItem' && n.relatedEntityId === data.workItemId)
@@ -332,7 +325,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Listen for unread count changes
     this.signalRService.onUnreadCountChanged(() => {
-      console.log('Unread count changed');
       this.loadUnreadCount();
       // Reload notifications if menu is open
       if (this.notifications().length > 0) {
@@ -379,7 +371,6 @@ export class AppComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error in backup polling:', error);
         }
       });
   }
@@ -464,7 +455,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.router.navigate(['/login']);
       },
       error: (error) => {
-        console.error('Logout error:', error);
         // Vẫn navigate về login ngay cả khi có lỗi
         this.router.navigate(['/login']);
       }
@@ -480,7 +470,6 @@ export class AppComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Password changed successfully
-        console.log('Password changed successfully');
       }
     });
   }
@@ -504,7 +493,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.loadUnreadCount();
       },
       error: (error) => {
-        console.error('Error loading notifications:', error);
         this.isLoadingNotifications.set(false);
       }
     });

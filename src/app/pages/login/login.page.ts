@@ -99,13 +99,6 @@ export class LoginPage implements OnDestroy {
         },
         error: (error) => {
           this.isLoading = false;
-          console.error('Login error:', error);
-          console.error('Error details:', {
-            code: error.code,
-            message: error.message,
-            status: error.status,
-            error: error.error
-          });
           
           // Xử lý các loại lỗi Firebase
           let errorMsg = 'Đăng nhập thất bại. Vui lòng thử lại.';

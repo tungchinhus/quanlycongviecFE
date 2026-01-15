@@ -25,6 +25,7 @@ import { catchError } from 'rxjs/operators';
 import { WorkItem, WorkChange, TechnicalSheet } from '../../../models/machine-assignment.model';
 import { FileDocument } from '../../../models/file.model';
 import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
+import { formatDateOnly } from '../../../utils/date.util';
 
 @Component({
   selector: 'app-assignment-form-dialog',
@@ -328,6 +329,28 @@ export class AssignmentFormDialogComponent implements OnInit {
     });
   }
 
+  /**
+   * Format date to ISO string with local timezone offset
+   * This ensures the date saved matches what the user entered in the UI
+   * Format: YYYY-MM-DDTHH:mm:ss+HH:mm (local time at midnight with timezone offset)
+   */
+  formatLocalDate(date: Date): string {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // Get timezone offset in minutes and convert to HH:mm format
+    const offsetMinutes = date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+    
+    // Return ISO string with local midnight and timezone offset
+    return `${year}-${month}-${day}T00:00:00${offsetString}`;
+  }
+
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -359,7 +382,9 @@ export class AssignmentFormDialogComponent implements OnInit {
       requestDocument: formValue.requestDocument?.trim() || '',
       standardRequirement: formValue.standardRequirement?.trim() || '',
       additionalRequest: formValue.additionalRequest?.trim() || '',
-      deliveryDate: formValue.deliveryDate ? new Date(formValue.deliveryDate).toISOString() : null,
+      // Sử dụng formatDateOnly để gửi chỉ date (YYYY-MM-DD) không có time và timezone
+      // Tránh lỗi timezone khi backend parse date
+      deliveryDate: formValue.deliveryDate ? formatDateOnly(new Date(formValue.deliveryDate)) : null,
       designer: formValue.designer ? formValue.designer.toString() : '',
       teamLeader: formValue.teamLeader ? formValue.teamLeader.toString() : ''
     };

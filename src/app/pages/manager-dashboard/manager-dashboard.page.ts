@@ -96,7 +96,6 @@ export class ManagerDashboardPage implements OnInit, AfterViewInit {
         }, 200);
       },
       error: (err) => {
-        console.error('Error loading manager dashboard data:', err);
         this.error.set('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
         this.loading.set(false);
       }
@@ -113,7 +112,6 @@ export class ManagerDashboardPage implements OnInit, AfterViewInit {
         try {
           chart.chart.update();
         } catch (error) {
-          console.error('Error updating chart:', error);
         }
       }
     });

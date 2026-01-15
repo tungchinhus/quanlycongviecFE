@@ -1,6 +1,6 @@
 import { Component, Inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,8 @@ import { WorkItemService } from '../../../services/work-item.service';
 import { FileDocument } from '../../../models/file.model';
 import { AuthService, AuthUser } from '../../../services/auth.service';
 import { UsersService } from '../../../services/users.service';
+import { AssignmentService } from '../../../services/assignment.service';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-work-item-review-detail-dialog',
@@ -56,10 +58,12 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
 
   constructor(
     private dialogRef: MatDialogRef<WorkItemReviewDetailDialogComponent>,
+    private dialog: MatDialog,
     private fileService: FileService,
     private workItemService: WorkItemService,
     private authService: AuthService,
     private usersService: UsersService,
+    private assignmentService: AssignmentService,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: { 
       workItem: WorkItemWithAssignment;
@@ -83,7 +87,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
         this.findDesignWorkItem();
       },
       error: (err) => {
-        console.error('Error loading users:', err);
         this.findDesignWorkItem();
       }
     });
@@ -114,7 +117,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
             this.loadFiles();
           },
           error: (err) => {
-            console.error('Error loading work items:', err);
             this.isLoading = false;
           }
         });
@@ -140,13 +142,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
       this.designWorkItem = workItems.find(
         item => item.workType === designWorkType
       ) || null;
-      
-      console.log('Design work item found:', {
-        designWorkType,
-        found: !!this.designWorkItem,
-        personName: this.designWorkItem?.personName,
-        personConfirmation: this.designWorkItem?.personConfirmation
-      });
     }
   }
 
@@ -186,9 +181,9 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
         // Tách files thành 2 nhóm: file giao việc và file thiết kế
         this.separateFiles(files);
         this.isLoading = false;
+        
       },
       error: (err) => {
-        console.error('Error loading files:', err);
         this.assignmentFiles = [];
         this.designFiles = [];
         this.files = [];
@@ -369,7 +364,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: (err) => {
-        console.error('Error downloading file:', err);
         const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi khi tải file';
         this.snackBar.open(errorMessage, 'Đóng', {
           duration: 5000,
@@ -434,7 +428,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
         }, 100);
       },
       error: (err) => {
-        console.error('Error viewing file:', err);
         const errorMessage = err.error?.message || err.error?.error || err.message || 'Lỗi khi xem file';
         this.snackBar.open(errorMessage, 'Đóng', {
           duration: 5000,
@@ -481,7 +474,6 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
       },
       error: (err) => {
         this.isConfirming.set(false);
-        console.error('Error confirming work item:', err);
         let errorMessage = 'Lỗi khi xác nhận công việc';
         
         if (err.error?.message) {
@@ -519,6 +511,76 @@ export class WorkItemReviewDetailDialogComponent implements OnInit {
     );
     
     return user ? (user.name || user.userName || personId) : personId;
+  }
+
+  // Kiểm tra xem có nên hiển thị nút mở khóa không
+  // Hiển thị khi design workitem đã xác nhận hoàn thành (cho phép nv kiểm soát mở khóa để nv thiết kế chỉnh sửa lại)
+  shouldShowUnlockButton(): boolean {
+    if (!this.reviewWorkItem.assignmentID) {
+      return false;
+    }
+    
+    // Chỉ hiển thị khi design workitem đã xác nhận hoàn thành
+    // Không cần kiểm tra assignment có bị khóa hay không, vì mục đích là cho phép mở khóa
+    // Không cần kiểm tra review workitem đã xác nhận hay chưa
+    return this.isDesignWorkItemConfirmed();
+  }
+
+  // Mở khóa assignment để cho phép user thiết kế update workitem
+  unlockAssignment() {
+    if (!this.reviewWorkItem.assignmentID) {
+      this.snackBar.open('Không tìm thấy thông tin assignment', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const machineName = this.reviewWorkItem.assignment?.machineName || 'assignment';
+    const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Mở khóa Assignment',
+        message: `Bạn có chắc chắn muốn mở khóa assignment "${machineName}" để cho phép user thiết kế chỉnh sửa workitem?`,
+        confirmText: 'Mở khóa',
+        cancelText: 'Hủy'
+      }
+    });
+
+    confirmDialog.afterClosed().subscribe(result => {
+      if (result) {
+        this.assignmentService.unlockAssignment(this.reviewWorkItem.assignmentID).subscribe({
+          next: (response) => {
+            this.snackBar.open('Đã mở khóa assignment thành công!', 'Đóng', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top'
+            });
+            // Cập nhật trạng thái assignment
+            if (this.reviewWorkItem.assignment) {
+              this.reviewWorkItem.assignment.isLocked = false;
+            }
+            this.dialogRef.close(true);
+          },
+          error: (err) => {
+            let errorMessage = 'Lỗi khi mở khóa assignment. ';
+            if (err.error?.message) {
+              errorMessage += err.error.message;
+            } else {
+              errorMessage += 'Vui lòng thử lại sau.';
+            }
+            this.snackBar.open(errorMessage, 'Đóng', {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
+      }
+    });
   }
 }
 

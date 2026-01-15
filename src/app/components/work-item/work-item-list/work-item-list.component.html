@@ -53,7 +53,7 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Thao tác</th>
         <td mat-cell *matCellDef="let item">
-          <button mat-icon-button [matMenuTriggerFor]="menu" [matTooltip]="'Tùy chọn'">
+          <button mat-icon-button [matMenuTriggerFor]="menu" [matTooltip]="'Tùy chọn'" (click)="onMenuOpen(item)">
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #menu="matMenu">
@@ -65,11 +65,21 @@
                 <mat-icon>visibility</mat-icon>
                 <span>Xem chi tiết</span>
               </button>
-              <button mat-menu-item (click)="confirmWorkItem(item)" *ngIf="!item.personConfirmation">
+              <button 
+                mat-menu-item 
+                (click)="confirmWorkItem(item)" 
+                *ngIf="!item.personConfirmation"
+                [disabled]="!isDesignWorkItemConfirmed(item)"
+                [matTooltip]="!isDesignWorkItemConfirmed(item) ? 'Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.' : ''">
                 <mat-icon>check_circle</mat-icon>
                 <span>Xác nhận</span>
               </button>
-              <button mat-menu-item (click)="rejectWorkItem(item)" *ngIf="!item.personConfirmation">
+              <button 
+                mat-menu-item 
+                (click)="rejectWorkItem(item)" 
+                *ngIf="!item.personConfirmation"
+                [disabled]="!isDesignWorkItemConfirmed(item)"
+                [matTooltip]="!isDesignWorkItemConfirmed(item) ? 'Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.' : ''">
                 <mat-icon>cancel</mat-icon>
                 <span>Từ chối</span>
               </button>
@@ -96,9 +106,12 @@
               </button>
             </ng-container>
             
-            <!-- Menu mở khóa assignment: Cho user kiểm soát (sau khi xác nhận) hoặc Manager/Admin -->
+            <!-- Menu mở khóa assignment: Cho user kiểm soát khi design workitem đã xác nhận hoặc Manager/Admin -->
             <mat-divider *ngIf="shouldShowUnlockButton(item)"></mat-divider>
-            <button mat-menu-item (click)="unlockAssignment(item)" *ngIf="shouldShowUnlockButton(item)">
+            <button 
+              mat-menu-item 
+              (click)="unlockAssignment(item)" 
+              *ngIf="shouldShowUnlockButton(item)">
               <mat-icon>lock_open</mat-icon>
               <span>Mở khóa</span>
             </button>

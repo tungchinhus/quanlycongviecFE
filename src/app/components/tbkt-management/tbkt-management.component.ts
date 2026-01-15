@@ -199,6 +199,28 @@ export class TBKTManagementComponent implements OnInit {
     });
   }
 
+  /**
+   * Format date to ISO string with local timezone offset
+   * This ensures the date saved matches what the user entered in the UI
+   * Format: YYYY-MM-DDTHH:mm:ss+HH:mm (local time at midnight with timezone offset)
+   */
+  formatLocalDate(date: Date): string {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // Get timezone offset in minutes and convert to HH:mm format
+    const offsetMinutes = date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+    
+    // Return ISO string with local midnight and timezone offset
+    return `${year}-${month}-${day}T00:00:00${offsetString}`;
+  }
+
   formatDate(date: Date | string | null | undefined): string {
     if (!date) return '-';
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -493,6 +515,28 @@ export class TBKTFormDialogComponent {
     }
   }
 
+  /**
+   * Format date to ISO string with local timezone offset
+   * This ensures the date saved matches what the user entered in the UI
+   * Format: YYYY-MM-DDTHH:mm:ss+HH:mm (local time at midnight with timezone offset)
+   */
+  formatLocalDate(date: Date): string {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // Get timezone offset in minutes and convert to HH:mm format
+    const offsetMinutes = date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+    
+    // Return ISO string with local midnight and timezone offset
+    return `${year}-${month}-${day}T00:00:00${offsetString}`;
+  }
+
   onSave(): void {
     if (this.tbktForm.invalid) {
       return;
@@ -517,9 +561,9 @@ export class TBKTFormDialogComponent {
       salesOrder: formValue.salesOrder || undefined,
       standardCode: formValue.standardCode || undefined,
       proposer: proposerFirebaseUID, // Store FirebaseUID as string
-      drawingDate: formValue.drawingDate ? formValue.drawingDate.toISOString() : undefined,
+      drawingDate: formValue.drawingDate ? this.formatLocalDate(formValue.drawingDate) : undefined,
       // archivedDate will be set automatically by backend when creating new (not when editing)
-      archivedDate: this.isEditMode ? undefined : new Date().toISOString(),
+      archivedDate: this.isEditMode ? undefined : this.formatLocalDate(new Date()),
       notes: formValue.notes || undefined
     };
 

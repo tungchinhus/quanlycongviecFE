@@ -22,6 +22,9 @@ import { WorkItemRejectDialogComponent } from '../work-item-reject-dialog/work-i
 import { WorkItemService } from '../../../services/work-item.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { NotificationService } from '../../../services/notification.service';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { formatDateOnly } from '../../../utils/date.util';
 
 @Component({
   selector: 'app-work-item-list',
@@ -93,11 +96,41 @@ export class WorkItemListComponent implements OnInit {
     this.isLoading = true;
     this.assignmentService.getMyWorkItems().subscribe({
       next: (items) => {
-        this.workItems = items;
-        this.isLoading = false;
+        // Load workItems cho các assignment nếu chưa có
+        const assignmentsNeedingWorkItems = items
+          .filter(item => item.assignment && (!item.assignment.workItems || item.assignment.workItems.length === 0))
+          .map(item => item.assignmentID)
+          .filter((id, index, self) => self.indexOf(id) === index); // unique
+        
+        if (assignmentsNeedingWorkItems.length > 0) {
+          const workItemRequests = assignmentsNeedingWorkItems.map(assignmentID =>
+            this.workItemService.getWorkItemsByAssignment(assignmentID).pipe(
+              map(workItems => ({ assignmentID, workItems })),
+              catchError(err => {
+                return of({ assignmentID, workItems: [] });
+              })
+            )
+          );
+          
+          forkJoin(workItemRequests).subscribe(results => {
+            // Cập nhật workItems vào assignments
+            results.forEach(({ assignmentID, workItems }) => {
+              items.forEach(item => {
+                if (item.assignmentID === assignmentID && item.assignment) {
+                  item.assignment.workItems = workItems;
+                }
+              });
+            });
+            
+            this.workItems = items;
+            this.isLoading = false;
+          });
+        } else {
+          this.workItems = items;
+          this.isLoading = false;
+        }
       },
       error: (err) => {
-        console.error('Error loading work items:', err);
         this.workItems = [];
         this.isLoading = false;
         
@@ -160,6 +193,17 @@ export class WorkItemListComponent implements OnInit {
       return;
     }
 
+    // Kiểm tra nếu design workitem chưa xác nhận thì không cho mở dialog xác nhận
+    if (!this.isDesignWorkItemConfirmed(item)) {
+      this.snackBar.open('Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     const dialogRef = this.dialog.open(WorkItemReviewDialogComponent, {
       width: '90%',
       maxWidth: '900px',
@@ -192,6 +236,17 @@ export class WorkItemListComponent implements OnInit {
   rejectWorkItem(item: WorkItemWithAssignment) {
     // Chỉ dùng cho review work items
     if (!this.isReviewWorkItem(item)) {
+      return;
+    }
+
+    // Kiểm tra nếu design workitem chưa xác nhận thì không cho mở dialog từ chối
+    if (!this.isDesignWorkItemConfirmed(item)) {
+      this.snackBar.open('Thiết kế chưa xác nhận hoàn thành. Vui lòng đợi người thiết kế xác nhận trước.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
       return;
     }
 
@@ -324,12 +379,25 @@ export class WorkItemListComponent implements OnInit {
 
     confirmDialog.afterClosed().subscribe(result => {
       if (result) {
-        // Cập nhật work item: set actualFinish = today, personConfirmation = true
-        const today = new Date();
-        const updateData = {
-          actualFinish: today.toISOString(),
+        // Cập nhật work item: set actualFinish = today (chỉ nếu chưa có), personConfirmation = true
+        // Nếu actualFinish đã có giá trị, giữ nguyên để không ghi đè ngày cũ
+        const updateData: any = {
           personConfirmation: true
         };
+        
+        // Chỉ set actualFinish nếu chưa có giá trị
+        if (!item.actualFinish) {
+          // Lấy ngày hiện tại từ local timezone để tránh lỗi timezone
+          // Tạo Date object từ local date components thay vì new Date() để đảm bảo đúng ngày
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth();
+          const day = now.getDate();
+          // Tạo Date object mới từ local date components (không có time, chỉ date)
+          const today = new Date(year, month, day);
+          const actualFinishDate = formatDateOnly(today);
+          updateData.actualFinish = actualFinishDate || undefined;
+        }
 
         this.workItemService.updateWorkItem(item.workItemID, updateData).subscribe({
           next: () => {
@@ -341,7 +409,6 @@ export class WorkItemListComponent implements OnInit {
             this.loadWorkItems(); // Reload danh sách
           },
           error: (err) => {
-            console.error('Error completing work item:', err);
             let errorMessage = 'Lỗi khi cập nhật công việc. ';
             if (err.error?.message) {
               errorMessage += err.error.message;
@@ -367,12 +434,16 @@ export class WorkItemListComponent implements OnInit {
       //   next: () => this.loadWorkItems(),
       //   error: (err) => console.error('Error deleting work item:', err)
       // });
-      console.warn('Delete work item not implemented yet');
     }
   }
 
   getMachineName(item: WorkItemWithAssignment): string {
     return item.assignment?.machineName || `Assignment #${item.assignmentID}`;
+  }
+
+  // Handler khi menu được mở
+  onMenuOpen(item: WorkItemWithAssignment) {
+    // Method này có thể được mở rộng trong tương lai nếu cần
   }
 
   isWorkItemCompleted(item: WorkItemWithAssignment): boolean {
@@ -415,20 +486,21 @@ export class WorkItemListComponent implements OnInit {
   }
 
   // Kiểm tra xem có nên hiển thị button unlock không (helper cho template)
-  // User kiểm soát (review workitem) có thể mở khóa sau khi đã xác nhận
+  // User kiểm soát (review workitem) có thể mở khóa khi design workitem đã xác nhận hoàn thành
   // Manager/Admin cũng có thể mở khóa
   shouldShowUnlockButton(item: WorkItemWithAssignment): boolean {
-    if (!this.isAssignmentLocked(item)) {
-      return false;
-    }
-    
-    // Nếu là user kiểm soát (review workitem), chỉ hiển thị sau khi đã xác nhận
+    // Nếu là user kiểm soát (review workitem), hiển thị khi design workitem đã xác nhận hoàn thành
+    // Không cần kiểm tra assignment có bị khóa hay không, vì mục đích là cho phép mở khóa
     if (this.isReviewWorkItem(item)) {
-      return item.personConfirmation === true;
+      return this.isDesignWorkItemConfirmed(item);
     }
     
-    // Manager/Admin có thể mở khóa (không cần kiểm tra personConfirmation vì họ có quyền cao hơn)
-    return this.isManagerOrAdminValue;
+    // Manager/Admin có thể mở khóa khi assignment bị khóa
+    if (this.isManagerOrAdminValue) {
+      return this.isAssignmentLocked(item);
+    }
+    
+    return false;
   }
 
   // Kiểm tra xem có nên hiển thị chip "Đã khóa" không
@@ -442,6 +514,48 @@ export class WorkItemListComponent implements OnInit {
     // Chỉ hiển thị "Đã khóa" khi workitem đã được xác nhận
     // Không phân biệt user kiểm soát hay user thiết kế
     return item.personConfirmation === true;
+  }
+
+  // Kiểm tra xem design workitem đã được xác nhận chưa
+  // Dùng để disable/enable các nút xác nhận/từ chối cho user kiểm soát
+  isDesignWorkItemConfirmed(item: WorkItemWithAssignment): boolean {
+    // Chỉ áp dụng cho review work items
+    if (!this.isReviewWorkItem(item)) {
+      return false;
+    }
+
+    const assignment = item.assignment;
+    if (!assignment || !assignment.workItems || assignment.workItems.length === 0) {
+      return false;
+    }
+
+    const reviewWorkType = item.workType;
+    let designWorkType: string | null = null;
+    
+    if (reviewWorkType === 'Core Review') {
+      designWorkType = 'Core Design';
+    } else if (reviewWorkType === 'Casing Review') {
+      designWorkType = 'Casing Design';
+    }
+
+    if (!designWorkType) {
+      return false;
+    }
+
+    // Tìm workItem design tương ứng
+    const designWorkItem = assignment.workItems.find(
+      workItem => workItem.workType === designWorkType
+    );
+
+    if (!designWorkItem) {
+      return false;
+    }
+
+    // Kiểm tra personConfirmation
+    const confirmationValue: any = designWorkItem.personConfirmation;
+    return confirmationValue === true || 
+           confirmationValue === 1 || 
+           (typeof confirmationValue === 'string' && confirmationValue === '1');
   }
 
   // Mở khóa assignment để cho phép user thiết kế update workitem
@@ -478,7 +592,6 @@ export class WorkItemListComponent implements OnInit {
             this.loadWorkItems(); // Reload danh sách để cập nhật trạng thái
           },
           error: (err) => {
-            console.error('Error unlocking assignment:', err);
             let errorMessage = 'Lỗi khi mở khóa assignment. ';
             if (err.error?.message) {
               errorMessage += err.error.message;
@@ -496,5 +609,6 @@ export class WorkItemListComponent implements OnInit {
       }
     });
   }
+
 }
 

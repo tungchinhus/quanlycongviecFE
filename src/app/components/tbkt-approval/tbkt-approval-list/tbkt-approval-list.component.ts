@@ -159,7 +159,6 @@ export class TBKTApprovalListComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('Error loading TBKT approval data:', err);
         this.error.set('Không thể tải dữ liệu cần duyệt. Vui lòng thử lại sau.');
         this.loading.set(false);
       }
@@ -540,7 +539,6 @@ export class TBKTApprovalDialogComponent {
         this.dialogRef.close(true);
       },
       error: (err) => {
-        console.error('Error approving TechnicalSheet:', err);
         let errorMessage = action === 'approve' ? 'Không thể duyệt. ' : 'Không thể từ chối. ';
         
         if (err.status === 403) {

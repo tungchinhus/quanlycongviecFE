@@ -62,7 +62,6 @@ export class UsersService {
   private mapUserDtoToAuthUser(dto: UserDto | any): AuthUser {
     // Validate dto
     if (!dto) {
-      console.error('[UsersService] mapUserDtoToAuthUser: dto is null or undefined');
       throw new Error('UserDto is null or undefined');
     }
 
