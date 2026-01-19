@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject, Inject } from '@angular/core';
+import { Component, OnInit, signal, inject, Inject, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -302,9 +302,9 @@ export class TBKTManagementComponent implements OnInit {
     <mat-dialog-content>
       <form [formGroup]="tbktForm" class="tbkt-form">
         <div class="form-row">
-          <mat-form-field appearance="outline" class="tbkt-field">
+          <mat-form-field appearance="outline" class="tbkt-field" [class.mat-form-field-invalid]="tbktForm.get('tbktNumber')?.hasError('duplicate')">
             <mat-label>Số TBKT *</mat-label>
-            <input matInput formControlName="tbktNumber" placeholder="Nhập số TBKT" [readonly]="isEditMode" required (input)="onTbktNumberInput($event)" type="text" inputmode="numeric">
+            <input #tbktNumberInput matInput formControlName="tbktNumber" placeholder="Nhập số TBKT" [readonly]="isEditMode" required (input)="onTbktNumberInput($event)" type="text" inputmode="numeric">
             <mat-hint *ngIf="!isEditMode && nextTbktNumber()">Gợi ý tiếp theo: {{ nextTbktNumber() }}</mat-hint>
             <mat-error *ngIf="tbktForm.get('tbktNumber')?.hasError('required')">
               Số TBKT là bắt buộc
@@ -312,17 +312,23 @@ export class TBKTManagementComponent implements OnInit {
             <mat-error *ngIf="tbktForm.get('tbktNumber')?.hasError('pattern')">
               Chỉ được nhập số
             </mat-error>
+            <mat-error *ngIf="tbktForm.get('tbktNumber')?.hasError('duplicate')">
+              TBKT này đã tồn tại. Vui lòng nhập số hoặc chữ cái khác.
+            </mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="tbkt-field uppercase-field">
+          <mat-form-field appearance="outline" class="tbkt-field uppercase-field" [class.mat-form-field-invalid]="tbktForm.get('tbktLetter')?.hasError('duplicate')">
             <mat-label>TBKT (In hoa) *</mat-label>
-            <input matInput formControlName="tbktLetter" placeholder="Nhập chữ cái" required (input)="onTbktLetterInput($event)" type="text">
+            <input #tbktLetterInput matInput formControlName="tbktLetter" placeholder="Nhập chữ cái" required (input)="onTbktLetterInput($event)" type="text">
             <mat-hint *ngIf="!isEditMode && nextTbktLetter()">Gợi ý tiếp theo: {{ nextTbktLetter() }}</mat-hint>
             <mat-error *ngIf="tbktForm.get('tbktLetter')?.hasError('required')">
               Chữ cái TBKT là bắt buộc
             </mat-error>
             <mat-error *ngIf="tbktForm.get('tbktLetter')?.hasError('pattern')">
               Chỉ được nhập chữ cái
+            </mat-error>
+            <mat-error *ngIf="tbktForm.get('tbktLetter')?.hasError('duplicate')">
+              TBKT này đã tồn tại. Vui lòng nhập số hoặc chữ cái khác.
             </mat-error>
           </mat-form-field>
         </div>
@@ -410,6 +416,14 @@ export class TBKTManagementComponent implements OnInit {
       flex: 1;
     }
 
+    .mat-form-field-invalid .mat-form-field-outline {
+      color: #f44336 !important;
+    }
+
+    .mat-form-field-invalid .mat-form-field-label {
+      color: #f44336 !important;
+    }
+
     .uppercase-field input {
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -430,12 +444,15 @@ export class TBKTManagementComponent implements OnInit {
     }
   `]
 })
-export class TBKTFormDialogComponent {
+export class TBKTFormDialogComponent implements AfterViewInit {
   private readonly assignmentService = inject(AssignmentService);
   private readonly dialogRef = inject(MatDialogRef<TBKTFormDialogComponent>);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+
+  @ViewChild('tbktNumberInput', { static: false }) tbktNumberInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('tbktLetterInput', { static: false }) tbktLetterInput!: ElementRef<HTMLInputElement>;
 
   readonly saving = signal(false);
   readonly isEditMode: boolean;
@@ -489,6 +506,15 @@ export class TBKTFormDialogComponent {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Focus on TBKT number input after view init if not in edit mode
+    if (!this.isEditMode && this.tbktNumberInput) {
+      setTimeout(() => {
+        this.tbktNumberInput.nativeElement.focus();
+      }, 100);
+    }
+  }
+
   onTbktNumberInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     let value = input.value;
@@ -499,6 +525,19 @@ export class TBKTFormDialogComponent {
     // Update the input field directly to prevent non-numeric characters
     if (input.value !== value) {
       input.value = value;
+    }
+    // Clear duplicate error from both fields when user starts typing
+    const tbktNumberControl = this.tbktForm.get('tbktNumber');
+    const tbktLetterControl = this.tbktForm.get('tbktLetter');
+    if (tbktNumberControl?.hasError('duplicate')) {
+      const errors = { ...tbktNumberControl.errors };
+      delete errors['duplicate'];
+      tbktNumberControl.setErrors(Object.keys(errors).length > 0 ? errors : null);
+    }
+    if (tbktLetterControl?.hasError('duplicate')) {
+      const errors = { ...tbktLetterControl.errors };
+      delete errors['duplicate'];
+      tbktLetterControl.setErrors(Object.keys(errors).length > 0 ? errors : null);
     }
   }
 
@@ -512,6 +551,19 @@ export class TBKTFormDialogComponent {
     // Update the input field directly to prevent non-letter characters
     if (input.value !== value) {
       input.value = value;
+    }
+    // Clear duplicate error from both fields when user starts typing
+    const tbktNumberControl = this.tbktForm.get('tbktNumber');
+    const tbktLetterControl = this.tbktForm.get('tbktLetter');
+    if (tbktNumberControl?.hasError('duplicate')) {
+      const errors = { ...tbktNumberControl.errors };
+      delete errors['duplicate'];
+      tbktNumberControl.setErrors(Object.keys(errors).length > 0 ? errors : null);
+    }
+    if (tbktLetterControl?.hasError('duplicate')) {
+      const errors = { ...tbktLetterControl.errors };
+      delete errors['duplicate'];
+      tbktLetterControl.setErrors(Object.keys(errors).length > 0 ? errors : null);
     }
   }
 
@@ -594,12 +646,43 @@ export class TBKTFormDialogComponent {
           ? 'Không thể cập nhật đề nghị TBKT. ' 
           : 'Không thể thêm đề nghị TBKT. ';
         
+        const errorMsg = err.error?.message || '';
+        const isDuplicateError = err.status === 409 || 
+                                 errorMsg.toLowerCase().includes('already exists') ||
+                                 errorMsg.toLowerCase().includes('đã tồn tại');
+        
         if (err.status === 400) {
-          errorMessage += err.error?.message || 'Dữ liệu không hợp lệ.';
-        } else if (err.status === 409) {
+          errorMessage += errorMsg || 'Dữ liệu không hợp lệ.';
+        } else if (isDuplicateError) {
           errorMessage += 'Số TBKT đã tồn tại.';
-        } else if (err.error?.message) {
-          errorMessage += err.error.message;
+          
+          // Set error on both TBKT number and letter fields
+          const tbktNumberControl = this.tbktForm.get('tbktNumber');
+          const tbktLetterControl = this.tbktForm.get('tbktLetter');
+          
+          if (tbktNumberControl) {
+            // Preserve existing errors and add duplicate error
+            const currentErrors = tbktNumberControl.errors || {};
+            tbktNumberControl.setErrors({ ...currentErrors, duplicate: true });
+            tbktNumberControl.markAsTouched();
+          }
+          
+          if (tbktLetterControl) {
+            // Preserve existing errors and add duplicate error
+            const currentErrors = tbktLetterControl.errors || {};
+            tbktLetterControl.setErrors({ ...currentErrors, duplicate: true });
+            tbktLetterControl.markAsTouched();
+          }
+          
+          // Focus on TBKT number input field (first field)
+          setTimeout(() => {
+            if (this.tbktNumberInput?.nativeElement) {
+              this.tbktNumberInput.nativeElement.focus();
+              this.tbktNumberInput.nativeElement.select();
+            }
+          }, 100);
+        } else if (errorMsg) {
+          errorMessage += errorMsg;
         } else {
           errorMessage += 'Vui lòng thử lại sau.';
         }
