@@ -90,12 +90,17 @@ export interface WorkItem {
   assignmentID: number;
   workType?: string;
   personName?: string;
+  fullName?: string;
   startDate?: Date | string; // API trả về ISO 8601 string
   expectedFinish?: Date | string; // API trả về ISO 8601 string
   actualFinish?: Date | string; // API trả về ISO 8601 string
   personConfirmation?: boolean;
   notes?: string;
   file_ID?: string; // Comma-separated file IDs (e.g., "1,2,3")
+  machineName?: string;
+  tbkt_ID?: string;
+  power_kVA?: number;
+  deliveryDate?: Date | string; // Ngày hoàn thành của TBKT tổng (từ MachineAssignment)
 }
 
 // WorkItem với thông tin Assignment đầy đủ (từ API my-work-items)

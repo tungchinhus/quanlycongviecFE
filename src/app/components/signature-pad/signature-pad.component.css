@@ -1,0 +1,29 @@
+.signature-pad-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.signature-canvas {
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: crosshair;
+  touch-action: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.signature-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.clear-btn {
+  color: #f44336;
+}
+
+.clear-btn:hover {
+  background-color: rgba(244, 67, 54, 0.1);
+}

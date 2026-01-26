@@ -4,7 +4,10 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-header {
@@ -45,11 +48,23 @@
 
 .dashboard-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 24px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0; /* Cho phép flex items co lại */
+}
+
+.stats-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 30%;
+  min-width: 0;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
@@ -66,7 +81,16 @@
 }
 
 .stat-card {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card mat-card-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .stat-card mat-card-header {
@@ -191,13 +215,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #f5f5f5;
   outline: none !important;
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
   box-shadow: none !important;
+  justify-content: space-between;
 }
 
 .recent-machine-item:last-child {
@@ -229,6 +254,24 @@
   color: #333;
   line-height: 1.4;
   word-break: break-word;
+  flex: 1;
+}
+
+/* Machine Status Text */
+.recent-machine-item .status-text {
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Status In Progress - Màu cam */
+.recent-machine-item .status-text.status-in-progress {
+  color: #ff9800;
+}
+
+/* Status Completed - Màu xanh lá */
+.recent-machine-item .status-text.status-completed {
+  color: #4caf50;
 }
 
 .recent-machines-empty {
@@ -373,3 +416,187 @@
   }
 }
 
+/* Department Work Items Section */
+.department-work-items-section {
+  width: 70%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.department-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.department-card {
+  height: 100%;
+}
+
+.department-card mat-card-header {
+  margin-bottom: 0px;
+}
+
+.department-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.department-card mat-icon {
+  color: #2196f3;
+}
+
+.work-items-list {
+  margin-top: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.work-items-table-card {
+  margin-top: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.work-items-table-card mat-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px !important;
+}
+
+.table-wrapper {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.work-items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.work-items-table th {
+  background-color: var(--thibidi-primary, #1976d2);
+  color: white;
+  font-weight: 500;
+  padding: 12px 8px;
+  text-align: left;
+}
+
+.work-items-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.work-items-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.work-items-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* TBKT column styling - matching tbkt-management */
+.work-items-table th:nth-child(2),
+.work-items-table td:nth-child(2) {
+  font-weight: 600;
+  color: var(--thibidi-primary, #1976d2);
+}
+
+.work-items-table td:nth-child(2) {
+  font-family: 'Courier New', monospace;
+}
+
+.work-items-table th:nth-child(2) {
+  color: white;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+/* Warning row styling */
+.work-items-table tbody tr.date-warning {
+  background-color: #fff3e0 !important;
+}
+
+.work-items-table tbody tr.date-warning:hover {
+  background-color: #ffe0b2 !important;
+}
+
+.work-items-table tbody tr.date-warning td {
+  color: #e65100;
+  font-weight: 500;
+}
+
+/* Red/Error row styling */
+.work-items-table tbody tr.date-red {
+  background-color: #ffebee !important;
+}
+
+.work-items-table tbody tr.date-red:hover {
+  background-color: #ffcdd2 !important;
+}
+
+.work-items-table tbody tr.date-red td {
+  color: #c62828;
+  font-weight: 500;
+}
+
+.no-work-items {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .department-work-items-section {
+    width: 100%;
+  }
+
+  .stats-column {
+    width: 100%;
+  }
+
+  .department-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .work-items-list {
+    max-height: 400px;
+  }
+
+  .work-items-table {
+    font-size: 12px;
+  }
+
+  .work-items-table th,
+  .work-items-table td {
+    padding: 8px 4px;
+  }
+}

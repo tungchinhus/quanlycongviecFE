@@ -64,7 +64,14 @@
           <!-- TBKT Column -->
           <ng-container matColumnDef="tbkt_ID">
             <th mat-header-cell *matHeaderCellDef class="tbkt-id-header">TBKT</th>
-            <td mat-cell *matCellDef="let element" class="tbkt-id-cell">{{ element.tbkt_ID || '-' }}</td>
+            <td mat-cell *matCellDef="let element" class="tbkt-id-cell">
+              <a 
+                class="tbkt-link" 
+                (click)="openTBKTDetailDialog(element)"
+                [matTooltip]="'Xem thông tin chi tiết TBKT ' + element.tbkt_ID">
+                {{ element.tbkt_ID || '-' }}
+              </a>
+            </td>
           </ng-container>
 
           <!-- Archived Date Column -->

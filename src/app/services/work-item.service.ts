@@ -101,5 +101,33 @@ export class WorkItemService {
   createWorkChange(workChange: Partial<WorkChange>): Observable<WorkChange> {
     return this.http.post<WorkChange>(`${environment.apiUrl}/work-changes`, workChange);
   }
+
+  /**
+   * Lấy work items theo khoảng thời gian và work type
+   * @param startDate Ngày bắt đầu (ISO string hoặc Date)
+   * @param endDate Ngày kết thúc (ISO string hoặc Date)
+   * @param workTypes Mảng các work types cần lọc (optional)
+   * @returns Observable<WorkItem[]>
+   */
+  getWorkItemsByDateRange(
+    startDate: string | Date,
+    endDate: string | Date,
+    workTypes?: string[]
+  ): Observable<WorkItem[]> {
+    let url = `${this.apiUrl}/by-date-range?`;
+    
+    const start = startDate instanceof Date ? startDate.toISOString() : startDate;
+    const end = endDate instanceof Date ? endDate.toISOString() : endDate;
+    
+    url += `startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`;
+    
+    if (workTypes && workTypes.length > 0) {
+      workTypes.forEach(type => {
+        url += `&workTypes=${encodeURIComponent(type)}`;
+      });
+    }
+    
+    return this.http.get<WorkItem[]>(url);
+  }
 }
 

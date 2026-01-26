@@ -86,7 +86,7 @@
             </div>
           </div>
           <mat-divider></mat-divider>
-          <button mat-menu-item>
+          <button mat-menu-item (click)="openPersonalInfo()">
             <mat-icon>person</mat-icon>
             <span>Thông tin cá nhân</span>
           </button>
@@ -198,13 +198,13 @@
           @if (canViewPage('/work-items')) {
             <a routerLink="/work-items"
                routerLinkActive="active"
-               [matTooltip]="sidenavService.isCollapsed() ? 'Công Việc' : ''"
+               [matTooltip]="sidenavService.isCollapsed() ? 'Thiết Kế - Kiểm Soát' : ''"
                matTooltipPosition="right"
                class="nav-item">
               <div class="nav-icon">
                 <mat-icon>work</mat-icon>
               </div>
-              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Công Việc</span>
+              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Thiết Kế - Kiểm Soát</span>
             </a>
           }
           @if (canViewPage('/excel-reader')) {

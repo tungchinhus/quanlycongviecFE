@@ -5,7 +5,10 @@ import { environment } from '../../environments/environment';
 
 export interface SystemSettings {
   fileStoragePath: string;
+  signatureStoragePath?: string;
   sendEmailNotifications: boolean;
+  designerWarningDays?: number;
+  reviewerWarningDays?: number;
   [key: string]: any; // Cho phép các settings khác trong tương lai
 }
 
@@ -79,6 +82,37 @@ export class SettingsService {
     return this.http.put<{ sendEmailNotifications: boolean }>(`${this.apiUrl}/notification-preference`, {
       sendEmailNotifications
     });
+  }
+
+  /**
+   * Lấy warning days settings
+   */
+  getWarningDays(): Observable<{ designerWarningDays: number; reviewerWarningDays: number }> {
+    return this.http.get<{ designerWarningDays: number; reviewerWarningDays: number }>(`${this.apiUrl}/warning-days`);
+  }
+
+  /**
+   * Cập nhật warning days settings
+   */
+  updateWarningDays(designerWarningDays: number, reviewerWarningDays: number): Observable<{ designerWarningDays: number; reviewerWarningDays: number }> {
+    return this.http.put<{ designerWarningDays: number; reviewerWarningDays: number }>(`${this.apiUrl}/warning-days`, {
+      designerWarningDays,
+      reviewerWarningDays
+    });
+  }
+
+  /**
+   * Lấy đường dẫn lưu chữ ký hiện tại
+   */
+  getSignatureStoragePath(): Observable<{ signatureStoragePath: string }> {
+    return this.http.get<{ signatureStoragePath: string }>(`${this.apiUrl}/signature-storage-path`);
+  }
+
+  /**
+   * Cập nhật đường dẫn lưu chữ ký
+   */
+  updateSignatureStoragePath(path: string): Observable<{ signatureStoragePath: string; message: string }> {
+    return this.http.put<{ signatureStoragePath: string; message: string }>(`${this.apiUrl}/signature-storage-path`, { Path: path });
   }
 }
 

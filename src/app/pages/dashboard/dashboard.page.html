@@ -27,8 +27,61 @@
   <!-- Dashboard Content -->
   @if (stats() && !loading() && !error()) {
     <div class="dashboard-content">
-      <!-- Statistics Cards -->
-      <div class="stats-grid">
+      <!-- Left Column: DS Công việc Table -->
+      <div class="department-work-items-section">
+        <h2 class="section-title">DS Công việc (7 ngày qua)</h2>
+        
+        @if (loadingDepartmentWorkItems()) {
+          <div class="loading-container">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Đang tải danh sách công việc...</p>
+          </div>
+        } @else {
+          @if (allWorkItems().length > 0) {
+            <mat-card class="work-items-table-card">
+              <mat-card-content>
+                <div class="table-wrapper">
+                  <table class="work-items-table">
+                    <thead>
+                      <tr>
+                        <th>Họ tên</th>
+                        <th>Vai trò</th>
+                        <th>TBKT</th>
+                        <th>Tên máy</th>
+                        <th>Ngày bắt đầu</th>
+                        <th>Dự kiến hoàn thành</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of allWorkItems(); track item.workItemID) {
+                        <tr [class]="getDateRowClass(item)">
+                          <td>{{ item.fullName || item.personName || '-' }}</td>
+                          <td>{{ getRoleDisplayName(item.workType) }}</td>
+                          <td>{{ item.tbkt_ID || '-' }}</td>
+                          <td>{{ item.machineName || '-' }}</td>
+                          <td>{{ formatDate(item.startDate) }}</td>
+                          <td>{{ formatDate(item.expectedFinish) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          } @else {
+            <mat-card>
+              <mat-card-content>
+                <div class="no-work-items">
+                  <p>Không có công việc nào trong 7 ngày qua</p>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        }
+      </div>
+
+      <!-- Right Column: Statistics Cards -->
+      <div class="stats-column">
         <!-- Work Items Stats - Only for regular users -->
         @if (!isManager()) {
           <mat-card class="stat-card">
@@ -115,10 +168,15 @@
             @if (stats()!.recent.machines && stats()!.recent.machines.length > 0) {
               <div class="recent-machines">
                 <ul class="recent-machines-list">
-                  @for (machine of stats()!.recent.machines; track machine) {
+                  @for (machine of stats()!.recent.machines; track getMachineKey(machine)) {
                     <li class="recent-machine-item">
                       <mat-icon class="machine-icon">precision_manufacturing</mat-icon>
-                      <span class="machine-name">{{ machine }}</span>
+                      <span class="machine-name">{{ getMachineName(machine) }}</span>
+                      @if (getMachineStatus(machine) === 'completed') {
+                        <span class="status-text status-completed">Hoàn thành</span>
+                      } @else {
+                        <span class="status-text status-in-progress">Đang xử lý</span>
+                      }
                     </li>
                   }
                 </ul>
@@ -128,31 +186,6 @@
                 <p>Chưa có hoạt động nào trong 7 ngày qua</p>
               </div>
             }
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      <!-- Charts Grid -->
-      <div class="charts-grid">
-        <!-- Monthly Stats Chart - Always visible -->
-        <mat-card class="chart-card chart-card-full">
-          <mat-card-header>
-            <mat-card-title>Thống kê theo tháng</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="chart-container">
-              @if (stats() && stats()!.monthly && stats()!.monthly.length > 0) {
-                <canvas baseChart
-                        [data]="monthlyChartData"
-                        [type]="monthlyChartType"
-                        [options]="monthlyChartOptions">
-                </canvas>
-              } @else {
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
-                  <p>Chưa có dữ liệu để hiển thị</p>
-                </div>
-              }
-            </div>
           </mat-card-content>
         </mat-card>
       </div>

@@ -111,6 +111,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'personal-info',
+    loadComponent: () => import('./pages/personal-info/personal-info.page').then(m => m.PersonalInfoPage),
+    canActivate: [authGuard]
+  },
+  {
     path: '**',
     loadComponent: () => import('./components/dashboard-redirect/dashboard-redirect.component').then(m => m.DashboardRedirectComponent)
   }

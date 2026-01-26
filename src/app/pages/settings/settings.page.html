@@ -58,6 +58,57 @@
               }
             </mat-form-field>
 
+            <div class="button-group">
+              <button 
+                mat-raised-button 
+                type="button"
+                color="accent" 
+                (click)="validatePath('fileStoragePath')"
+                [disabled]="isValidating() || isSaving() || !settingsForm.get('fileStoragePath')?.value">
+                @if (isValidating()) {
+                  <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+                } @else {
+                  <mat-icon>check_circle</mat-icon>
+                }
+                Kiểm tra đường dẫn
+              </button>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Đường dẫn lưu chữ ký điện tử</mat-label>
+              <input 
+                matInput 
+                formControlName="signatureStoragePath"
+                placeholder="Ví dụ: C:\Files\Signatures hoặc /var/www/signatures"
+                [readonly]="isSaving()">
+              <mat-icon matPrefix>draw</mat-icon>
+              <mat-hint>
+                Nhập đường dẫn tuyệt đối đến thư mục trên server để lưu chữ ký điện tử (ví dụ: C:\Files\Signatures hoặc /var/www/signatures)
+              </mat-hint>
+              @if (settingsForm.get('signatureStoragePath')?.hasError('required') && settingsForm.get('signatureStoragePath')?.touched) {
+                <mat-error>Vui lòng nhập đường dẫn lưu chữ ký</mat-error>
+              }
+              @if (settingsForm.get('signatureStoragePath')?.hasError('minlength') && settingsForm.get('signatureStoragePath')?.touched) {
+                <mat-error>Đường dẫn phải có ít nhất 1 ký tự</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="button-group">
+              <button 
+                mat-raised-button 
+                type="button"
+                color="accent" 
+                (click)="validatePath('signatureStoragePath')"
+                [disabled]="isValidating() || isSaving() || !settingsForm.get('signatureStoragePath')?.value">
+                @if (isValidating()) {
+                  <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+                } @else {
+                  <mat-icon>check_circle</mat-icon>
+                }
+                Kiểm tra đường dẫn
+              </button>
+            </div>
+
             <div class="notification-setting">
               <mat-checkbox formControlName="sendEmailNotifications" class="full-width">
                 Gửi thông báo qua email
@@ -66,6 +117,63 @@
                 Nếu bật: Hệ thống sẽ gửi email thông báo khi có file được upload.<br>
                 Nếu tắt: Hệ thống sẽ hiển thị thông báo (badge đỏ) trên biểu tượng chuông.
               </p>
+            </div>
+
+            <div class="warning-days-settings">
+              <h3 class="section-title">
+                <mat-icon>warning</mat-icon>
+                Cấu hình cảnh báo
+              </h3>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Số ngày cảnh báo (User thiết kế)</mat-label>
+                <input 
+                  matInput 
+                  type="number"
+                  formControlName="designerWarningDays"
+                  placeholder="2"
+                  min="0"
+                  max="30"
+                  [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <mat-hint>
+                  Cảnh báo trước X ngày so với ngày dự kiến hoàn thành ở workitem (mặc định: 2 ngày)
+                </mat-hint>
+                @if (settingsForm.get('designerWarningDays')?.hasError('required') && settingsForm.get('designerWarningDays')?.touched) {
+                  <mat-error>Vui lòng nhập số ngày cảnh báo</mat-error>
+                }
+                @if (settingsForm.get('designerWarningDays')?.hasError('min') && settingsForm.get('designerWarningDays')?.touched) {
+                  <mat-error>Số ngày phải lớn hơn hoặc bằng 0</mat-error>
+                }
+                @if (settingsForm.get('designerWarningDays')?.hasError('max') && settingsForm.get('designerWarningDays')?.touched) {
+                  <mat-error>Số ngày không được vượt quá 30</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Số ngày cảnh báo (User kiểm soát)</mat-label>
+                <input 
+                  matInput 
+                  type="number"
+                  formControlName="reviewerWarningDays"
+                  placeholder="1"
+                  min="0"
+                  max="30"
+                  [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <mat-hint>
+                  Cảnh báo trước X ngày để vào xác nhận kiểm soát (mặc định: 1 ngày)
+                </mat-hint>
+                @if (settingsForm.get('reviewerWarningDays')?.hasError('required') && settingsForm.get('reviewerWarningDays')?.touched) {
+                  <mat-error>Vui lòng nhập số ngày cảnh báo</mat-error>
+                }
+                @if (settingsForm.get('reviewerWarningDays')?.hasError('min') && settingsForm.get('reviewerWarningDays')?.touched) {
+                  <mat-error>Số ngày phải lớn hơn hoặc bằng 0</mat-error>
+                }
+                @if (settingsForm.get('reviewerWarningDays')?.hasError('max') && settingsForm.get('reviewerWarningDays')?.touched) {
+                  <mat-error>Số ngày không được vượt quá 30</mat-error>
+                }
+              </mat-form-field>
             </div>
 
             <div class="form-actions">

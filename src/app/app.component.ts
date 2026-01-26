@@ -461,6 +461,10 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  openPersonalInfo(): void {
+    this.router.navigate(['/personal-info']);
+  }
+
   openChangePasswordDialog(): void {
     const dialogRef = this.dialog.open(ChangePasswordDialogComponent, {
       width: '500px',

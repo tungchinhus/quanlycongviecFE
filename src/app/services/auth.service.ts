@@ -1,8 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, setPersistence, browserLocalPersistence, browserSessionPersistence } from '@angular/fire/auth';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from, of } from 'rxjs';
-import { map, switchMap, catchError, tap } from 'rxjs/operators';
+import { Observable, from, of, throwError, timer } from 'rxjs';
+import { map, switchMap, catchError, tap, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { UserRole, UserRole as UserRoleEnum, normalizeRoleName, normalizeRoles as normalizeRolesEnum, ALL_USER_ROLES } from '../constants/enums';
 
@@ -156,6 +156,19 @@ export class AuthService {
 
     // Nếu không phải email format, coi như username và query từ backend để lấy email
     return this.http.get<{ email: string }>(`${environment.apiUrl}/users/by-username/${encodeURIComponent(usernameOrEmail)}`).pipe(
+      timeout(10000), // 10 giây timeout cho việc resolve email
+      catchError((timeoutError) => {
+        if (timeoutError.name === 'TimeoutError' || timeoutError.name === 'timeout') {
+          console.error('Resolve email request timeout after 10 seconds');
+          throw { 
+            ...timeoutError, 
+            status: 0, 
+            message: 'Không thể kết nối đến server để lấy email. Vui lòng kiểm tra kết nối mạng.',
+            code: 'auth/network-request-failed'
+          };
+        }
+        throw timeoutError;
+      }),
       map((response: { email: string }) => response.email),
       catchError((error) => {
         console.error('Error resolving email from username:', error);
@@ -226,6 +239,19 @@ export class AuthService {
                     }>(`${environment.apiUrl}/auth/login/firebase-token`, {
                       idToken: idToken
                     }).pipe(
+                      timeout(30000), // 30 giây timeout
+                      catchError((timeoutError) => {
+                        if (timeoutError.name === 'TimeoutError' || timeoutError.name === 'timeout') {
+                          console.error('Backend login request timeout after 30 seconds');
+                          throw { 
+                            ...timeoutError, 
+                            status: 0, 
+                            message: 'Backend không phản hồi. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.',
+                            code: 'auth/network-request-failed'
+                          };
+                        }
+                        throw timeoutError;
+                      }),
                       map((response) => {
                         // Bước 5: Lưu JWT token từ backend vào localStorage
                         localStorage.setItem('token', response.token);

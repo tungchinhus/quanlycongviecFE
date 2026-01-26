@@ -286,6 +286,104 @@
   color: #ff9800;
 }
 
+/* Work Items Section */
+.work-items-section {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.work-items-card {
+  width: 100%;
+}
+
+.work-items-card mat-card-header {
+  padding: 12px 16px 8px 16px !important;
+}
+
+.work-items-card mat-card-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.work-items-card mat-card-content {
+  padding: 16px !important;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.work-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.work-items-table th {
+  background-color: var(--thibidi-primary, #1976d2);
+  color: white;
+  font-weight: 500;
+  padding: 12px 8px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.work-items-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.work-items-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.work-items-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* TBKT column styling */
+.work-items-table th:nth-child(2),
+.work-items-table td:nth-child(2) {
+  font-weight: 600;
+  color: var(--thibidi-primary, #1976d2);
+}
+
+.work-items-table td:nth-child(2) {
+  font-family: 'Courier New', monospace;
+}
+
+.work-items-table th:nth-child(2) {
+  color: white;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+/* Warning row styling */
+.work-items-table tbody tr.date-warning {
+  background-color: #fff3e0 !important;
+}
+
+.work-items-table tbody tr.date-warning:hover {
+  background-color: #ffe0b2 !important;
+}
+
+.work-items-table tbody tr.date-warning td {
+  color: #e65100;
+  font-weight: 500;
+}
+
+.no-work-items {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
 @media (max-width: 1024px) {
   .charts-row {
     grid-template-columns: 1fr;
@@ -341,5 +439,18 @@
 
   .stat-value {
     font-size: 32px;
+  }
+
+  .work-items-table {
+    font-size: 12px;
+  }
+
+  .work-items-table th,
+  .work-items-table td {
+    padding: 8px 4px;
+  }
+
+  .table-wrapper {
+    max-height: 400px;
   }
 }

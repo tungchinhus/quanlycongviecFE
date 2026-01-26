@@ -54,7 +54,10 @@ export class SettingsPage implements OnInit {
   initForm() {
     this.settingsForm = this.fb.group({
       fileStoragePath: ['', [Validators.required, Validators.minLength(1)]],
-      sendEmailNotifications: [true]
+      signatureStoragePath: ['', [Validators.required, Validators.minLength(1)]],
+      sendEmailNotifications: [true],
+      designerWarningDays: [2, [Validators.required, Validators.min(0), Validators.max(30)]],
+      reviewerWarningDays: [1, [Validators.required, Validators.min(0), Validators.max(30)]]
     });
   }
 
@@ -69,7 +72,10 @@ export class SettingsPage implements OnInit {
         this.isLoading.set(false);
         this.settingsForm.patchValue({
           fileStoragePath: settings.fileStoragePath || '',
-          sendEmailNotifications: settings.sendEmailNotifications !== false // Default to true
+          signatureStoragePath: settings.signatureStoragePath || '',
+          sendEmailNotifications: settings.sendEmailNotifications !== false, // Default to true
+          designerWarningDays: settings.designerWarningDays ?? 2,
+          reviewerWarningDays: settings.reviewerWarningDays ?? 1
         });
       },
       error: (error) => {
@@ -85,8 +91,8 @@ export class SettingsPage implements OnInit {
     });
   }
 
-  validatePath() {
-    const path = this.settingsForm.get('fileStoragePath')?.value;
+  validatePath(fieldName: 'fileStoragePath' | 'signatureStoragePath' = 'fileStoragePath') {
+    const path = this.settingsForm.get(fieldName)?.value;
     if (!path || path.trim() === '') {
       this.snackBar.open('Vui lòng nhập đường dẫn trước khi kiểm tra.', 'Đóng', {
         duration: 3000,
@@ -156,31 +162,74 @@ export class SettingsPage implements OnInit {
       return;
     }
 
+    const signatureStoragePath = this.settingsForm.get('signatureStoragePath')?.value?.trim();
+    if (!signatureStoragePath) {
+      this.snackBar.open('Vui lòng nhập đường dẫn lưu chữ ký.', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
     const sendEmailNotifications = this.settingsForm.get('sendEmailNotifications')?.value ?? true;
+    const designerWarningDays = this.settingsForm.get('designerWarningDays')?.value ?? 2;
+    const reviewerWarningDays = this.settingsForm.get('reviewerWarningDays')?.value ?? 1;
 
     this.isSaving.set(true);
     
-    // Save both file storage path and notification preference
+    // Save all settings
     const saveFileStorage = this.settingsService.updateFileStoragePath(fileStoragePath);
+    const saveSignatureStorage = this.settingsService.updateSignatureStoragePath(signatureStoragePath);
     const saveNotification = this.settingsService.updateNotificationPreference(sendEmailNotifications);
+    const saveWarningDays = this.settingsService.updateWarningDays(designerWarningDays, reviewerWarningDays);
 
-    // Execute both saves
+    // Execute all saves
     saveFileStorage.subscribe({
       next: () => {
-        saveNotification.subscribe({
+        saveSignatureStorage.subscribe({
           next: () => {
-            this.isSaving.set(false);
-            this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
-              duration: 3000,
-              horizontalPosition: 'center',
-              verticalPosition: 'top',
-              panelClass: ['success-snackbar']
+            saveNotification.subscribe({
+              next: () => {
+                saveWarningDays.subscribe({
+                  next: () => {
+                    this.isSaving.set(false);
+                    this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
+                      duration: 3000,
+                      horizontalPosition: 'center',
+                      verticalPosition: 'top',
+                      panelClass: ['success-snackbar']
+                    });
+                  },
+                  error: (error) => {
+                    this.isSaving.set(false);
+                    console.error('Error saving warning days:', error);
+                    this.snackBar.open('Đã lưu đường dẫn và thông báo nhưng không thể lưu cài đặt cảnh báo.', 'Đóng', {
+                      duration: 5000,
+                      horizontalPosition: 'center',
+                      verticalPosition: 'top',
+                      panelClass: ['error-snackbar']
+                    });
+                  }
+                });
+              },
+              error: (error) => {
+                this.isSaving.set(false);
+                console.error('Error saving notification preference:', error);
+                this.snackBar.open('Đã lưu đường dẫn nhưng không thể lưu cài đặt thông báo.', 'Đóng', {
+                  duration: 5000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'top',
+                  panelClass: ['error-snackbar']
+                });
+              }
             });
           },
           error: (error) => {
             this.isSaving.set(false);
-            console.error('Error saving notification preference:', error);
-            this.snackBar.open('Đã lưu đường dẫn nhưng không thể lưu cài đặt thông báo.', 'Đóng', {
+            console.error('Error saving signature storage path:', error);
+            this.snackBar.open('Đã lưu đường dẫn file nhưng không thể lưu đường dẫn chữ ký.', 'Đóng', {
               duration: 5000,
               horizontalPosition: 'center',
               verticalPosition: 'top',

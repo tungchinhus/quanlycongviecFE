@@ -1,0 +1,190 @@
+<div class="personal-info-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>
+          <mat-icon>person</mat-icon>
+          Thông tin cá nhân
+        </h1>
+        <p class="page-description">Quản lý thông tin cá nhân và chữ ký điện tử</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <!-- User Information Card -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>account_circle</mat-icon>
+          Thông tin tài khoản
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="user-info-grid">
+          <div class="info-item">
+            <div class="info-label">
+              <mat-icon>person</mat-icon>
+              Họ và tên
+            </div>
+            <div class="info-value">{{ user()?.name || 'N/A' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">
+              <mat-icon>email</mat-icon>
+              Email
+            </div>
+            <div class="info-value">{{ user()?.email || 'N/A' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">
+              <mat-icon>badge</mat-icon>
+              Vai trò
+            </div>
+            <div class="info-value">{{ user()?.roles?.join(', ') || 'N/A' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">
+              <mat-icon>person_pin</mat-icon>
+              User ID
+            </div>
+            <div class="info-value">{{ user()?.userId || user()?.id || 'N/A' }}</div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Signature Card -->
+    <mat-card class="signature-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>draw</mat-icon>
+          Chữ ký điện tử
+        </mat-card-title>
+        <mat-card-subtitle>
+          Vẽ hoặc upload hình ảnh chữ ký điện tử của bạn để sử dụng trong hệ thống
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isLoading()) {
+          <div class="loading-container">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Đang tải...</p>
+          </div>
+        } @else {
+          @if (hasSignature() && !showSignaturePad()) {
+            <!-- Display existing signature -->
+            <div class="signature-display">
+              <div class="signature-preview">
+                @if (signatureUrl() && !imageLoadError()) {
+                  <img 
+                    [src]="signatureUrl()" 
+                    alt="Chữ ký điện tử" 
+                    class="signature-image"
+                    (error)="onImageError()" />
+                } @else {
+                  <div class="signature-error">
+                    <mat-icon>error_outline</mat-icon>
+                    <p>Không thể tải chữ ký</p>
+                  </div>
+                }
+              </div>
+              <div class="signature-actions">
+                <button mat-raised-button color="primary" (click)="showSignatureEditor()">
+                  <mat-icon>edit</mat-icon>
+                  Chỉnh sửa
+                </button>
+                <button mat-button color="warn" (click)="deleteSignature()">
+                  <mat-icon>delete</mat-icon>
+                  Xóa
+                </button>
+              </div>
+            </div>
+          } @else if (showSignaturePad()) {
+            <!-- Signature editor -->
+            <div class="signature-editor">
+              <!-- Mode selector -->
+              <div class="mode-selector">
+                <button 
+                  mat-button 
+                  [class.active]="signatureMode() === 'draw'"
+                  (click)="setSignatureMode('draw')">
+                  <mat-icon>draw</mat-icon>
+                  Vẽ chữ ký
+                </button>
+                <button 
+                  mat-button 
+                  [class.active]="signatureMode() === 'upload'"
+                  (click)="setSignatureMode('upload')">
+                  <mat-icon>upload_file</mat-icon>
+                  Upload hình ảnh
+                </button>
+              </div>
+
+              @if (signatureMode() === 'draw') {
+                <!-- Draw mode -->
+                <app-signature-pad 
+                  [width]="600" 
+                  [height]="300"
+                  (signatureSaved)="onSignatureSaved($event)">
+                </app-signature-pad>
+              } @else {
+                <!-- Upload mode -->
+                <div class="upload-container">
+                  <div class="file-upload-area">
+                    <input 
+                      type="file" 
+                      id="signature-file-input"
+                      accept="image/png,image/jpeg,image/jpg,image/gif,image/bmp,image/webp"
+                      (change)="onFileSelected($event)"
+                      style="display: none;">
+                    <label for="signature-file-input" class="file-upload-label">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <span>Chọn file hình ảnh chữ ký</span>
+                      <span class="file-hint">PNG, JPG, GIF, BMP, WEBP (tối đa 5MB)</span>
+                    </label>
+                  </div>
+                  
+                  @if (uploadedFilePreview()) {
+                    <div class="upload-preview">
+                      <img [src]="uploadedFilePreview()" alt="Preview chữ ký" class="preview-image">
+                      <div class="preview-info">
+                        <p><strong>File:</strong> {{ uploadedFile()?.name }}</p>
+                        <p><strong>Kích thước:</strong> {{ (uploadedFile()?.size || 0) / 1024 | number:'1.0-2' }} KB</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="editor-actions">
+                <button mat-raised-button color="primary" (click)="saveSignature()" [disabled]="isUploading() || (signatureMode() === 'upload' && !uploadedFile())">
+                  @if (isUploading()) {
+                    <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+                  } @else {
+                    <mat-icon>save</mat-icon>
+                  }
+                  Lưu chữ ký
+                </button>
+                <button mat-button (click)="hideSignatureEditor()" [disabled]="isUploading()">
+                  <mat-icon>close</mat-icon>
+                  Hủy
+                </button>
+              </div>
+            </div>
+          } @else {
+            <!-- No signature -->
+            <div class="no-signature">
+              <mat-icon class="no-signature-icon">draw</mat-icon>
+              <p>Bạn chưa có chữ ký điện tử</p>
+              <button mat-raised-button color="primary" (click)="showSignatureEditor()">
+                <mat-icon>add</mat-icon>
+                Tạo chữ ký mới
+              </button>
+            </div>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
