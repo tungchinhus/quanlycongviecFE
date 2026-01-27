@@ -419,20 +419,141 @@ export class WorkItemDialogComponent implements OnInit {
         );
       }
 
-      // Kiểm tra nếu là file của user hiện tại (chỉ khi có currentUser)
+      // Kiểm tra nếu là file của user hiện tại
+      // Có 3 cách: 
+      // 1. File có UploadedBy = currentUser
+      // 2. File có UploadedBy = PersonName của work item VÀ PersonName = currentUser
+      // 3. File có ID trong file_ID của work item VÀ work item có PersonName = currentUser
       let isCurrentUserFile = false;
-      if (this.currentUser && uploadedBy) {
+      
+      if (this.currentUser) {
         const currentUserIdentifiers = [
           this.currentUser.userName,
           this.currentUser.id?.toString(),
           this.currentUser.userId?.toString(),
           this.currentUser.email,
-          this.currentUser.name
+          this.currentUser.name,
+          this.currentUser.firebaseUid
         ].filter(id => id);
         
-        isCurrentUserFile = currentUserIdentifiers.some(id => 
-          id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
-        );
+        // Cách 1: Kiểm tra UploadedBy của file trực tiếp với currentUser
+        if (uploadedBy) {
+          isCurrentUserFile = currentUserIdentifiers.some(id => 
+            id && uploadedBy && id.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
+          );
+        }
+        
+        // Cách 2 & 3: Kiểm tra qua work item PersonName
+        if (!isCurrentUserFile && this.workItem) {
+          const workItemPersonName = this.workItem.personName;
+          
+          if (workItemPersonName) {
+            // Tạo danh sách các identifier có thể của PersonName (có thể là ID, userName, name, etc)
+            const workItemPersonNameIdentifiers = [workItemPersonName.toString()];
+            
+            // Tìm user từ PersonName trong danh sách users để lấy thêm identifiers
+            const workItemUser = this.users.find(u => 
+              u.id === workItemPersonName ||
+              u.id?.toString() === workItemPersonName ||
+              u.userId?.toString() === workItemPersonName ||
+              u.userName === workItemPersonName ||
+              u.name === workItemPersonName ||
+              u.email === workItemPersonName
+            );
+            
+            if (workItemUser) {
+              if (workItemUser.userName) workItemPersonNameIdentifiers.push(workItemUser.userName);
+              if (workItemUser.name) workItemPersonNameIdentifiers.push(workItemUser.name);
+              if (workItemUser.email) workItemPersonNameIdentifiers.push(workItemUser.email);
+              if (workItemUser.id) workItemPersonNameIdentifiers.push(workItemUser.id.toString());
+              if (workItemUser.userId) workItemPersonNameIdentifiers.push(workItemUser.userId.toString());
+              if (workItemUser.firebaseUid) workItemPersonNameIdentifiers.push(workItemUser.firebaseUid);
+            }
+            
+            // Kiểm tra xem PersonName của work item có match với currentUser không
+            const isPersonNameMatch = currentUserIdentifiers.some(currentId => 
+              workItemPersonNameIdentifiers.some(personId => 
+                currentId && personId && currentId.toString().toLowerCase() === personId.toString().toLowerCase()
+              )
+            );
+            
+            if (isPersonNameMatch) {
+              // Cách 2: File có UploadedBy = PersonName của work item (sau khi đã chuyển giao)
+              if (uploadedBy) {
+                const isUploadedByMatch = workItemPersonNameIdentifiers.some(personId => 
+                  personId && uploadedBy && personId.toString().toLowerCase() === uploadedBy.toString().toLowerCase()
+                );
+                if (isUploadedByMatch) {
+                  isCurrentUserFile = true;
+                }
+              }
+              
+              // Cách 3: File có ID trong file_ID của work item
+              // Đây là cách quan trọng nhất: nếu file có trong File_ID thì chắc chắn là file của work item này
+              if (!isCurrentUserFile) {
+                const workItemFileIds = this.parseFileIds(this.workItem.file_ID);
+                const fileId = file.id || file.fileID;
+                const isFileLinkedToWorkItem = fileId && workItemFileIds.includes(fileId);
+                
+                if (isFileLinkedToWorkItem) {
+                  isCurrentUserFile = true;
+                }
+              }
+            }
+          }
+          
+          // Cách 4: Nếu file có ID trong file_ID của work item, thì luôn hiển thị (không cần check PersonName)
+          // Điều này đảm bảo files được link qua File_ID sẽ luôn hiển thị
+          if (!isCurrentUserFile && this.workItem) {
+            const workItemFileIds = this.parseFileIds(this.workItem.file_ID);
+            const fileId = file.id || file.fileID;
+            const isFileLinkedToWorkItem = fileId && workItemFileIds.includes(fileId);
+            
+            if (isFileLinkedToWorkItem) {
+              // Kiểm tra xem PersonName của work item có match với currentUser không
+              const workItemPersonName = this.workItem.personName;
+              if (workItemPersonName) {
+                const currentUserIdentifiers = [
+                  this.currentUser.userName,
+                  this.currentUser.id?.toString(),
+                  this.currentUser.userId?.toString(),
+                  this.currentUser.email,
+                  this.currentUser.name,
+                  this.currentUser.firebaseUid
+                ].filter(id => id);
+                
+                const workItemPersonNameIdentifiers = [workItemPersonName.toString()];
+                const workItemUser = this.users.find(u => 
+                  u.id === workItemPersonName ||
+                  u.id?.toString() === workItemPersonName ||
+                  u.userId?.toString() === workItemPersonName ||
+                  u.userName === workItemPersonName ||
+                  u.name === workItemPersonName ||
+                  u.email === workItemPersonName
+                );
+                
+                if (workItemUser) {
+                  if (workItemUser.userName) workItemPersonNameIdentifiers.push(workItemUser.userName);
+                  if (workItemUser.name) workItemPersonNameIdentifiers.push(workItemUser.name);
+                  if (workItemUser.email) workItemPersonNameIdentifiers.push(workItemUser.email);
+                  if (workItemUser.id) workItemPersonNameIdentifiers.push(workItemUser.id.toString());
+                  if (workItemUser.userId) workItemPersonNameIdentifiers.push(workItemUser.userId.toString());
+                  if (workItemUser.firebaseUid) workItemPersonNameIdentifiers.push(workItemUser.firebaseUid);
+                }
+                
+                const isPersonNameMatch = currentUserIdentifiers.some(currentId => 
+                  workItemPersonNameIdentifiers.some(personId => 
+                    currentId && personId && currentId.toString().toLowerCase() === personId.toString().toLowerCase()
+                  )
+                );
+                
+                if (isPersonNameMatch) {
+                  isCurrentUserFile = true;
+                }
+              }
+            }
+          }
+        }
       }
 
       // Chỉ hiển thị:
@@ -530,6 +651,23 @@ export class WorkItemDialogComponent implements OnInit {
 
           // Reload files list
           this.loadFiles();
+          
+          // Quan trọng: Reload work item để lấy File_ID mới nhất sau khi upload files
+          // Backend đã tự động thêm file IDs vào File_ID của work item
+          if (this.workItem?.workItemID && successFiles.length > 0) {
+            this.workItemService.getWorkItemById(this.workItem.workItemID).subscribe({
+              next: (updatedWorkItem) => {
+                // Cập nhật File_ID trong workItem để giữ nguyên khi update tiếp theo
+                if (updatedWorkItem.file_ID) {
+                  this.workItem!.file_ID = updatedWorkItem.file_ID;
+                }
+              },
+              error: (err) => {
+                console.error('Error reloading work item after upload:', err);
+                // Không block flow nếu reload thất bại
+              }
+            });
+          }
 
           if (failCount === 0) {
             // Không hiển thị snackbar ở đây vì đã có thông báo ở onSave
@@ -543,6 +681,21 @@ export class WorkItemDialogComponent implements OnInit {
           this.isUploading.set(false);
           // Reload files list ngay cả khi có lỗi (có thể một số file đã upload thành công)
           this.loadFiles();
+          
+          // Reload work item để lấy File_ID mới nhất (nếu có file nào đã upload thành công)
+          if (this.workItem?.workItemID) {
+            this.workItemService.getWorkItemById(this.workItem.workItemID).subscribe({
+              next: (updatedWorkItem) => {
+                if (updatedWorkItem.file_ID) {
+                  this.workItem!.file_ID = updatedWorkItem.file_ID;
+                }
+              },
+              error: (reloadErr) => {
+                console.error('Error reloading work item after upload error:', reloadErr);
+              }
+            });
+          }
+          
           // Không hiển thị snackbar ở đây, để onSave xử lý
           resolve(false);
         }
@@ -801,6 +954,16 @@ export class WorkItemDialogComponent implements OnInit {
     if (formValue.notes) {
       updateData.notes = formValue.notes;
     }
+    
+    // Quan trọng: Chỉ gửi File_ID nếu có giá trị hợp lệ (không null, không empty)
+    // Không gửi File_ID nếu null hoặc empty để tránh overwrite thành rỗng
+    // File_ID đã được cập nhật khi upload files hoặc chuyển giao việc, không nên bị overwrite
+    const currentFileId = this.workItem.file_ID;
+    if (currentFileId && currentFileId.trim() !== '') {
+      updateData.file_ID = currentFileId;
+    }
+    // Nếu File_ID là null hoặc empty, không gửi trong updateData
+    // Backend sẽ giữ nguyên giá trị hiện tại trong database
 
     // Cập nhật work item TRƯỚC, chỉ upload file khi update thành công
     this.workItemService.updateWorkItem(this.workItem.workItemID, updateData).subscribe({
@@ -1134,6 +1297,22 @@ export class WorkItemDialogComponent implements OnInit {
     
     const deliveryDate = this.workItem.assignment.deliveryDate;
     return parseDateSafe(deliveryDate);
+  }
+
+  // Helper method để parse file_ID (comma-separated string) thành array of numbers
+  private parseFileIds(fileIds: string | undefined): number[] {
+    if (!fileIds || !fileIds.trim()) {
+      return [];
+    }
+    
+    return fileIds.split(',')
+      .map(id => id.trim())
+      .filter(id => id !== '')
+      .map(id => {
+        const parsed = parseInt(id, 10);
+        return isNaN(parsed) ? null : parsed;
+      })
+      .filter((id): id is number => id !== null);
   }
 }
 

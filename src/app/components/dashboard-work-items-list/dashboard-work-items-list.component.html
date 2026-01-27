@@ -1,0 +1,56 @@
+<div class="work-items-section">
+  <mat-card class="work-items-card">
+    <mat-card-header>
+      <mat-card-title>{{ title }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (loading) {
+        <div class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Đang tải danh sách công việc...</p>
+        </div>
+      } @else {
+        @if (workItems.length > 0) {
+          <div class="table-wrapper">
+            <table class="work-items-table">
+              <thead>
+                <tr>
+                  <th>Họ tên</th>
+                  <th>Vai trò</th>
+                  <th>TBKT</th>
+                  <th>Tên máy</th>
+                  <th>Ngày bắt đầu</th>
+                  <th>Dự kiến hoàn thành</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of workItems; track item.workItemID) {
+                  <tr [class]="getDateRowClass(item)">
+                    <td>{{ item.fullName || item.personName || '-' }}</td>
+                    <td>{{ getRoleDisplayName(item.workType) }}</td>
+                    <td>
+                      @if (item.tbkt_ID) {
+                        <a class="tbkt-link" (click)="openTBKTDetail(item)" [matTooltip]="'Click để xem chi tiết TBKT'">
+                          {{ item.tbkt_ID }}
+                        </a>
+                      } @else {
+                        -
+                      }
+                    </td>
+                    <td>{{ item.machineName || '-' }}</td>
+                    <td>{{ formatDate(item.startDate) }}</td>
+                    <td>{{ formatDate(item.expectedFinish) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="no-work-items">
+            <p>Không có công việc nào trong 7 ngày qua</p>
+          </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

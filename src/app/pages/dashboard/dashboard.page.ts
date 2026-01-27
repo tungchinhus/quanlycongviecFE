@@ -8,11 +8,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { DashboardService, DashboardStats } from '../../services/dashboard.service';
 import { AuthService } from '../../services/auth.service';
 import { UserRole } from '../../constants/enums';
 import { WorkItem } from '../../models/machine-assignment.model';
-import { SettingsService } from '../../services/settings.service';
+import { MachineDetailDialogComponent, MachineDetailData } from '../../components/machine-detail-dialog/machine-detail-dialog.component';
+import { DashboardWorkItemsListComponent } from '../../components/dashboard-work-items-list/dashboard-work-items-list.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -25,7 +27,8 @@ import { SettingsService } from '../../services/settings.service';
     MatButtonModule,
     MatTooltipModule,
     MatTableModule,
-    MatChipsModule
+    MatChipsModule,
+    DashboardWorkItemsListComponent
   ],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.css'
@@ -34,7 +37,7 @@ export class DashboardPage implements OnInit {
   private readonly dashboardService = inject(DashboardService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly settingsService = inject(SettingsService);
+  private readonly dialog = inject(MatDialog);
   readonly auth = inject(AuthService);
 
   stats = signal<DashboardStats | null>(null);
@@ -45,28 +48,8 @@ export class DashboardPage implements OnInit {
   allWorkItems = signal<WorkItem[]>([]);
   loadingDepartmentWorkItems = signal(false);
 
-  // Warning days configuration
-  designerWarningDays = signal<number>(2); // Default: 2 days
-  reviewerWarningDays = signal<number>(1); // Default: 1 day
-
   ngOnInit(): void {
-    this.loadWarningDaysConfig();
     this.loadDashboardData();
-  }
-
-  loadWarningDaysConfig(): void {
-    this.settingsService.getWarningDays().subscribe({
-      next: (config) => {
-        this.designerWarningDays.set(config.designerWarningDays);
-        this.reviewerWarningDays.set(config.reviewerWarningDays);
-      },
-      error: (err) => {
-        console.error('Error loading warning days config:', err);
-        // Use defaults if error
-        this.designerWarningDays.set(2);
-        this.reviewerWarningDays.set(1);
-      }
-    });
   }
 
   loadDashboardData(): void {
@@ -75,11 +58,6 @@ export class DashboardPage implements OnInit {
 
     this.dashboardService.getUserStats().subscribe({
       next: (data) => {
-        // Debug: Log recent machines để kiểm tra format
-        if (data.recent?.machines) {
-          console.log('Recent machines data:', data.recent.machines);
-          console.log('First machine:', data.recent.machines[0]);
-        }
         this.stats.set(data);
         this.loading.set(false);
         // Force change detection
@@ -105,12 +83,6 @@ export class DashboardPage implements OnInit {
     // skipDateFilter = true để hiển thị tất cả, không filter theo ngày (mục đích xem tổng quan)
     this.dashboardService.getAllWorkItemsForDashboard(true, true).subscribe({
       next: (workItems) => {
-        // Debug: Log để kiểm tra deliveryDate
-        console.log('Work items received:', workItems);
-        workItems.forEach(item => {
-          console.log(`WorkItem ${item.workItemID}: deliveryDate = ${item.deliveryDate}, expectedFinish = ${item.expectedFinish}`);
-        });
-        
         // Hiển thị tất cả work items, không filter theo ngày
         // Mục đích: xem tổng quan công việc trong 7 ngày qua (đã filter ở backend)
         
@@ -140,8 +112,6 @@ export class DashboardPage implements OnInit {
 
 
   refresh(): void {
-    // Reload warning days config để đảm bảo có cấu hình mới nhất từ settings
-    this.loadWarningDaysConfig();
     this.loadDashboardData();
   }
 
@@ -211,18 +181,6 @@ export class DashboardPage implements OnInit {
     return workTypeMap[workType] || workType;
   }
 
-  getRoleDisplayName(workType: string | undefined): string {
-    if (!workType) return '-';
-    const roleMap: { [key: string]: string } = {
-      'Core Design': 'tk ruột',
-      'Casing Design': 'tk vỏ',
-      'Core Review': 'ks ruột',
-      'Casing Review': 'ks vỏ',
-      'Material Leveling': 'vật tư'
-    };
-    return roleMap[workType] || '-';
-  }
-
   getWorkItemStatus(item: WorkItem): { label: string; color: string } {
     if (item.actualFinish) {
       return { label: 'Hoàn thành', color: 'primary' };
@@ -245,60 +203,6 @@ export class DashboardPage implements OnInit {
     if (!date) return '-';
     const d = typeof date === 'string' ? new Date(date) : date;
     return d.toLocaleDateString('vi-VN');
-  }
-
-  getDateRowClass(item: WorkItem): string {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Xác định loại workitem để áp dụng đúng số ngày warning từ cấu hình
-    const isDesignWorkItem = item.workType === 'Core Design' || item.workType === 'Casing Design';
-    const isReviewWorkItem = item.workType === 'Core Review' || item.workType === 'Casing Review';
-    
-    // Lấy số ngày cảnh báo từ cấu hình trong phần cài đặt
-    let warningDays = 0;
-    if (isDesignWorkItem) {
-      // User thiết kế: cảnh báo trước X ngày so với ngày hoàn thành của TBKT tổng
-      warningDays = this.designerWarningDays();
-    } else if (isReviewWorkItem) {
-      // User kiểm soát: cảnh báo trước X ngày so với ngày hoàn thành của TBKT tổng
-      warningDays = this.reviewerWarningDays();
-    } else {
-      // Mặc định dùng designer warning days cho các workitem khác (Material Leveling, etc.)
-      warningDays = this.designerWarningDays();
-    }
-    
-    // Kiểm tra warning CHỈ dựa trên ngày hoàn thành của TBKT tổng (DeliveryDate từ MachineAssignment)
-    // Bắt buộc phải có deliveryDate mới kiểm tra cảnh báo
-    if (!item.deliveryDate) {
-      return ''; // Không có deliveryDate thì không cảnh báo
-    }
-    
-    const deliveryDate = new Date(item.deliveryDate);
-    if (isNaN(deliveryDate.getTime())) {
-      console.warn(`Invalid deliveryDate for WorkItem ${item.workItemID}: ${item.deliveryDate}`);
-      return ''; // Invalid date thì không cảnh báo
-    }
-    
-    deliveryDate.setHours(0, 0, 0, 0);
-    
-    // Tính số ngày còn lại đến ngày hoàn thành của TBKT tổng
-    const daysUntilFinish = Math.ceil((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Debug log
-    console.log(`WorkItem ${item.workItemID}: today=${today.toLocaleDateString('vi-VN')}, deliveryDate=${deliveryDate.toLocaleDateString('vi-VN')}, daysUntilFinish=${daysUntilFinish}, warningDays=${warningDays}`);
-    
-    // Cảnh báo CHỈ KHI: còn <= X ngày nữa (từ cấu hình) hoặc đã quá hạn
-    // Ví dụ: nếu warningDays = 2 và ngày hiện tại là 06/01/2026:
-    // - Ngày hoàn thành 31/1/2026: còn 25 ngày > 2 ngày => KHÔNG cảnh báo
-    // - Ngày hoàn thành 08/01/2026: còn 2 ngày = 2 ngày => CẢNH BÁO
-    // - Ngày hoàn thành 07/01/2026: còn 1 ngày < 2 ngày => CẢNH BÁO
-    // - Ngày hoàn thành 05/01/2026: đã quá hạn (âm) => CẢNH BÁO
-    if (daysUntilFinish <= warningDays) {
-      return 'date-warning';
-    }
-    
-    return '';
   }
 
   getMachineName(machine: any): string {
@@ -332,6 +236,34 @@ export class DashboardPage implements OnInit {
     }
     return machine?.machineName || String(machine);
   }
+
+  openMachineDetail(machine: any): void {
+    // Hỗ trợ cả format cũ (string) và format mới (object)
+    let machineData: MachineDetailData;
+    
+    if (typeof machine === 'string') {
+      // Format cũ: chỉ có tên máy
+      machineData = {
+        machineName: machine,
+        status: 'in-progress'
+      };
+    } else {
+      // Format mới: object với đầy đủ thông tin
+      machineData = {
+        machineName: machine?.machineName || machine || '-',
+        tbktId: machine?.tbktId,
+        status: machine?.status || 'in-progress',
+        startDate: machine?.startDate
+      };
+    }
+
+    this.dialog.open(MachineDetailDialogComponent, {
+      width: '900px',
+      maxWidth: '90vw',
+      data: machineData
+    });
+  }
+
 
 }
 

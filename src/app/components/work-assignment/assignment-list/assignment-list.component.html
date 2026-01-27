@@ -103,6 +103,14 @@
             </button>
             <button 
               mat-menu-item 
+              (click)="openChangeAssignmentDialog(sheet)"
+              [disabled]="!canChangeAssignment(sheet)"
+              [matTooltip]="getChangeAssignmentTooltip(sheet)">
+              <mat-icon>swap_horiz</mat-icon>
+              <span>Thay đổi giao việc</span>
+            </button>
+            <button 
+              mat-menu-item 
               (click)="deleteTechnicalSheet(sheet)"
               [disabled]="!canDeleteTechnicalSheet(sheet)">
               <mat-icon>delete</mat-icon>

@@ -8,6 +8,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .dashboard-header {
@@ -257,6 +258,41 @@
   flex: 1;
 }
 
+.machine-name.clickable {
+  cursor: pointer;
+  color: #2196f3;
+  text-decoration: none;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.machine-name.clickable:hover {
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+.machine-name.clickable:active {
+  color: #1565c0;
+}
+
+/* TBKT link styling */
+.tbkt-link {
+  color: var(--thibidi-primary, #1976d2);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.tbkt-link:hover {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+.tbkt-link:active {
+  color: #0d47a1;
+}
+
 /* Machine Status Text */
 .recent-machine-item .status-text {
   font-size: 13px;
@@ -422,8 +458,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .section-title {

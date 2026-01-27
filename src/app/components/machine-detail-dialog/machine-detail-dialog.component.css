@@ -1,0 +1,171 @@
+.machine-detail-dialog {
+  min-width: 900px;
+  max-width: 1100px;
+}
+
+h2 mat-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.error-container {
+  color: #f44336;
+}
+
+.error-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: #f44336;
+}
+
+.machine-name-fallback {
+  margin-top: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.detail-container {
+  padding: 16px 0;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.detail-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.detail-value {
+  font-size: 15px;
+  color: #333;
+  word-break: break-word;
+}
+
+.approval-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.approval-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.approval-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.approval-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.approval-date {
+  font-size: 12px;
+  color: #999;
+  margin-left: 8px;
+}
+
+.approval-notes {
+  font-size: 14px;
+  color: #333;
+  font-style: italic;
+}
+
+.notes-content {
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.status-approved {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.status-rejected {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.status-pending {
+  color: #ff9800;
+  font-weight: bold;
+}
+
+mat-dialog-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .machine-detail-dialog {
+    min-width: 90vw;
+    max-width: 90vw;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .approval-info {
+    grid-template-columns: 1fr;
+  }
+}

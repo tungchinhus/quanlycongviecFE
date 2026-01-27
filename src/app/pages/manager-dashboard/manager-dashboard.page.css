@@ -4,9 +4,10 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
   height: calc(100vh - 64px); /* Trừ đi chiều cao header */
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-header {
@@ -52,7 +53,9 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .stats-grid {
@@ -313,7 +316,9 @@
 .table-wrapper {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 500px;
+  max-height: none;
+  flex: 1;
+  min-height: 0;
 }
 
 .work-items-table {

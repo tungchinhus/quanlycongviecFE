@@ -1,0 +1,141 @@
+<div class="machine-detail-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>info</mat-icon>
+    Thông tin chi tiết TBKT{{ technicalSheet ? ': ' + technicalSheet.tbkt_ID : (data.tbktId ? ': ' + data.tbktId : '') }}
+  </h2>
+  
+  <mat-dialog-content>
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải thông tin...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !isLoading" class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <p *ngIf="data.machineName" class="machine-name-fallback">
+        Tên máy: {{ data.machineName }}
+      </p>
+    </div>
+
+    <!-- Technical Sheet Details -->
+    <div *ngIf="technicalSheet && !isLoading && !error" class="detail-container">
+      <!-- Thông tin cơ bản -->
+      <div class="detail-section">
+        <h3 class="section-title">Thông tin cơ bản</h3>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">TBKT ID:</span>
+            <span class="detail-value">{{ technicalSheet.tbkt_ID || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tên Máy:</span>
+            <span class="detail-value">{{ data.machineName || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Công suất (kVA):</span>
+            <span class="detail-value">{{ technicalSheet.power_kVA || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Điện áp:</span>
+            <span class="detail-value">{{ technicalSheet.voltageSpec || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Pha:</span>
+            <span class="detail-value">{{ technicalSheet.phase || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Mã tiêu chuẩn:</span>
+            <span class="detail-value">{{ technicalSheet.standardCode || '-' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông tin ngày tháng -->
+      <div class="detail-section">
+        <h3 class="section-title">Thông tin ngày tháng</h3>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Ngày giao hàng:</span>
+            <span class="detail-value">{{ formatDate(technicalSheet.deliveryDate) }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Ngày vẽ:</span>
+            <span class="detail-value">{{ formatDate(technicalSheet.drawingDate) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông tin người phụ trách -->
+      <div class="detail-section">
+        <h3 class="section-title">Thông tin người phụ trách</h3>
+        <div class="detail-grid detail-grid-3">
+          <div class="detail-item">
+            <span class="detail-label">Thiết kế vỏ:</span>
+            <span class="detail-value">{{ casingDesignerName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Thiết kế ruột:</span>
+            <span class="detail-value">{{ coreDesignerName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Định mức vật tư:</span>
+            <span class="detail-value">{{ materialLevelingName }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông tin ký duyệt -->
+      <div class="detail-section">
+        <h3 class="section-title">Thông tin ký duyệt</h3>
+        <div class="approval-info">
+          <div class="approval-column">
+            <div class="approval-item">
+              <span class="approval-label">Trưởng phòng ký:</span>
+              <span [class]="getStatusClass(technicalSheet.managerL1ApprovalStatus)">
+                {{ getStatusText(technicalSheet.managerL1ApprovalStatus) }}
+              </span>
+              <span *ngIf="technicalSheet.managerL1ApprovalDate" class="approval-date">
+                ({{ formatDate(technicalSheet.managerL1ApprovalDate) }})
+              </span>
+            </div>
+            <div class="approval-item" *ngIf="technicalSheet.managerL1ApprovalNotes">
+              <span class="approval-label">Ghi chú từ Trưởng phòng:</span>
+              <span class="approval-notes">{{ technicalSheet.managerL1ApprovalNotes }}</span>
+            </div>
+          </div>
+          <div class="approval-column">
+            <div class="approval-item">
+              <span class="approval-label">Giám đốc ký:</span>
+              <span [class]="getStatusClass(technicalSheet.managerApprovalStatus)">
+                {{ getStatusText(technicalSheet.managerApprovalStatus) }}
+              </span>
+              <span *ngIf="technicalSheet.managerApprovalDate" class="approval-date">
+                ({{ formatDate(technicalSheet.managerApprovalDate) }})
+              </span>
+            </div>
+            <div class="approval-item" *ngIf="technicalSheet.managerApprovalNotes">
+              <span class="approval-label">Ghi chú từ Giám đốc:</span>
+              <span class="approval-notes">{{ technicalSheet.managerApprovalNotes }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ghi chú -->
+      <div class="detail-section" *ngIf="technicalSheet.notes">
+        <h3 class="section-title">Ghi chú</h3>
+        <div class="notes-content">{{ technicalSheet.notes }}</div>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onClose()">
+      <mat-icon>close</mat-icon>
+      Đóng
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -29,55 +29,11 @@
     <div class="dashboard-content">
       <!-- Left Column: DS Công việc Table -->
       <div class="department-work-items-section">
-        <h2 class="section-title">DS Công việc (7 ngày qua)</h2>
-        
-        @if (loadingDepartmentWorkItems()) {
-          <div class="loading-container">
-            <mat-spinner diameter="40"></mat-spinner>
-            <p>Đang tải danh sách công việc...</p>
-          </div>
-        } @else {
-          @if (allWorkItems().length > 0) {
-            <mat-card class="work-items-table-card">
-              <mat-card-content>
-                <div class="table-wrapper">
-                  <table class="work-items-table">
-                    <thead>
-                      <tr>
-                        <th>Họ tên</th>
-                        <th>Vai trò</th>
-                        <th>TBKT</th>
-                        <th>Tên máy</th>
-                        <th>Ngày bắt đầu</th>
-                        <th>Dự kiến hoàn thành</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (item of allWorkItems(); track item.workItemID) {
-                        <tr [class]="getDateRowClass(item)">
-                          <td>{{ item.fullName || item.personName || '-' }}</td>
-                          <td>{{ getRoleDisplayName(item.workType) }}</td>
-                          <td>{{ item.tbkt_ID || '-' }}</td>
-                          <td>{{ item.machineName || '-' }}</td>
-                          <td>{{ formatDate(item.startDate) }}</td>
-                          <td>{{ formatDate(item.expectedFinish) }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          } @else {
-            <mat-card>
-              <mat-card-content>
-                <div class="no-work-items">
-                  <p>Không có công việc nào trong 7 ngày qua</p>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          }
-        }
+        <app-dashboard-work-items-list
+          [workItems]="allWorkItems()"
+          [loading]="loadingDepartmentWorkItems()"
+          title="DS Công việc (7 ngày qua)">
+        </app-dashboard-work-items-list>
       </div>
 
       <!-- Right Column: Statistics Cards -->
@@ -171,7 +127,7 @@
                   @for (machine of stats()!.recent.machines; track getMachineKey(machine)) {
                     <li class="recent-machine-item">
                       <mat-icon class="machine-icon">precision_manufacturing</mat-icon>
-                      <span class="machine-name">{{ getMachineName(machine) }}</span>
+                      <span class="machine-name clickable" (click)="openMachineDetail(machine)" [matTooltip]="'Click để xem chi tiết'">{{ getMachineName(machine) }}</span>
                       @if (getMachineStatus(machine) === 'completed') {
                         <span class="status-text status-completed">Hoàn thành</span>
                       } @else {

@@ -1,0 +1,90 @@
+<h2 mat-dialog-title>
+  <mat-icon>swap_horiz</mat-icon>
+  Thay Đổi Giao Việc
+</h2>
+
+<mat-dialog-content>
+  <div class="dialog-content">
+    <p class="info-text">
+      Có thể thay đổi nhân viên thiết kế, nhân viên định mức và nhân viên kiểm soát.
+    </p>
+    
+    <form [formGroup]="changeForm" class="change-form">
+      <!-- Core Design (Thiết kế ruột) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên thiết kế ruột</mat-label>
+        <mat-select formControlName="coreDesignUser" [disabled]="!coreDesignWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!coreDesignWorkItem">Chưa có công việc thiết kế ruột</mat-hint>
+      </mat-form-field>
+
+      <!-- Casing Design (Thiết kế vỏ) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên thiết kế vỏ</mat-label>
+        <mat-select formControlName="casingDesignUser" [disabled]="!casingDesignWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!casingDesignWorkItem">Chưa có công việc thiết kế vỏ</mat-hint>
+      </mat-form-field>
+
+      <!-- Material Leveling (Định mức vật tư) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên định mức</mat-label>
+        <mat-select formControlName="materialLevelingUser" [disabled]="!materialLevelingWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!materialLevelingWorkItem">Chưa có công việc định mức</mat-hint>
+      </mat-form-field>
+
+      <!-- Core Review (Kiểm soát ruột) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên kiểm soát ruột</mat-label>
+        <mat-select formControlName="coreReviewUser" [disabled]="!coreReviewWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!coreReviewWorkItem">Chưa có công việc kiểm soát ruột</mat-hint>
+      </mat-form-field>
+
+      <!-- Casing Review (Kiểm soát vỏ) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên kiểm soát vỏ</mat-label>
+        <mat-select formControlName="casingReviewUser" [disabled]="!casingReviewWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!casingReviewWorkItem">Chưa có công việc kiểm soát vỏ</mat-hint>
+      </mat-form-field>
+    </form>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isSaving">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()" 
+    [disabled]="isSaving || changeForm.invalid">
+    <mat-icon *ngIf="!isSaving">save</mat-icon>
+    <mat-spinner *ngIf="isSaving" diameter="20" class="inline-spinner"></mat-spinner>
+    Lưu
+  </button>
+</mat-dialog-actions>

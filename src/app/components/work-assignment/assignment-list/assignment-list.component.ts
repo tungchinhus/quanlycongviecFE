@@ -23,6 +23,7 @@ import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
 import { AssignmentFormDialogComponent } from '../assignment-form-dialog/assignment-form-dialog.component';
 import { AssignmentDetailDialogComponent } from '../assignment-detail-dialog/assignment-detail-dialog.component';
+import { ChangeAssignmentDialogComponent } from '../change-assignment-dialog/change-assignment-dialog.component';
 
 interface ColumnVisibility {
   [key: string]: boolean;
@@ -417,6 +418,98 @@ export class AssignmentListComponent implements OnInit {
   canEditAssignment(sheet: TechnicalSheet): boolean {
     // Chỉ cho phép chỉnh sửa nếu chưa có work items được sử dụng
     return !this.hasUsedWorkItems(sheet);
+  }
+
+  // Kiểm tra xem có thể thay đổi giao việc không
+  // Chỉ cho phép khi assignment chưa ở trạng thái "Hoàn thành" (status = 3)
+  // Và không cho phép khi status = 1 (Mới - chưa làm gì)
+  canChangeAssignment(sheet: TechnicalSheet): boolean {
+    // Tìm assignment liên quan đến technical sheet này
+    const relatedAssignment = this.assignments.find(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    
+    // Nếu chưa có assignment, không cho phép thay đổi
+    if (!relatedAssignment) {
+      return false;
+    }
+    
+    // Lấy status của assignment (mặc định là 1 nếu không có)
+    const assignmentStatus = relatedAssignment.status ?? AssignmentStatus.New;
+    const statusValue = typeof assignmentStatus === 'number' ? assignmentStatus : assignmentStatus;
+    
+    // Không cho phép thay đổi khi status = 1 (Mới - chưa làm gì, không cần thiết)
+    if (statusValue === TASK_STATUS.NEW || statusValue === 1) {
+      return false;
+    }
+    
+    // Chỉ cho phép thay đổi khi status chưa phải là 3 (Hoàn thành)
+    // Status 3 = "ký duyệt tbkt tổng hoàn thành"
+    return statusValue !== TASK_STATUS.COMPLETED && statusValue !== 3;
+  }
+
+  // Lấy tooltip cho nút thay đổi giao việc
+  getChangeAssignmentTooltip(sheet: TechnicalSheet): string {
+    const relatedAssignment = this.assignments.find(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    
+    if (!relatedAssignment) {
+      return 'Chưa có gán công việc';
+    }
+    
+    const assignmentStatus = relatedAssignment.status ?? AssignmentStatus.New;
+    const statusValue = typeof assignmentStatus === 'number' ? assignmentStatus : assignmentStatus;
+    
+    if (statusValue === TASK_STATUS.NEW || statusValue === 1) {
+      return 'Không thể thay đổi giao việc khi TBKT ở trạng thái mới (chưa làm gì)';
+    }
+    
+    if (statusValue === TASK_STATUS.COMPLETED || statusValue === 3) {
+      return 'Không thể thay đổi giao việc khi trạng thái đã ký duyệt TBKT tổng hoàn thành';
+    }
+    
+    return '';
+  }
+
+  // Mở dialog thay đổi giao việc
+  openChangeAssignmentDialog(sheet: TechnicalSheet) {
+    // Tìm assignment liên quan đến technical sheet này
+    const relatedAssignment = this.assignments.find(assignment => 
+      assignment.tbkt_ID === sheet.tbkt_ID || 
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    
+    if (!relatedAssignment || !relatedAssignment.assignmentID) {
+      this.snackBar.open(`Đề nghị "${sheet.tbkt_ID}" chưa có gán công việc. Vui lòng tạo gán công việc trước.`, 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+      return;
+    }
+    
+    // Mở dialog thay đổi giao việc
+    const dialogRef = this.dialog.open(ChangeAssignmentDialogComponent, {
+      width: '90%',
+      maxWidth: '800px',
+      minWidth: '320px',
+      disableClose: false,
+      data: { 
+        assignment: relatedAssignment,
+        technicalSheet: sheet
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      // Reload data sau khi thay đổi thành công
+      if (result) {
+        this.loadTechnicalSheets();
+      }
+    });
   }
 
   canDeleteTechnicalSheet(sheet: TechnicalSheet): boolean {
