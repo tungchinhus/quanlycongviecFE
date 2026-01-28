@@ -13,7 +13,7 @@
         matInput 
         [value]="searchTerm()" 
         (input)="onSearchChange($any($event.target).value)"
-        placeholder="Tìm kiếm theo TBKT, Ngày lưu trữ, Trạng thái...">
+        placeholder="Tìm kiếm theo TBKT, Trạng thái...">
       <mat-icon matPrefix>search</mat-icon>
       <button 
         *ngIf="searchTerm()"
@@ -74,15 +74,9 @@
             </td>
           </ng-container>
 
-          <!-- Archived Date Column -->
-          <ng-container matColumnDef="archivedDate">
-            <th mat-header-cell *matHeaderCellDef>Ngày lưu trữ</th>
-            <td mat-cell *matCellDef="let element">{{ formatDate(element.archivedDate) }}</td>
-          </ng-container>
-
           <!-- ManagerL1 Approval Status Column -->
           <ng-container matColumnDef="managerL1ApprovalStatus">
-            <th mat-header-cell *matHeaderCellDef>Trạng thái ManagerL1</th>
+            <th mat-header-cell *matHeaderCellDef>Trưởng phòng duyệt</th>
             <td mat-cell *matCellDef="let element">
               <span [class]="getApprovalStatusClass(element, 'ManagerL1')">
                 {{ getApprovalStatus(element, 'ManagerL1') }}
@@ -95,7 +89,7 @@
 
           <!-- Manager Approval Status Column -->
           <ng-container matColumnDef="managerApprovalStatus">
-            <th mat-header-cell *matHeaderCellDef>Trạng thái Manager</th>
+            <th mat-header-cell *matHeaderCellDef>Giám đốc duyệt</th>
             <td mat-cell *matCellDef="let element">
               <span [class]="getApprovalStatusClass(element, 'Manager')">
                 {{ getApprovalStatus(element, 'Manager') }}

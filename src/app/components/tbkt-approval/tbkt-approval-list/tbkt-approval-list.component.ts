@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject, Inject } from '@angular/core';
+import { Component, OnInit, signal, inject, Inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
@@ -12,11 +12,15 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule } from '@angul
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { AssignmentService } from '../../../services/assignment.service';
-import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
+import { FileService } from '../../../services/file.service';
+import { TechnicalSheet, MachineAssignment, WorkItem } from '../../../models/machine-assignment.model';
+import { FileDocument } from '../../../models/file.model';
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-tbkt-approval-list',
@@ -61,7 +65,6 @@ export class TBKTApprovalListComponent implements OnInit {
   
   readonly displayedColumns: string[] = [
     'tbkt_ID',
-    'archivedDate',
     'managerL1ApprovalStatus',
     'managerApprovalStatus',
     'actions'
@@ -124,17 +127,17 @@ export class TBKTApprovalListComponent implements OnInit {
           }
         });
         
-        // Kiểm tra xem tất cả assignments của mỗi TBKT có status = Completed (3) không
+        // Kiểm tra "tất cả công đoạn thiết kế đã hoàn thành" theo WorkItems, không theo assignment.Status.
+        // Assignment.Status = 3 chỉ khi đã ManagerL1+Manager duyệt → nếu dựa vào đó thì ManagerL1
+        // không bao giờ thấy TBKT để ký (vòng lặp). Do đó dùng: mọi assignment của TBKT có
+        // tất cả work items đã xác nhận (personConfirmation === true) = sẵn sàng cho ManagerL1.
         assignmentsByTBKT.forEach((tbktAssignments, tbktId) => {
-          // TBKT được coi là hoàn thành nếu:
-          // 1. Có ít nhất 1 assignment
-          // 2. TẤT CẢ assignments đều có status = 3 (Completed)
-          const allCompleted = tbktAssignments.length > 0 && 
+          const allWorkItemsConfirmed = tbktAssignments.length > 0 &&
             tbktAssignments.every(assignment => {
-              const status = assignment.status ?? AssignmentStatus.New;
-              return status === AssignmentStatus.Completed || status === 3;
+              const items = assignment.workItems ?? [];
+              return items.length > 0 && items.every(wi => wi.personConfirmation === true);
             });
-          this.tbktCompletionMap.set(tbktId, allCompleted);
+          this.tbktCompletionMap.set(tbktId, allWorkItemsConfirmed);
         });
         
         // Đối với các TBKT không có assignment, đánh dấu là chưa hoàn thành
@@ -145,10 +148,9 @@ export class TBKTApprovalListComponent implements OnInit {
           }
         });
         
-        // Lấy các TBKT đã hoàn thành:
-        // 1. Có ArchivedDate (đã được đánh dấu hoàn thành thủ công)
-        // 2. HOẶC có tất cả assignments (workitems) đã hoàn thành (status = 3)
-        // Điều này đảm bảo các TBKT với workitems status 3 sẽ hiển thị trong phần ký duyệt
+        // Lấy các TBKT cần/sẵn sàng cho ký duyệt:
+        // 1. Có ArchivedDate (đã được đánh dấu hoàn thành thủ công), HOẶC
+        // 2. Tất cả công đoạn thiết kế (work items) đã xác nhận hoàn thành — khi đó ManagerL1 thấy TBKT tổng để ký
         const completedSheets = sheets.filter(sheet => {
           const tbktId = String(sheet.tbkt_ID || '').trim();
           const hasArchivedDate = sheet.archivedDate != null;
@@ -306,16 +308,22 @@ export class TBKTApprovalListComponent implements OnInit {
   }
 
   openTBKTDetailDialog(sheet: TechnicalSheet): void {
-    // Load thông tin đầy đủ từ API
-    this.assignmentService.getTechnicalSheet(sheet.tbkt_ID).subscribe({
-      next: (fullSheet) => {
-        const dialogRef = this.dialog.open(TBKTDetailDialogComponent, {
+    const tbktId = String(sheet.tbkt_ID || '').trim();
+    forkJoin({
+      sheet: this.assignmentService.getTechnicalSheet(sheet.tbkt_ID),
+      assignments: this.assignmentService.getAllAssignments()
+    }).subscribe({
+      next: ({ sheet: fullSheet, assignments }) => {
+        const assignmentsForTbkt = (assignments || []).filter(
+          a => String(a.tbkt_ID || '').trim() === tbktId
+        );
+        this.dialog.open(TBKTDetailDialogComponent, {
           width: '800px',
           maxWidth: '90vw',
-          data: { sheet: fullSheet }
+          data: { sheet: fullSheet, assignments: assignmentsForTbkt }
         });
       },
-      error: (err) => {
+      error: () => {
         this.snackBar.open('Không thể tải thông tin chi tiết TBKT', 'Đóng', {
           duration: 3000,
           horizontalPosition: 'center',
@@ -611,7 +619,8 @@ export class TBKTApprovalDialogComponent {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatExpansionModule
   ],
   template: `
     <h2 mat-dialog-title>
@@ -646,79 +655,106 @@ export class TBKTApprovalDialogComponent {
               <span class="detail-value">{{ data.sheet.standardCode || '-' }}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Số đơn hàng (SO):</span>
-              <span class="detail-value">{{ data.sheet.salesOrder || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Thông tin ngày tháng -->
-        <div class="detail-section">
-          <h3 class="section-title">Thông tin ngày tháng</h3>
-          <div class="detail-grid">
-            <div class="detail-item">
               <span class="detail-label">Ngày giao hàng:</span>
               <span class="detail-value">{{ formatDate(data.sheet.deliveryDate) }}</span>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">Ngày vẽ:</span>
-              <span class="detail-value">{{ formatDate(data.sheet.drawingDate) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Ngày bàn giao:</span>
-              <span class="detail-value">{{ formatDate(data.sheet.handOverDate) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Ngày lưu trữ:</span>
-              <span class="detail-value">{{ formatDate(data.sheet.archivedDate) }}</span>
-            </div>
           </div>
         </div>
 
-        <!-- Thông tin người phụ trách -->
+        <!-- Thông tin người phụ trách: panel expand/collapse Thiết kế vỏ, Thiết kế ruột -->
         <div class="detail-section">
           <h3 class="section-title">Thông tin người phụ trách</h3>
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">KS Điện:</span>
-              <span class="detail-value">{{ data.sheet.requesterElectrical || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">KS Cơ:</span>
-              <span class="detail-value">{{ data.sheet.requesterMechanical || '-' }}</span>
-            </div>
-          </div>
+          <mat-accordion class="responsible-accordion">
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>{{ getCasingPanelTitle() }}</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div class="work-items-list" *ngIf="getCasingWorkItems().length > 0; else emptyCasing">
+                <ng-container *ngFor="let wi of getCasingWorkItems()">
+                <div class="work-item-row" *ngIf="hasWorkItemData(wi)">
+                  <div class="wi-dates">
+                    <span class="wi-date"><strong>Ngày bắt đầu:</strong> {{ formatDate(wi.startDate) }}</span>
+                    <span class="wi-date"><strong>Ngày hoàn thành:</strong> {{ formatDate(wi.actualFinish) || formatDate(wi.expectedFinish) }}</span>
+                  </div>
+                  <div class="wi-files" *ngIf="getFilesForWorkItem(wi).length > 0">
+                    <span class="wi-files-label">File thiết kế:</span>
+                    <span class="wi-file-link" *ngFor="let f of getFilesForWorkItem(wi)">
+                      <button type="button" mat-button color="primary" (click)="downloadFile(f)">
+                        <mat-icon>download</mat-icon>
+                        {{ f.fileName || ('File ' + (f.id || f.fileID)) }}
+                      </button>
+                    </span>
+                  </div>
+                </div>
+                </ng-container>
+              </div>
+              <ng-template #emptyCasing>
+                <p class="empty-hint">Chưa có thông tin thiết kế vỏ</p>
+              </ng-template>
+            </mat-expansion-panel>
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>{{ getCorePanelTitle() }}</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div class="work-items-list" *ngIf="getCoreWorkItems().length > 0; else emptyCore">
+                <ng-container *ngFor="let wi of getCoreWorkItems()">
+                <div class="work-item-row" *ngIf="hasWorkItemData(wi)">
+                  <div class="wi-dates">
+                    <span class="wi-date"><strong>Ngày bắt đầu:</strong> {{ formatDate(wi.startDate) }}</span>
+                    <span class="wi-date"><strong>Ngày hoàn thành:</strong> {{ formatDate(wi.actualFinish) || formatDate(wi.expectedFinish) }}</span>
+                  </div>
+                  <div class="wi-files" *ngIf="getFilesForWorkItem(wi).length > 0">
+                    <span class="wi-files-label">File thiết kế:</span>
+                    <span class="wi-file-link" *ngFor="let f of getFilesForWorkItem(wi)">
+                      <button type="button" mat-button color="primary" (click)="downloadFile(f)">
+                        <mat-icon>download</mat-icon>
+                        {{ f.fileName || ('File ' + (f.id || f.fileID)) }}
+                      </button>
+                    </span>
+                  </div>
+                </div>
+                </ng-container>
+              </div>
+              <ng-template #emptyCore>
+                <p class="empty-hint">Chưa có thông tin thiết kế ruột</p>
+              </ng-template>
+            </mat-expansion-panel>
+          </mat-accordion>
         </div>
 
-        <!-- Thông tin ký duyệt -->
+        <!-- Thông tin ký duyệt: 2 cột Trưởng phòng (trái) | Giám đốc khối (phải) -->
         <div class="detail-section">
           <h3 class="section-title">Thông tin ký duyệt</h3>
-          <div class="approval-info">
-            <div class="approval-item">
-              <span class="approval-label">Trạng thái ManagerL1:</span>
-              <span [class]="getStatusClass(data.sheet.managerL1ApprovalStatus)">
-                {{ getStatusText(data.sheet.managerL1ApprovalStatus) }}
-              </span>
-              <span *ngIf="data.sheet.managerL1ApprovalDate" class="approval-date">
-                ({{ formatDate(data.sheet.managerL1ApprovalDate) }})
-              </span>
+          <div class="approval-info approval-info-two-cols">
+            <div class="approval-col">
+              <div class="approval-item">
+                <span class="approval-label">Trưởng phòng</span>
+                <span [class]="getStatusClass(data.sheet.managerL1ApprovalStatus)">
+                  {{ getStatusText(data.sheet.managerL1ApprovalStatus) }}
+                </span>
+                <span *ngIf="data.sheet.managerL1ApprovalDate" class="approval-date">
+                  ({{ formatDate(data.sheet.managerL1ApprovalDate) }})
+                </span>
+              </div>
+              <div class="approval-item" *ngIf="data.sheet.managerL1ApprovalNotes">
+                <span class="approval-label">Ghi chú:</span>
+                <span class="approval-notes">{{ data.sheet.managerL1ApprovalNotes }}</span>
+              </div>
             </div>
-            <div class="approval-item" *ngIf="data.sheet.managerL1ApprovalNotes">
-              <span class="approval-label">Ghi chú ManagerL1:</span>
-              <span class="approval-notes">{{ data.sheet.managerL1ApprovalNotes }}</span>
-            </div>
-            <div class="approval-item">
-              <span class="approval-label">Trạng thái Manager:</span>
-              <span [class]="getStatusClass(data.sheet.managerApprovalStatus)">
-                {{ getStatusText(data.sheet.managerApprovalStatus) }}
-              </span>
-              <span *ngIf="data.sheet.managerApprovalDate" class="approval-date">
-                ({{ formatDate(data.sheet.managerApprovalDate) }})
-              </span>
-            </div>
-            <div class="approval-item" *ngIf="data.sheet.managerApprovalNotes">
-              <span class="approval-label">Ghi chú Manager:</span>
-              <span class="approval-notes">{{ data.sheet.managerApprovalNotes }}</span>
+            <div class="approval-col">
+              <div class="approval-item">
+                <span class="approval-label">Giám đốc khối</span>
+                <span [class]="getStatusClass(data.sheet.managerApprovalStatus)">
+                  {{ getStatusText(data.sheet.managerApprovalStatus) }}
+                </span>
+                <span *ngIf="data.sheet.managerApprovalDate" class="approval-date">
+                  ({{ formatDate(data.sheet.managerApprovalDate) }})
+                </span>
+              </div>
+              <div class="approval-item" *ngIf="data.sheet.managerApprovalNotes">
+                <span class="approval-label">Ghi chú:</span>
+                <span class="approval-notes">{{ data.sheet.managerApprovalNotes }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -783,6 +819,17 @@ export class TBKTApprovalDialogComponent {
       flex-direction: column;
       gap: 12px;
     }
+    .approval-info-two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
+    }
+    .approval-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
     .approval-item {
       display: flex;
       flex-direction: column;
@@ -810,6 +857,65 @@ export class TBKTApprovalDialogComponent {
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .responsible-accordion {
+      display: block;
+      margin-top: 8px;
+    }
+    .responsible-accordion mat-expansion-panel {
+      margin-bottom: 8px;
+    }
+    .work-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .work-item-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    .work-item-row .wi-dates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      font-size: 13px;
+      color: #555;
+    }
+    .work-item-row .wi-date {
+      white-space: nowrap;
+    }
+    .work-item-row .wi-files {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .work-item-row .wi-files-label {
+      font-size: 13px;
+      color: #666;
+      font-weight: 500;
+    }
+    .work-item-row .wi-file-link button {
+      padding: 0 4px;
+      min-width: auto;
+      line-height: 32px;
+    }
+    .work-item-row .wi-file-link mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .empty-hint {
+      margin: 0;
+      color: #999;
+      font-style: italic;
+      padding: 8px 0;
+    }
     .status-approved {
       color: #4caf50;
       font-weight: bold;
@@ -833,13 +939,132 @@ export class TBKTApprovalDialogComponent {
       .detail-grid {
         grid-template-columns: 1fr;
       }
+      .approval-info-two-cols {
+        grid-template-columns: 1fr;
+      }
     }
   `]
 })
-export class TBKTDetailDialogComponent {
+export class TBKTDetailDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<TBKTDetailDialogComponent>);
+  private readonly fileService = inject(FileService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly cdr = inject(ChangeDetectorRef);
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { sheet: TechnicalSheet }) {}
+  readonly filesByAssignmentMap = signal<Map<number, FileDocument[]>>(new Map());
+
+  private readonly workTypeLabel: Record<string, string> = {
+    'Casing Design': 'Thiết kế vỏ',
+    'Casing Review': 'Kiểm soát vỏ',
+    'Core Design': 'Thiết kế ruột',
+    'Core Review': 'Kiểm soát ruột',
+    'Material Leveling': 'Định mức vật tư'
+  };
+
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { sheet: TechnicalSheet; assignments?: MachineAssignment[] }) {}
+
+  ngOnInit(): void {
+    const assignments = this.data.assignments ?? [];
+    if (assignments.length === 0) return;
+    forkJoin(
+      assignments.map(a =>
+        this.fileService.getFilesByAssignment(a.assignmentID).pipe(catchError(() => of([])))
+      )
+    ).subscribe(results => {
+      const map = new Map<number, FileDocument[]>();
+      assignments.forEach((a, i) => map.set(a.assignmentID, results[i] ?? []));
+      this.filesByAssignmentMap.set(map);
+      this.cdr.markForCheck();
+    });
+  }
+
+  getCasingPanelTitle(): string {
+    const design = this.getCasingWorkItems().find(wi => wi.workType === 'Casing Design');
+    const name = design ? (design.fullName ?? design.personName ?? '').trim() : '';
+    return name ? `Thiết kế vỏ - ${name}` : 'Thiết kế vỏ';
+  }
+
+  getCorePanelTitle(): string {
+    const design = this.getCoreWorkItems().find(wi => wi.workType === 'Core Design');
+    const name = design ? (design.fullName ?? design.personName ?? '').trim() : '';
+    return name ? `Thiết kế ruột - ${name}` : 'Thiết kế ruột';
+  }
+
+  hasWorkItemData(wi: WorkItem): boolean {
+    return !!(wi.startDate || wi.actualFinish || wi.expectedFinish || (this.getFilesForWorkItem(wi).length > 0));
+  }
+
+  getCasingWorkItems(): WorkItem[] {
+    const ass = this.data.assignments ?? [];
+    return ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Casing Design' || wi.workType === 'Casing Review')));
+  }
+
+  getCoreWorkItems(): WorkItem[] {
+    const ass = this.data.assignments ?? [];
+    return ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Core Design' || wi.workType === 'Core Review')));
+  }
+
+  getFilesForWorkItem(wi: WorkItem): FileDocument[] {
+    const map = this.filesByAssignmentMap();
+    const files = map.get(wi.assignmentID) ?? [];
+    const ids = this.parseFileIds(wi.file_ID);
+    if (ids.length === 0) return [];
+    return files.filter(f => {
+      const id = f.id ?? f.fileID;
+      return id != null && ids.includes(Number(id));
+    });
+  }
+
+  private parseFileIds(fileIds: string | undefined): number[] {
+    if (!fileIds || !fileIds.trim()) return [];
+    return fileIds.split(',')
+      .map(id => id.trim())
+      .filter(id => id !== '')
+      .map(id => { const n = parseInt(id, 10); return isNaN(n) ? null : n; })
+      .filter((n): n is number => n !== null);
+  }
+
+  downloadFile(file: FileDocument): void {
+    const fileId = file.id ?? file.fileID;
+    if (fileId == null) return;
+    this.fileService.downloadFile(fileId).subscribe({
+      next: (blob) => {
+        if (blob.type === 'application/json' || blob.size < 100) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const err = JSON.parse(reader.result as string);
+              this.snackBar.open(err.message || err.error || 'Lỗi khi tải file', 'Đóng', {
+                duration: 5000, horizontalPosition: 'center', verticalPosition: 'top', panelClass: ['error-snackbar']
+              });
+            } catch {
+              this.snackBar.open('Lỗi khi tải file', 'Đóng', { duration: 3000, horizontalPosition: 'center', verticalPosition: 'top' });
+            }
+          };
+          reader.readAsText(blob);
+          return;
+        }
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.fileName || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || err.message || 'Lỗi khi tải file', 'Đóng', {
+          duration: 5000, horizontalPosition: 'center', verticalPosition: 'top', panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  getWorkTypeDisplayName(workType: string | undefined): string {
+    if (!workType) return '';
+    return this.workTypeLabel[workType] ?? workType;
+  }
 
   formatDate(date: Date | string | null | undefined): string {
     if (!date) return '-';
