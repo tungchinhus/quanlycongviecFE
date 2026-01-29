@@ -24,10 +24,10 @@
       <mat-card-header>
         <mat-card-title>
           <mat-icon>folder</mat-icon>
-          Đường dẫn lưu file
+          Cấu hình lưu file & cảnh báo
         </mat-card-title>
         <mat-card-subtitle>
-          Thiết lập đường dẫn thư mục trên server để lưu trữ file
+          Thiết lập nhanh các thông số hệ thống quan trọng
         </mat-card-subtitle>
       </mat-card-header>
       
@@ -44,11 +44,11 @@
               <input 
                 matInput 
                 formControlName="fileStoragePath"
-                placeholder="Ví dụ: C:\Files\Uploads hoặc /var/www/uploads"
+                placeholder="C:\Files\Uploads hoặc /var/www/uploads"
                 [readonly]="isSaving()">
               <mat-icon matPrefix>folder_open</mat-icon>
               <mat-hint>
-                Nhập đường dẫn tuyệt đối đến thư mục trên server (ví dụ: C:\Files\Uploads hoặc /var/www/uploads)
+                Đường dẫn tuyệt đối đến thư mục lưu file trên server.
               </mat-hint>
               @if (settingsForm.get('fileStoragePath')?.hasError('required') && settingsForm.get('fileStoragePath')?.touched) {
                 <mat-error>Vui lòng nhập đường dẫn lưu file</mat-error>
@@ -79,11 +79,11 @@
               <input 
                 matInput 
                 formControlName="signatureStoragePath"
-                placeholder="Ví dụ: C:\Files\Signatures hoặc /var/www/signatures"
+                placeholder="C:\Files\Signatures hoặc /var/www/signatures"
                 [readonly]="isSaving()">
               <mat-icon matPrefix>draw</mat-icon>
               <mat-hint>
-                Nhập đường dẫn tuyệt đối đến thư mục trên server để lưu chữ ký điện tử (ví dụ: C:\Files\Signatures hoặc /var/www/signatures)
+                Đường dẫn tuyệt đối đến thư mục lưu chữ ký điện tử trên server.
               </mat-hint>
               @if (settingsForm.get('signatureStoragePath')?.hasError('required') && settingsForm.get('signatureStoragePath')?.touched) {
                 <mat-error>Vui lòng nhập đường dẫn lưu chữ ký</mat-error>
@@ -114,8 +114,7 @@
                 Gửi thông báo qua email
               </mat-checkbox>
               <p class="notification-hint">
-                Nếu bật: Hệ thống sẽ gửi email thông báo khi có file được upload.<br>
-                Nếu tắt: Hệ thống sẽ hiển thị thông báo (badge đỏ) trên biểu tượng chuông.
+                Bật để gửi email khi có file mới; tắt để chỉ hiển thị thông báo trên biểu tượng chuông.
               </p>
             </div>
 
@@ -176,21 +175,43 @@
               </mat-form-field>
             </div>
 
-            <div class="form-actions">
-              <button 
-                mat-raised-button 
-                type="button" 
-                color="accent"
-                (click)="validatePath()"
-                [disabled]="isValidating() || isSaving() || settingsForm.get('fileStoragePath')?.invalid">
-                @if (isValidating()) {
-                  <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-                } @else {
-                  <mat-icon>check_circle</mat-icon>
+            <div class="sync-settings">
+              <h3 class="section-title">
+                <mat-icon>sync</mat-icon>
+                Cấu hình đồng bộ file về server
+              </h3>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Thời gian đồng bộ (phút)</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  formControlName="syncIntervalMinutes"
+                  placeholder="2"
+                  min="1"
+                  max="1440"
+                  [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                <mat-hint>
+                  Số phút giữa các lần đồng bộ file từ máy trạm lên server.
+                </mat-hint>
+                @if (settingsForm.get('syncIntervalMinutes')?.hasError('required') && settingsForm.get('syncIntervalMinutes')?.touched) {
+                  <mat-error>Vui lòng nhập thời gian đồng bộ</mat-error>
                 }
-                Kiểm tra đường dẫn
-              </button>
-              
+                @if (settingsForm.get('syncIntervalMinutes')?.hasError('min') && settingsForm.get('syncIntervalMinutes')?.touched) {
+                  <mat-error>Thời gian đồng bộ phải lớn hơn hoặc bằng 1 phút</mat-error>
+                }
+                @if (settingsForm.get('syncIntervalMinutes')?.hasError('max') && settingsForm.get('syncIntervalMinutes')?.touched) {
+                  <mat-error>Thời gian đồng bộ không được vượt quá 1440 phút (24 giờ)</mat-error>
+                }
+              </mat-form-field>
+
+              <p class="notification-hint">
+                Áp dụng cho tiến trình đồng bộ file từ máy trạm về server.
+              </p>
+            </div>
+
+            <div class="form-actions">
               <div class="action-buttons">
                 <button 
                   mat-button 
@@ -223,16 +244,13 @@
       <mat-card-header>
         <mat-card-title>
           <mat-icon>info</mat-icon>
-          Lưu ý
+          Lưu ý quan trọng
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
         <ul class="info-list">
-          <li>Đường dẫn phải là đường dẫn tuyệt đối trên server (không phải đường dẫn tương đối)</li>
-          <li>Server phải có quyền ghi vào thư mục được chỉ định</li>
-          <li>Thư mục sẽ được tạo tự động nếu chưa tồn tại (nếu server có quyền)</li>
-          <li>Sử dụng nút "Kiểm tra đường dẫn" để xác minh đường dẫn trước khi lưu</li>
-          <li>Thay đổi đường dẫn sẽ chỉ áp dụng cho các file được upload sau khi lưu cài đặt</li>
+          <li>Đường dẫn phải là đường dẫn tuyệt đối trên server và server cần có quyền ghi vào thư mục.</li>
+          <li>Nên kiểm tra đường dẫn trước khi lưu; thay đổi chỉ áp dụng cho các file được upload sau khi cập nhật cài đặt.</li>
         </ul>
       </mat-card-content>
     </mat-card>

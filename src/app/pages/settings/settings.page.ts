@@ -57,7 +57,8 @@ export class SettingsPage implements OnInit {
       signatureStoragePath: ['', [Validators.required, Validators.minLength(1)]],
       sendEmailNotifications: [true],
       designerWarningDays: [2, [Validators.required, Validators.min(0), Validators.max(30)]],
-      reviewerWarningDays: [1, [Validators.required, Validators.min(0), Validators.max(30)]]
+      reviewerWarningDays: [1, [Validators.required, Validators.min(0), Validators.max(30)]],
+      syncIntervalMinutes: [2, [Validators.required, Validators.min(1), Validators.max(1440)]]
     });
   }
 
@@ -75,7 +76,8 @@ export class SettingsPage implements OnInit {
           signatureStoragePath: settings.signatureStoragePath || '',
           sendEmailNotifications: settings.sendEmailNotifications !== false, // Default to true
           designerWarningDays: settings.designerWarningDays ?? 2,
-          reviewerWarningDays: settings.reviewerWarningDays ?? 1
+          reviewerWarningDays: settings.reviewerWarningDays ?? 1,
+          syncIntervalMinutes: settings.syncIntervalMinutes ?? 2
         });
       },
       error: (error) => {
@@ -176,6 +178,7 @@ export class SettingsPage implements OnInit {
     const sendEmailNotifications = this.settingsForm.get('sendEmailNotifications')?.value ?? true;
     const designerWarningDays = this.settingsForm.get('designerWarningDays')?.value ?? 2;
     const reviewerWarningDays = this.settingsForm.get('reviewerWarningDays')?.value ?? 1;
+    const syncIntervalMinutes = this.settingsForm.get('syncIntervalMinutes')?.value ?? 2;
 
     this.isSaving.set(true);
     
@@ -184,6 +187,7 @@ export class SettingsPage implements OnInit {
     const saveSignatureStorage = this.settingsService.updateSignatureStoragePath(signatureStoragePath);
     const saveNotification = this.settingsService.updateNotificationPreference(sendEmailNotifications);
     const saveWarningDays = this.settingsService.updateWarningDays(designerWarningDays, reviewerWarningDays);
+    const saveSyncInterval = this.settingsService.updateSyncInterval(syncIntervalMinutes);
 
     // Execute all saves
     saveFileStorage.subscribe({
@@ -194,12 +198,27 @@ export class SettingsPage implements OnInit {
               next: () => {
                 saveWarningDays.subscribe({
                   next: () => {
-                    this.isSaving.set(false);
-                    this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
-                      duration: 3000,
-                      horizontalPosition: 'center',
-                      verticalPosition: 'top',
-                      panelClass: ['success-snackbar']
+                    // Sau khi lưu warning days, lưu thêm sync interval
+                    saveSyncInterval.subscribe({
+                      next: () => {
+                        this.isSaving.set(false);
+                        this.snackBar.open('Cài đặt đã được lưu thành công!', 'Đóng', {
+                          duration: 3000,
+                          horizontalPosition: 'center',
+                          verticalPosition: 'top',
+                          panelClass: ['success-snackbar']
+                        });
+                      },
+                      error: (error) => {
+                        this.isSaving.set(false);
+                        console.error('Error saving sync interval:', error);
+                        this.snackBar.open('Đã lưu các cài đặt khác nhưng không thể lưu thời gian đồng bộ.', 'Đóng', {
+                          duration: 5000,
+                          horizontalPosition: 'center',
+                          verticalPosition: 'top',
+                          panelClass: ['error-snackbar']
+                        });
+                      }
                     });
                   },
                   error: (error) => {

@@ -9,6 +9,7 @@ export interface SystemSettings {
   sendEmailNotifications: boolean;
   designerWarningDays?: number;
   reviewerWarningDays?: number;
+  syncIntervalMinutes?: number;
   [key: string]: any; // Cho phép các settings khác trong tương lai
 }
 
@@ -66,6 +67,22 @@ export class SettingsService {
    */
   getAllSystemSettings(): Observable<SystemSettings> {
     return this.http.get<SystemSettings>(`${this.apiUrl}/all`);
+  }
+
+  /**
+   * Lấy thời gian đồng bộ (phút)
+   */
+  getSyncInterval(): Observable<{ syncIntervalMinutes: number }> {
+    return this.http.get<{ syncIntervalMinutes: number }>(`${this.apiUrl}/sync-interval`);
+  }
+
+  /**
+   * Cập nhật thời gian đồng bộ (phút)
+   */
+  updateSyncInterval(syncIntervalMinutes: number): Observable<{ syncIntervalMinutes: number }> {
+    return this.http.put<{ syncIntervalMinutes: number }>(`${this.apiUrl}/sync-interval`, {
+      syncIntervalMinutes
+    });
   }
 
   /**
