@@ -18,6 +18,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AssignmentService } from '../../../services/assignment.service';
+import { WorkItemService } from '../../../services/work-item.service';
+import { WorkItemPdfService } from '../../../services/work-item-pdf.service';
 import { TechnicalSheet, MachineAssignment, AssignmentStatus } from '../../../models/machine-assignment.model';
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../constants/enums';
@@ -89,6 +91,8 @@ export class AssignmentListComponent implements OnInit {
 
   constructor(
     private assignmentService: AssignmentService,
+    private workItemService: WorkItemService,
+    private workItemPdfService: WorkItemPdfService,
     private dialog: MatDialog,
     private authService: AuthService,
     private snackBar: MatSnackBar
@@ -271,7 +275,7 @@ export class AssignmentListComponent implements OnInit {
         } else if (err.status === 500) {
           errorMsg += 'Lỗi server. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
         } else if (err.status === 0 || err.status === undefined) {
-          errorMsg += 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+          errorMsg += 'Không thể kết nối đến server (API backend có thể chưa chạy). Vui lòng khởi động API tại thư mục quanlyfilesBE (vd: dotnet run) và kiểm tra địa chỉ trong environment (mặc định: http://localhost:5000/api).';
         } else {
           errorMsg += `Lỗi: ${err.status} - ${err.message || 'Vui lòng thử lại sau.'}`;
         }
@@ -451,10 +455,7 @@ export class AssignmentListComponent implements OnInit {
 
   // Lấy tooltip cho nút thay đổi giao việc
   getChangeAssignmentTooltip(sheet: TechnicalSheet): string {
-    const relatedAssignment = this.assignments.find(assignment => 
-      assignment.tbkt_ID === sheet.tbkt_ID || 
-      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
-    );
+    const relatedAssignment = this.getRelatedAssignment(sheet);
     
     if (!relatedAssignment) {
       return 'Chưa có gán công việc';
@@ -472,6 +473,70 @@ export class AssignmentListComponent implements OnInit {
     }
     
     return '';
+  }
+
+  /** Lấy assignment liên quan đến technical sheet (dùng cho menu Xuất PDF, v.v.) */
+  getRelatedAssignment(sheet: TechnicalSheet): MachineAssignment | null {
+    const found = this.assignments.find(assignment =>
+      assignment.tbkt_ID === sheet.tbkt_ID ||
+      assignment.tbkt_ID === sheet.tbkt_ID?.toString()
+    );
+    return found ?? null;
+  }
+
+  /** Xuất phiếu phân công PDF cho đề nghị (chỉ khi đã có gán công việc). */
+  exportAssignmentPdf(sheet: TechnicalSheet): void {
+    const relatedAssignment = this.getRelatedAssignment(sheet);
+    if (!relatedAssignment?.assignmentID) {
+      this.snackBar.open(`Đề nghị "${sheet.tbkt_ID}" chưa có gán công việc. Vui lòng giao việc trước.`, 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+      return;
+    }
+
+    this.assignmentService.getAssignmentById(relatedAssignment.assignmentID).subscribe({
+      next: (assignment) => {
+        if (!assignment.workItems || assignment.workItems.length === 0) {
+          this.workItemService.getWorkItemsByAssignment(assignment.assignmentID).subscribe({
+            next: (workItems) => {
+              assignment.workItems = workItems;
+              this.workItemPdfService.exportAssignmentPdf({ assignment } as any);
+              this.snackBar.open('Đã xuất file PDF.', 'Đóng', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top'
+              });
+            },
+            error: () => {
+              this.workItemPdfService.exportAssignmentPdf({ assignment } as any);
+              this.snackBar.open('Đã xuất file PDF.', 'Đóng', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top'
+              });
+            }
+          });
+        } else {
+          this.workItemPdfService.exportAssignmentPdf({ assignment } as any);
+          this.snackBar.open('Đã xuất file PDF.', 'Đóng', {
+            duration: 2000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
+        }
+      },
+      error: () => {
+        this.snackBar.open('Không thể tải thông tin phiếu phân công.', 'Đóng', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   // Mở dialog thay đổi giao việc

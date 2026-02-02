@@ -1,6 +1,6 @@
-import { Component, Inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, signal, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -55,7 +55,7 @@ import { formatDateOnly } from '../../../utils/date.util';
   templateUrl: './assignment-form-dialog.component.html',
   styleUrls: ['./assignment-form-dialog.component.css']
 })
-export class AssignmentFormDialogComponent implements OnInit {
+export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
   assignmentForm: FormGroup;
   users: AuthUser[] = [];
   managers: AuthUser[] = [];
@@ -68,6 +68,8 @@ export class AssignmentFormDialogComponent implements OnInit {
   readonly isLoadingFiles = signal<boolean>(false);
   isEditMode: boolean = false;
   assignmentId: number | null = null;
+
+  @ViewChild('deliveryDateInput') deliveryDateInput?: ElementRef<HTMLInputElement>;
 
   constructor(
     private fb: FormBuilder,
@@ -89,7 +91,7 @@ export class AssignmentFormDialogComponent implements OnInit {
       requestDocument: ['', [Validators.required, Validators.maxLength(255)]], // ĐĐH/Giấy đề nghị - BẮT BUỘC
       standardRequirement: ['', [Validators.required, Validators.maxLength(1000)]], // BẮT BUỘC
       additionalRequest: ['', [Validators.required, Validators.maxLength(1000)]], // BẮT BUỘC
-      deliveryDate: [null, Validators.required], // BẮT BUỘC
+      deliveryDate: [null, [Validators.required, this.deliveryDateNotInPastValidator()]], // BẮT BUỘC, không được nhỏ hơn ngày hiện tại
       // Lưu user ID nhưng hiển thị tên
       designer: [this.currentUser?.id || '', { disabled: true }],
       teamLeader: ['', [Validators.required, Validators.maxLength(100)]], // BẮT BUỘC
@@ -176,6 +178,19 @@ export class AssignmentFormDialogComponent implements OnInit {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Khi mở màn hình: nếu ngày giao < hôm nay thì focus vào ô Ngày Giao và hiển thị lỗi đỏ
+    setTimeout(() => this.focusDeliveryDateIfInvalid(), 150);
+  }
+
+  /** Focus vào Ngày Giao và đánh dấu touched để hiện text đỏ khi ngày giao < hôm nay */
+  private focusDeliveryDateIfInvalid(): void {
+    const control = this.assignmentForm.get('deliveryDate');
+    if (!control?.hasError('deliveryDateBeforeToday')) return;
+    control.markAsTouched();
+    this.deliveryDateInput?.nativeElement?.focus();
+  }
+
   loadUsers() {
     this.isLoadingUsers = true;
     this.usersService.loadUsers(1, 100).subscribe({
@@ -235,6 +250,8 @@ export class AssignmentFormDialogComponent implements OnInit {
           // Ngày Giao từ DrawingDate (NGÀY GIAO)
           deliveryDate: deliveryDateValue
         });
+        // Nếu ngày giao từ TBKT < hôm nay thì focus và hiện lỗi đỏ
+        setTimeout(() => this.focusDeliveryDateIfInvalid(), 150);
       },
       error: (err) => {
         console.error('Error loading TechnicalSheet data:', err);
@@ -726,6 +743,20 @@ export class AssignmentFormDialogComponent implements OnInit {
     
     return hasAtLeastOne ? null : { atLeastOnePerformerRequired: true };
   };
+
+  /** Ngày giao không được nhỏ hơn ngày hiện tại của hệ thống */
+  private deliveryDateNotInPastValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control.value) return null;
+      const d = new Date(control.value);
+      if (isNaN(d.getTime())) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() < today.getTime()) return { deliveryDateBeforeToday: true };
+      return null;
+    };
+  }
 
   // Getter để kiểm tra form có valid không (dùng trong template)
   get isFormValid(): boolean {

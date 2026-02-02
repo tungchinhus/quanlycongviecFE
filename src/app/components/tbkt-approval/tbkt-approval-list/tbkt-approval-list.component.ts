@@ -13,6 +13,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatMenuModule } from '@angular/material/menu';
 import { AssignmentService } from '../../../services/assignment.service';
 import { FileService } from '../../../services/file.service';
 import { TechnicalSheet, MachineAssignment, WorkItem } from '../../../models/machine-assignment.model';
@@ -38,7 +39,8 @@ import { catchError } from 'rxjs/operators';
     MatSnackBarModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule
+    MatSelectModule,
+    MatMenuModule
   ],
   templateUrl: './tbkt-approval-list.component.html',
   styleUrls: ['./tbkt-approval-list.component.css']
@@ -291,6 +293,78 @@ export class TBKTApprovalListComponent implements OnInit {
     return 'Xử lý';
   }
 
+  /** TBKT đã ký duyệt đầy đủ (Trưởng phòng + Giám đốc) → không cho ký thêm hoặc yêu cầu chỉnh sửa */
+  isFullyApproved(sheet: TechnicalSheet): boolean {
+    return sheet.managerL1ApprovalStatus === 'Approved' && sheet.managerApprovalStatus === 'Approved';
+  }
+
+  onActionMenuOpen(sheet: TechnicalSheet): void {
+    // Có thể dùng để track/log khi mở menu
+  }
+
+  requestEdit(sheet: TechnicalSheet): void {
+    const dialogRef = this.dialog.open(TBKTRequestEditDialogComponent, {
+      width: '480px',
+      data: { sheet }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result == null) return;
+
+      const notes = (result as { notes?: string }).notes ?? '';
+      const tbktId = String(sheet.tbkt_ID || '').trim();
+
+      this.assignmentService.getAllAssignments().subscribe({
+        next: (assignments) => {
+          const forTbkt = (assignments || []).filter(
+            a => String(a.tbkt_ID || '').trim() === tbktId
+          );
+          if (forTbkt.length === 0) {
+            this.snackBar.open(`Không tìm thấy assignment nào cho TBKT ${sheet.tbkt_ID}.`, 'Đóng', {
+              duration: 4000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar']
+            });
+            return;
+          }
+          const unlockCalls = forTbkt.map(a =>
+            this.assignmentService.unlockAssignment(a.assignmentID).pipe(
+              catchError(() => of(null))
+            )
+          );
+          forkJoin(unlockCalls).subscribe({
+            next: (results) => {
+              const ok = results.filter(r => r != null).length;
+              this.snackBar.open(
+                `Đã gửi yêu cầu chỉnh sửa và mở khóa ${ok} assignment của TBKT ${sheet.tbkt_ID}.`,
+                'Đóng',
+                { duration: 4000, horizontalPosition: 'center', verticalPosition: 'top' }
+              );
+              this.loadTBKTData();
+            },
+            error: () => {
+              this.snackBar.open('Có lỗi khi mở khóa assignment. Vui lòng thử lại.', 'Đóng', {
+                duration: 4000,
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                panelClass: ['error-snackbar']
+              });
+            }
+          });
+        },
+        error: () => {
+          this.snackBar.open('Không thể tải danh sách assignment.', 'Đóng', {
+            duration: 4000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    });
+  }
+
   openApprovalDialog(sheet: TechnicalSheet): void {
     const approvalLevel = this.getApprovalLevel(sheet);
     if (!approvalLevel) return;
@@ -453,10 +527,6 @@ export class TBKTApprovalListComponent implements OnInit {
         <mat-icon>close</mat-icon>
         Hủy
       </button>
-      <button mat-raised-button color="warn" (click)="onReject()" [disabled]="submitting()">
-        <mat-icon>cancel</mat-icon>
-        Từ chối
-      </button>
       <button mat-raised-button color="primary" (click)="onApprove()" [disabled]="submitting()">
         <mat-icon *ngIf="!submitting()">check</mat-icon>
         <mat-spinner *ngIf="submitting()" diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
@@ -552,13 +622,6 @@ export class TBKTApprovalDialogComponent {
     this.submitAction('approve');
   }
 
-  onReject(): void {
-    if (!confirm('Bạn có chắc muốn từ chối TechnicalSheet này?')) {
-      return;
-    }
-    this.submitAction('reject');
-  }
-
   submitAction(action: 'approve' | 'reject'): void {
     this.submitting.set(true);
     const notes = this.approvalForm.get('notes')?.value || undefined;
@@ -607,6 +670,75 @@ export class TBKTApprovalDialogComponent {
 
   onCancel(): void {
     this.dialogRef.close(false);
+  }
+}
+
+// Dialog: Yêu cầu chỉnh sửa – nhập ghi chú, sau khi xác nhận TBKT và work item sẽ được mở khóa
+@Component({
+  selector: 'app-tbkt-request-edit-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatIconModule
+  ],
+  template: `
+    <h2 mat-dialog-title>
+      <mat-icon>edit_note</mat-icon>
+      Yêu cầu chỉnh sửa
+    </h2>
+    <mat-dialog-content>
+      <p class="dialog-info">TBKT <strong>{{ data.sheet.tbkt_ID }}</strong> và các work item liên quan sẽ được mở khóa để chỉnh sửa.</p>
+      <form [formGroup]="form" class="request-edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Ghi chú</mat-label>
+          <textarea matInput formControlName="notes" rows="4" placeholder="Nhập ghi chú yêu cầu chỉnh sửa..."></textarea>
+        </mat-form-field>
+      </form>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="onCancel()">
+        <mat-icon>close</mat-icon>
+        Hủy
+      </button>
+      <button mat-raised-button color="primary" (click)="onConfirm()">
+        <mat-icon>lock_open</mat-icon>
+        Xác nhận (mở khóa)
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .dialog-info {
+      margin-bottom: 16px;
+      padding: 12px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+    .request-edit-form { display: flex; flex-direction: column; gap: 8px; }
+    .full-width { width: 100%; }
+    mat-dialog-content { min-height: 140px; }
+    mat-dialog-actions { padding: 16px 24px; }
+  `]
+})
+export class TBKTRequestEditDialogComponent {
+  private readonly dialogRef = inject(MatDialogRef<TBKTRequestEditDialogComponent>);
+  private readonly fb = inject(FormBuilder);
+
+  readonly form = this.fb.group({ notes: [''] });
+
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { sheet: TechnicalSheet }) {}
+
+  onCancel(): void {
+    this.dialogRef.close(null);
+  }
+
+  onConfirm(): void {
+    const notes = this.form.get('notes')?.value?.trim() ?? '';
+    this.dialogRef.close({ notes });
   }
 }
 

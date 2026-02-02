@@ -105,6 +105,13 @@
                 <span>Hoàn Thành</span>
               </button>
             </ng-container>
+
+            <!-- Xuất PDF phiếu phân công: hiển thị cho mọi item (theo assignment) -->
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="exportAssignmentPdf(item)">
+              <mat-icon>picture_as_pdf</mat-icon>
+              <span>Xuất PDF</span>
+            </button>
             
             <!-- Menu mở khóa assignment: Cho user kiểm soát khi design workitem đã xác nhận hoặc Manager/Admin -->
             <mat-divider *ngIf="shouldShowUnlockButton(item)"></mat-divider>

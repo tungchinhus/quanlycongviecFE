@@ -27,6 +27,21 @@ npm start
 npm run build:prod
 ```
 
+## Chạy local (Development)
+
+Frontend gọi API tại `http://localhost:5000/api` (xem `src/environments/environment.ts`). Nếu gặp lỗi **"Không thể kết nối đến server"** hoặc **ERR_CONNECTION_REFUSED**:
+
+1. **Khởi động API backend trước** (thư mục `quanlyfilesBE`):
+   ```bash
+   cd quanlyfilesBE
+   dotnet run
+   ```
+   Hoặc mở solution trong Visual Studio và chạy với profile **http** (listen tại `http://localhost:5000`).
+
+2. Sau đó chạy frontend: `npm start`.
+
+3. Nếu backend chạy ở địa chỉ/port khác, sửa `apiUrl` trong `src/environments/environment.ts`.
+
 ## Tính Năng
 
 ### Quản Lý File

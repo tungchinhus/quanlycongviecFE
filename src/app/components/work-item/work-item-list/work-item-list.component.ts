@@ -20,6 +20,7 @@ import { WorkItemReviewDialogComponent } from '../work-item-review-dialog/work-i
 import { WorkItemReviewDetailDialogComponent } from '../work-item-review-detail-dialog/work-item-review-detail-dialog.component';
 import { WorkItemRejectDialogComponent } from '../work-item-reject-dialog/work-item-reject-dialog.component';
 import { WorkItemService } from '../../../services/work-item.service';
+import { WorkItemPdfService } from '../../../services/work-item-pdf.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { NotificationService } from '../../../services/notification.service';
 import { forkJoin, of } from 'rxjs';
@@ -60,7 +61,8 @@ export class WorkItemListComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private workItemService: WorkItemService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private workItemPdfService: WorkItemPdfService
   ) {}
 
   ngOnInit() {
@@ -556,6 +558,25 @@ export class WorkItemListComponent implements OnInit {
     return confirmationValue === true || 
            confirmationValue === 1 || 
            (typeof confirmationValue === 'string' && confirmationValue === '1');
+  }
+
+  /** Xuất phiếu phân công và theo dõi công việc dạng PDF */
+  exportAssignmentPdf(item: WorkItemWithAssignment): void {
+    if (!item.assignment) {
+      this.snackBar.open('Không có thông tin phiếu phân công để xuất.', 'Đóng', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+    this.workItemPdfService.exportAssignmentPdf(item);
+    this.snackBar.open('Đã xuất file PDF.', 'Đóng', {
+      duration: 2000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top'
+    });
   }
 
   // Mở khóa assignment để cho phép user thiết kế update workitem

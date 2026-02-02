@@ -111,6 +111,14 @@
             </button>
             <button 
               mat-menu-item 
+              (click)="exportAssignmentPdf(sheet)"
+              [disabled]="!getRelatedAssignment(sheet)"
+              [matTooltip]="!getRelatedAssignment(sheet) ? 'Chưa có gán công việc. Vui lòng giao việc trước.' : 'Xuất phiếu phân công PDF'">
+              <mat-icon>picture_as_pdf</mat-icon>
+              <span>Xuất PDF</span>
+            </button>
+            <button 
+              mat-menu-item 
               (click)="deleteTechnicalSheet(sheet)"
               [disabled]="!canDeleteTechnicalSheet(sheet)">
               <mat-icon>delete</mat-icon>

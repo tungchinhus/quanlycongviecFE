@@ -61,12 +61,18 @@
     <div class="form-row form-row-three">
       <mat-form-field appearance="outline" class="form-field-flex">
         <mat-label>Ngày Giao *</mat-label>
-        <input matInput [matDatepicker]="picker" formControlName="deliveryDate" required>
+        <input matInput #deliveryDateInput [matDatepicker]="picker" formControlName="deliveryDate" required>
         <mat-datepicker-toggle matIconSuffix [for]="picker" type="button"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
         @if (assignmentForm.get('deliveryDate')?.hasError('required')) {
           <mat-error>
             Ngày giao là bắt buộc
+          </mat-error>
+        }
+        @if (assignmentForm.get('deliveryDate')?.hasError('deliveryDateBeforeToday')) {
+          <mat-error>
+            <mat-icon class="error-icon-inline">error</mat-icon>
+            Ngày giao không được nhỏ hơn ngày hiện tại
           </mat-error>
         }
       </mat-form-field>
