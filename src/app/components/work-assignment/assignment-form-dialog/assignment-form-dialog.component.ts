@@ -22,7 +22,7 @@ import { FileService } from '../../../services/file.service';
 import { UserRole } from '../../../constants/enums';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { WorkItem, WorkChange, TechnicalSheet } from '../../../models/machine-assignment.model';
+import { WorkItem, WorkChange, TechnicalSheet, MachineAssignment } from '../../../models/machine-assignment.model';
 import { FileDocument } from '../../../models/file.model';
 import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
 import { formatDateOnly } from '../../../utils/date.util';
@@ -117,7 +117,7 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
       const assignment = this.data.assignment;
       this.assignmentId = assignment.assignmentID;
       
-      // Điền các trường cơ bản
+      // Điền các trường cơ bản (designer, teamLeader, người thực hiện sẽ được điền sau khi load users)
       this.assignmentForm.patchValue({
         tbktId: assignment.tbkt_ID || this.data.tbktId || '',
         machineName: assignment.machineName || '',
@@ -132,28 +132,8 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
       // Disable field tbktId vì đã được chọn từ danh sách
       this.assignmentForm.get('tbktId')?.disable();
       
-      // Điền work items nếu có
-      if (assignment.workItems && assignment.workItems.length > 0) {
-        assignment.workItems.forEach((workItem: WorkItem) => {
-          switch(workItem.workType) {
-            case 'Core Design':
-              this.assignmentForm.patchValue({ coreDesignUser: workItem.personName || '' });
-              break;
-            case 'Core Review':
-              this.assignmentForm.patchValue({ coreReviewUser: workItem.personName || '' });
-              break;
-            case 'Casing Design':
-              this.assignmentForm.patchValue({ casingDesignUser: workItem.personName || '' });
-              break;
-            case 'Casing Review':
-              this.assignmentForm.patchValue({ casingReviewUser: workItem.personName || '' });
-              break;
-            case 'Material Leveling':
-              this.assignmentForm.patchValue({ materialLevelingUser: workItem.personName || '' });
-              break;
-          }
-        });
-      }
+      // Work items (T.Kế ruột, K.Soát ruột, ...) sẽ được điền trong loadUsers -> patchPerformerFieldsFromAssignment
+      // để resolve personName/UserName sang user id cho mat-select hiển thị đúng tên
       
       // Điền work changes nếu có
       if (assignment.workChanges && assignment.workChanges.length > 0) {
@@ -208,12 +188,70 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
         );
         
         this.isLoadingUsers = false;
+        // Sau khi có danh sách users, điền lại người thực hiện (resolve UserName/FullName -> id) cho edit mode
+        if (this.isEditMode && this.data?.assignment) {
+          this.patchPerformerFieldsFromAssignment(this.data.assignment);
+        }
       },
       error: (err) => {
         console.error('Error loading users:', err);
         this.isLoadingUsers = false;
       }
     });
+  }
+
+  /**
+   * Resolve designer/teamLeader (có thể là UserName hoặc ID từ API) và work item personName
+   * sang user id để mat-select hiển thị đúng người được chọn.
+   */
+  private patchPerformerFieldsFromAssignment(assignment: MachineAssignment): void {
+    const patch: Record<string, string | number> = {};
+
+    // Designer: API có thể trả UserName hoặc UserId (string)
+    if (assignment.designer) {
+      const designerId = this.resolveToUserId(assignment.designer);
+      if (designerId !== undefined) patch['designer'] = designerId;
+    }
+
+    // TeamLeader: API trả UserName đã resolve -> cần tìm manager id tương ứng
+    if (assignment.teamLeader) {
+      const teamLeaderId = this.resolveToUserId(assignment.teamLeader, this.managers);
+      if (teamLeaderId !== undefined) patch['teamLeader'] = teamLeaderId;
+    }
+
+    // Work items: personName từ API có thể là UserId (string) hoặc UserName/FullName
+    if (assignment.workItems && assignment.workItems.length > 0) {
+      assignment.workItems.forEach((workItem: WorkItem) => {
+        const personId = this.resolveToUserId(workItem.personName ?? workItem.fullName ?? '');
+        if (personId === undefined) return;
+        switch (workItem.workType) {
+          case 'Core Design': patch['coreDesignUser'] = personId; break;
+          case 'Core Review': patch['coreReviewUser'] = personId; break;
+          case 'Casing Design': patch['casingDesignUser'] = personId; break;
+          case 'Casing Review': patch['casingReviewUser'] = personId; break;
+          case 'Material Leveling': patch['materialLevelingUser'] = personId; break;
+        }
+      });
+    }
+
+    if (Object.keys(patch).length > 0) {
+      this.assignmentForm.patchValue(patch);
+    }
+  }
+
+  /**
+   * Resolve giá trị từ API (UserId string, UserName, hoặc FullName) sang user id dùng cho mat-select.
+   * So khớp theo: id, userId, userName, name (fullName).
+   */
+  private resolveToUserId(value: string | number | undefined, list?: AuthUser[]): string | number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const str = String(value).trim();
+    const source = list ?? this.users;
+    const byId = source.find(u => u.id === str || String(u.id) === str || (u.userId != null && String(u.userId) === str));
+    if (byId) return byId.id;
+    const byUserName = source.find(u => (u.userName && u.userName === str) || (u.name && u.name === str));
+    if (byUserName) return byUserName.id;
+    return str;
   }
 
   loadTechnicalSheetData(tbktId: string | number) {

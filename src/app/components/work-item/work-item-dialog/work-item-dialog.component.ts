@@ -77,13 +77,13 @@ export class WorkItemDialogComponent implements OnInit {
   private initialFormValues: any = null;
   private hasChanges = signal<boolean>(false);
 
-  // Mapping workType sang tiếng Việt
+  // Mapping workType sang nhãn hiển thị
   private workTypeMap: { [key: string]: string } = {
-    'Core Design': 'Thiết kế ruột',
-    'Core Review': 'Kiểm soát ruột',
-    'Casing Design': 'Thiết kế vỏ',
-    'Casing Review': 'Kiểm soát vỏ',
-    'Material Leveling': 'Định mức vật tư'
+    'Core Design': 'T.Kế ruột',
+    'Core Review': 'K.Soát ruột',
+    'Casing Design': 'T.Kế vỏ',
+    'Casing Review': 'K.Soát vỏ',
+    'Material Leveling': 'Đ.mức vật tư'
   };
 
   constructor(
@@ -320,14 +320,14 @@ export class WorkItemDialogComponent implements OnInit {
     return this.workTypeMap[workType] || workType;
   }
 
-  // Convert từ tiếng Việt về tiếng Anh (reverse mapping)
+  // Convert từ nhãn hiển thị về workType (reverse mapping)
   getWorkTypeEnglish(displayName: string): string {
     const reverseMap: { [key: string]: string } = {
-      'Thiết kế ruột': 'Core Design',
-      'Kiểm soát ruột': 'Core Review',
-      'Thiết kế vỏ': 'Casing Design',
-      'Kiểm soát vỏ': 'Casing Review',
-      'Định mức vật tư': 'Material Leveling'
+      'T.Kế ruột': 'Core Design',
+      'K.Soát ruột': 'Core Review',
+      'T.Kế vỏ': 'Casing Design',
+      'K.Soát vỏ': 'Casing Review',
+      'Đ.mức vật tư': 'Material Leveling'
     };
     return reverseMap[displayName] || displayName;
   }

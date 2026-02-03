@@ -208,16 +208,57 @@
             </a>
           }
           @if (canViewPage('/excel-reader')) {
-            <a routerLink="/excel-reader"
-               routerLinkActive="active"
-               [matTooltip]="sidenavService.isCollapsed() ? 'Tra Cứu Thông Số MBA' : ''"
-               matTooltipPosition="right"
-               class="nav-item">
-              <div class="nav-icon">
-                <mat-icon>table_chart</mat-icon>
-              </div>
-              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tra Cứu Thông Số MBA</span>
-            </a>
+            @if (!sidenavService.isCollapsed()) {
+              <button type="button"
+                      class="nav-item nav-parent"
+                      [class.active]="isTraCuuActive()"
+                      (click)="toggleTraCuu()">
+                <div class="nav-icon">
+                  <mat-icon>search</mat-icon>
+                </div>
+                <span class="nav-text">Tra Cứu</span>
+                <mat-icon class="nav-chevron">{{ traCuuExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              @if (traCuuExpanded()) {
+                <a routerLink="/excel-reader"
+                   routerLinkActive="active"
+                   class="nav-item nav-sub-item">
+                  <div class="nav-icon">
+                    <mat-icon>table_chart</mat-icon>
+                  </div>
+                  <span class="nav-text">Tra Cứu Thông Số MBA</span>
+                </a>
+                <a routerLink="/tra-cuu-files"
+                   routerLinkActive="active"
+                   class="nav-item nav-sub-item">
+                  <div class="nav-icon">
+                    <mat-icon>folder_open</mat-icon>
+                  </div>
+                  <span class="nav-text">Tra Cứu Files</span>
+                </a>
+              }
+            } @else {
+              <button type="button"
+                      class="nav-item"
+                      [matMenuTriggerFor]="traCuuMenu"
+                      [class.active]="isTraCuuActive()"
+                      [matTooltip]="'Tra Cứu'"
+                      matTooltipPosition="right">
+                <div class="nav-icon">
+                  <mat-icon>search</mat-icon>
+                </div>
+              </button>
+              <mat-menu #traCuuMenu="matMenu" class="tra-cuu-submenu">
+                <button mat-menu-item (click)="navigateToTraCuu('/excel-reader')">
+                  <mat-icon>table_chart</mat-icon>
+                  <span>Tra Cứu Thông Số MBA</span>
+                </button>
+                <button mat-menu-item (click)="navigateToTraCuu('/tra-cuu-files')">
+                  <mat-icon>folder_open</mat-icon>
+                  <span>Tra Cứu Files</span>
+                </button>
+              </mat-menu>
+            }
           }
           @if (canViewPage('/tbkt-management')) {
             <a routerLink="/tbkt-management"

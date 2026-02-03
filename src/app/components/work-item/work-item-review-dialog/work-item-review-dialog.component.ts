@@ -55,13 +55,13 @@ export class WorkItemReviewDialogComponent implements OnInit {
   users: AuthUser[] = [];
   confirmForm: FormGroup;
 
-  // Mapping workType sang tiếng Việt
+  // Mapping workType sang nhãn hiển thị
   private workTypeMap: { [key: string]: string } = {
-    'Core Design': 'Thiết kế ruột',
-    'Core Review': 'Kiểm soát ruột',
-    'Casing Design': 'Thiết kế vỏ',
-    'Casing Review': 'Kiểm soát vỏ',
-    'Material Leveling': 'Định mức vật tư'
+    'Core Design': 'T.Kế ruột',
+    'Core Review': 'K.Soát ruột',
+    'Casing Design': 'T.Kế vỏ',
+    'Casing Review': 'K.Soát vỏ',
+    'Material Leveling': 'Đ.mức vật tư'
   };
 
   constructor(

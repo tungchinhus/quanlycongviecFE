@@ -61,7 +61,14 @@ export class WorkItemPdfService {
       return;
     }
 
-    const workItems = assignment.workItems || [];
+    const rawWorkItems = assignment.workItems || [];
+    // Thứ tự hiển thị: T.Kế ruột, K.Soát ruột, T.Kế vỏ, K.Soát vỏ, Đ.mức vật tư
+    const workTypeOrder = ['Core Design', 'Core Review', 'Casing Design', 'Casing Review', 'Material Leveling'];
+    const workItems = [...rawWorkItems].sort((a, b) => {
+      const ia = workTypeOrder.indexOf(a.workType || '');
+      const ib = workTypeOrder.indexOf(b.workType || '');
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
     const tbktId = assignment.tbkt_ID || '-';
     // Ưu tiên Designer (người giao việc đúng theo DB) rồi mới TeamLeader
     const nguoiGiaoViecRaw = assignment.designer || assignment.teamLeader || '';
@@ -76,8 +83,15 @@ export class WorkItemPdfService {
       ['Người giao việc (Tổ trưởng hoặc Phó Phòng)', nguoiGiaoViecDisplay]
     ];
 
+    const workTypeDisplayLabel: Record<string, string> = {
+      'Core Design': 'T.Kế ruột',
+      'Core Review': 'K.Soát ruột',
+      'Casing Design': 'T.Kế vỏ',
+      'Casing Review': 'K.Soát vỏ',
+      'Material Leveling': 'Đ.mức vật tư'
+    };
     const workRows = workItems.map(wi => [
-      wi.workType || '-',
+      workTypeDisplayLabel[wi.workType || ''] ?? wi.workType ?? '-',
       this.formatDisplayName(wi.fullName || wi.personName || undefined),
       '', // Xác nhận (chữ ký) người thực hiện — để trống
       wi.startDate ? formatDate(wi.startDate) : '-',

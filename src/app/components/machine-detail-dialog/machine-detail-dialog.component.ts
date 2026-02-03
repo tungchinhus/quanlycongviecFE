@@ -38,9 +38,11 @@ export class MachineDetailDialogComponent implements OnInit {
   technicalSheet: TechnicalSheet | null = null;
   isLoading = true;
   error: string | null = null;
-  casingDesignerName: string = '-';
   coreDesignerName: string = '-';
+  casingDesignerName: string = '-';
   materialLevelingName: string = '-';
+  /** Ngày giao hàng từ bảng MachineAssignment (ưu tiên hơn TechnicalSheet). */
+  deliveryDateFromAssignment: Date | string | null = null;
   users: AuthUser[] = [];
 
   constructor(
@@ -94,16 +96,15 @@ export class MachineDetailDialogComponent implements OnInit {
         const tbktAssignments = assignments.filter(a => 
           String(a.tbkt_ID || '').trim() === String(this.data.tbktId || '').trim()
         );
+        // Ngày giao hàng lấy từ MachineAssignment (bảng assignment), fallback sang sheet
+        const firstAssignment = tbktAssignments[0];
+        this.deliveryDateFromAssignment = firstAssignment?.deliveryDate ?? null;
         
-        // Tìm thiết kế vỏ (Casing Design)
-        const casingDesignWorkItem = this.findDesignWorkItem(tbktAssignments, 'Casing Design');
-        this.casingDesignerName = this.getPersonFullName(casingDesignWorkItem);
-        
-        // Tìm thiết kế ruột (Core Design)
+        // Thứ tự hiển thị: Thiết kế ruột, Thiết kế vỏ, Định mức vật tư (không hiển thị riêng Kiểm soát ruột/vỏ)
         const coreDesignWorkItem = this.findDesignWorkItem(tbktAssignments, 'Core Design');
         this.coreDesignerName = this.getPersonFullName(coreDesignWorkItem);
-        
-        // Tìm nhân viên định mức (Material Leveling)
+        const casingDesignWorkItem = this.findDesignWorkItem(tbktAssignments, 'Casing Design');
+        this.casingDesignerName = this.getPersonFullName(casingDesignWorkItem);
         const materialLevelingWorkItem = this.findDesignWorkItem(tbktAssignments, 'Material Leveling');
         this.materialLevelingName = this.getPersonFullName(materialLevelingWorkItem);
         
@@ -117,39 +118,38 @@ export class MachineDetailDialogComponent implements OnInit {
     });
   }
 
+  /** Trả về tên đầy đủ (full name) từ workItem, ưu tiên từ danh sách users thay vì username. */
   private getPersonFullName(workItem: WorkItem | null): string {
     if (!workItem) {
       return '-';
     }
 
-    // Nếu đã có fullName, dùng luôn
-    if (workItem.fullName) {
-      return workItem.fullName;
+    // Ưu tiên fullName từ API (đã là tên đầy đủ)
+    if (workItem.fullName && String(workItem.fullName).trim()) {
+      return String(workItem.fullName).trim();
     }
 
-    // Nếu có personName, tìm trong danh sách users
-    if (workItem.personName) {
-      const personNameStr = String(workItem.personName).trim();
-      
-      // Tìm user theo nhiều cách: id, userId, userName, name
-      const user = this.users.find(u => 
-        u.id === personNameStr || 
-        u.id?.toString() === personNameStr ||
-        u.userId?.toString() === personNameStr ||
-        u.userName === personNameStr ||
-        u.name === personNameStr
-      );
-      
-      // Trả về fullName (name property trong AuthUser)
-      if (user && user.name) {
-        return user.name;
-      }
-      
-      // Nếu không tìm thấy, trả về personName
-      return personNameStr;
+    // Có personName (thường là username hoặc userId) → tìm trong users để lấy tên đầy đủ
+    const personNameStr = workItem.personName != null ? String(workItem.personName).trim() : '';
+    if (!personNameStr) return '-';
+
+    const personLower = personNameStr.toLowerCase();
+    const user = this.users.find(u => {
+      const id = u.id != null ? String(u.id).trim() : '';
+      const userId = u.userId != null ? String(u.userId).trim() : '';
+      const userName = (u.userName ?? '').trim().toLowerCase();
+      const name = (u.name ?? '').trim();
+      return id === personNameStr ||
+        userId === personNameStr ||
+        userName === personLower ||
+        name === personNameStr;
+    });
+
+    if (user && (user.name ?? '').trim()) {
+      return (user.name ?? '').trim();
     }
 
-    return '-';
+    return personNameStr;
   }
 
   private findDesignWorkItem(assignments: MachineAssignment[], workType: string): WorkItem | null {

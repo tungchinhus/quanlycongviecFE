@@ -10,6 +10,7 @@
     </p>
     
     <form [formGroup]="changeForm" class="change-form">
+      <!-- Thứ tự: Thiết kế ruột, Kiểm soát ruột, Thiết kế vỏ, Kiểm soát vỏ, Định mức vật tư -->
       <!-- Core Design (Thiết kế ruột) -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Nhân viên thiết kế ruột</mat-label>
@@ -20,30 +21,6 @@
           </mat-option>
         </mat-select>
         <mat-hint *ngIf="!coreDesignWorkItem">Chưa có công việc thiết kế ruột</mat-hint>
-      </mat-form-field>
-
-      <!-- Casing Design (Thiết kế vỏ) -->
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Nhân viên thiết kế vỏ</mat-label>
-        <mat-select formControlName="casingDesignUser" [disabled]="!casingDesignWorkItem">
-          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
-          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
-            {{ user.name || user.userName || user.id }}
-          </mat-option>
-        </mat-select>
-        <mat-hint *ngIf="!casingDesignWorkItem">Chưa có công việc thiết kế vỏ</mat-hint>
-      </mat-form-field>
-
-      <!-- Material Leveling (Định mức vật tư) -->
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Nhân viên định mức</mat-label>
-        <mat-select formControlName="materialLevelingUser" [disabled]="!materialLevelingWorkItem">
-          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
-          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
-            {{ user.name || user.userName || user.id }}
-          </mat-option>
-        </mat-select>
-        <mat-hint *ngIf="!materialLevelingWorkItem">Chưa có công việc định mức</mat-hint>
       </mat-form-field>
 
       <!-- Core Review (Kiểm soát ruột) -->
@@ -58,6 +35,18 @@
         <mat-hint *ngIf="!coreReviewWorkItem">Chưa có công việc kiểm soát ruột</mat-hint>
       </mat-form-field>
 
+      <!-- Casing Design (Thiết kế vỏ) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên thiết kế vỏ</mat-label>
+        <mat-select formControlName="casingDesignUser" [disabled]="!casingDesignWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!casingDesignWorkItem">Chưa có công việc thiết kế vỏ</mat-hint>
+      </mat-form-field>
+
       <!-- Casing Review (Kiểm soát vỏ) -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Nhân viên kiểm soát vỏ</mat-label>
@@ -68,6 +57,18 @@
           </mat-option>
         </mat-select>
         <mat-hint *ngIf="!casingReviewWorkItem">Chưa có công việc kiểm soát vỏ</mat-hint>
+      </mat-form-field>
+
+      <!-- Material Leveling (Định mức vật tư) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nhân viên định mức</mat-label>
+        <mat-select formControlName="materialLevelingUser" [disabled]="!materialLevelingWorkItem">
+          <mat-option [value]="''">-- Chọn nhân viên --</mat-option>
+          <mat-option *ngFor="let user of users" [value]="user.id || user.userId || user.userName">
+            {{ user.name || user.userName || user.id }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="!materialLevelingWorkItem">Chưa có công việc định mức</mat-hint>
       </mat-form-field>
     </form>
   </div>

@@ -27,6 +27,9 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { parseDateSafe, formatDateOnly } from '../../../utils/date.util';
 
+/** Thứ tự hiển thị: Thiết kế ruột, Kiểm soát ruột, Thiết kế vỏ, Kiểm soát vỏ, Định mức vật tư */
+const WORK_TYPE_ORDER = ['Core Design', 'Core Review', 'Casing Design', 'Casing Review', 'Material Leveling'];
+
 @Component({
   selector: 'app-assignment-detail-dialog',
   standalone: true,
@@ -151,8 +154,13 @@ export class AssignmentDetailDialogComponent implements OnInit {
       });
     } else {
       // Nếu không có current user, hiển thị tất cả
-      this.filteredWorkItems = this.assignment.workItems;
+      this.filteredWorkItems = [...this.assignment.workItems];
     }
+    this.filteredWorkItems.sort((a, b) => {
+      const ia = WORK_TYPE_ORDER.indexOf(a.workType || '');
+      const ib = WORK_TYPE_ORDER.indexOf(b.workType || '');
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
   }
 
   createWorkItemForms() {
@@ -265,16 +273,32 @@ export class AssignmentDetailDialogComponent implements OnInit {
     });
   }
 
-  getDesignerName(designerId: string | undefined): string | null {
-    if (!designerId) return null;
-    const user = this.users.find(u => u.id === designerId || u.id?.toString() === designerId);
-    return user ? (user.name || user.userName || null) : null;
+  /** Hiển thị tên người giao việc: ưu tiên giá trị từ API (tên đầy đủ), không thì tra users theo id/userId/userName. */
+  getDesignerName(designerId: string | number | undefined): string | null {
+    if (designerId == null || designerId === '') return null;
+    const s = String(designerId).trim();
+    if (!s) return null;
+    if (s.includes(' ') || isNaN(Number(s))) return s;
+    const user = this.users.find(u =>
+      u.id === s || u.id?.toString() === s ||
+      u.userId?.toString() === s ||
+      (u.userName && (u.userName as string).trim().toLowerCase() === s.toLowerCase())
+    );
+    return user ? (user.name || user.userName || null) : s;
   }
 
-  getTeamLeaderName(teamLeaderId: string | undefined): string | null {
-    if (!teamLeaderId) return null;
-    const user = this.users.find(u => u.id === teamLeaderId || u.id?.toString() === teamLeaderId);
-    return user ? (user.name || user.userName || null) : null;
+  /** Hiển thị tên trưởng đơn vị: ưu tiên giá trị từ API (tên đầy đủ), không thì tra users theo id/userId/userName. */
+  getTeamLeaderName(teamLeaderId: string | number | undefined): string | null {
+    if (teamLeaderId == null || teamLeaderId === '') return null;
+    const s = String(teamLeaderId).trim();
+    if (!s) return null;
+    if (s.includes(' ') || isNaN(Number(s))) return s;
+    const user = this.users.find(u =>
+      u.id === s || u.id?.toString() === s ||
+      u.userId?.toString() === s ||
+      (u.userName && (u.userName as string).trim().toLowerCase() === s.toLowerCase())
+    );
+    return user ? (user.name || user.userName || null) : s;
   }
 
   getPersonName(personId: string | undefined): string | null {
@@ -360,15 +384,16 @@ export class AssignmentDetailDialogComponent implements OnInit {
       }
     });
     
-    // Chuyển đổi Map thành mảng
+    // Chuyển đổi Map thành mảng, sắp xếp workTypes theo thứ tự chuẩn
     const result: Array<{ userName: string; workTypes: Array<{ name: string; workType: string; isCompleted: boolean }> }> = [];
     userWorkMap.forEach((workTypesMap, userName) => {
-      result.push({
-        userName: userName,
-        workTypes: Array.from(workTypesMap.values())
+      const workTypes = Array.from(workTypesMap.values()).sort((a, b) => {
+        const ia = WORK_TYPE_ORDER.indexOf(a.workType || '');
+        const ib = WORK_TYPE_ORDER.indexOf(b.workType || '');
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
       });
+      result.push({ userName, workTypes });
     });
-    
     return result;
   }
 

@@ -57,10 +57,10 @@
             </div>
           </div>
 
-          <!-- Phần Công Việc -->
-          <div class="work-items-section" *ngIf="assignment.workItems && assignment.workItems.length > 0">
+          <!-- Phần Công Việc (thứ tự: Thiết kế ruột, Kiểm soát ruột, Thiết kế vỏ, Kiểm soát vỏ, Định mức vật tư) -->
+          <div class="work-items-section" *ngIf="getSortedWorkItems().length > 0">
             <div class="work-items-list">
-              <mat-card *ngFor="let item of assignment.workItems" class="work-item-card">
+              <mat-card *ngFor="let item of getSortedWorkItems()" class="work-item-card">
                 <mat-card-content>
                   <h4>{{ getWorkTypeName(item.workType) || 'Công việc' }}</h4>
                   <p><strong>Người thực hiện:</strong> {{ getPersonName(item.personName) || '-' }}</p>
@@ -72,7 +72,7 @@
               </mat-card>
             </div>
           </div>
-          <div *ngIf="!assignment.workItems || assignment.workItems.length === 0" class="no-data">
+          <div *ngIf="getSortedWorkItems().length === 0" class="no-data">
             <p>Chưa có công việc nào</p>
           </div>
         </mat-tab>

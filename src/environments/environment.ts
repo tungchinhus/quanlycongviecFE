@@ -9,6 +9,8 @@ export const environment = {
     appId: "1:373646706069:web:70f0cf79c1031471b6e29c",
     measurementId: "G-GJTTZC70Y2"
   },
-  apiUrl: 'http://localhost:5000/api' // Điều chỉnh theo URL API local của bạn
+  apiUrl: 'http://localhost:5000/api', // Điều chỉnh theo URL API local của bạn
+  /** URL Python service cho Tra Cứu Files (vd: http://localhost:8000) */
+  pythonServiceUrl: 'http://localhost:8000'
 };
 

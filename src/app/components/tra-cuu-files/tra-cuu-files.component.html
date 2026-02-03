@@ -1,0 +1,115 @@
+<div class="tra-cuu-files-container">
+  <div class="tra-cuu-files-header">
+    <h1>Tra Cứu Files</h1>
+  </div>
+  <mat-card class="tra-cuu-files-card">
+    <mat-card-content>
+      <div class="toolbar">
+        <mat-form-field appearance="outline" class="path-field">
+          <mat-label>Đường dẫn folder</mat-label>
+          <input
+            matInput
+            [value]="folderPath()"
+            (input)="onFolderPathChange($any($event.target).value)"
+            placeholder="Nhập đường dẫn tuyệt đối (vd: M:\P. Thiet Ke) hoặc bấm icon folder">
+          <mat-icon matPrefix>folder</mat-icon>
+          <button mat-icon-button matSuffix type="button" (click)="triggerFolderPick(); $event.stopPropagation()" matTooltip="Chọn folder (điền tên; Python cần đường dẫn tuyệt đối thì nhập tay vd: M:\P. Thiet Ke)">
+            <mat-icon>folder_open</mat-icon>
+          </button>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Tìm kiếm</mat-label>
+          <input
+            matInput
+            [value]="searchTerm()"
+            (input)="onSearchChange($any($event.target).value)"
+            (keydown.enter)="onSearchKeydown($event)"
+            placeholder="Nhập từ khóa rồi nhấn Enter...">
+          <mat-icon matPrefix>search</mat-icon>
+          @if (searchTerm()) {
+            <button mat-icon-button matSuffix (click)="onSearchChange('')" type="button" [attr.aria-label]="'Xóa'">
+              <mat-icon>clear</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+        <button mat-raised-button color="accent" (click)="doSearch()" [disabled]="loading()" type="button">
+          <mat-icon>search</mat-icon>
+          Tìm
+        </button>
+      </div>
+
+      @if (error()) {
+        <div class="error-row">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error() }}</span>
+        </div>
+        @if (error() && (error()?.includes('ổ mạng') || error()?.includes('Folder không tồn tại'))) {
+          <div class="help-box">
+            <strong>Để search ổ mạng (M:\...):</strong>
+            <ol>
+              <li>Chạy Python service trên <strong>chính máy bạn</strong> (máy đã map ổ M:).</li>
+              <li>Mở PowerShell → <code>cd d:\Project\thibidi\quanlyfiles\python-service</code> → <code>.\start.ps1</code></li>
+              <li>Giữ cửa sổ PowerShell mở, quay lại trang này và bấm <strong>Tìm</strong> lại.</li>
+            </ol>
+          </div>
+        }
+      }
+
+      @if (loading()) {
+        <div class="loading-row">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Đang gọi Python với path đã chọn...</span>
+        </div>
+      }
+
+      @if (!loading() && searchResults().length > 0) {
+        <div class="results-info">
+          <span>Tìm thấy <strong>{{ searchResults().length }}</strong> file</span>
+        </div>
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="paginatedResults()" class="file-table">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Tên file</th>
+              <td mat-cell *matCellDef="let row" class="name-cell">
+                <button type="button" class="file-link" (click)="openInExplorer(row)" matTooltip="Mở trong Explorer và chọn file này">
+                  <mat-icon class="cell-icon">description</mat-icon>
+                  <span>{{ row.name ?? row.path ?? '–' }}</span>
+                  <mat-icon class="open-icon">open_in_new</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="path">
+              <th mat-header-cell *matHeaderCellDef>Đường dẫn</th>
+              <td mat-cell *matCellDef="let row" class="path-cell">{{ row.path ?? '–' }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </div>
+        <mat-paginator
+          [length]="searchResults().length"
+          [pageSize]="pageSize()"
+          [pageIndex]="pageIndex()"
+          [pageSizeOptions]="[25, 50, 100, 200]"
+          [showFirstLastButtons]="true"
+          (page)="onPageChange($event)"
+          aria-label="Phân trang kết quả">
+        </mat-paginator>
+      }
+
+      @if (!loading() && !folderPath() && searchResults().length === 0) {
+        <div class="empty-state">
+          <mat-icon>folder_open</mat-icon>
+          <p>Nhập <strong>đường dẫn tuyệt đối</strong> (vd: <strong>M:\P. Thiet Ke</strong>) hoặc bấm icon folder để chọn (trình duyệt chỉ cho tên folder; Python cần path đầy đủ thì nhập/dán vào ô). Sau đó nhập từ khóa và bấm <strong>Tìm</strong>.</p>
+        </div>
+      }
+
+      @if (!loading() && folderPath() && searchResults().length === 0 && !error()) {
+        <div class="empty-state">
+          <mat-icon>search</mat-icon>
+          <p>Đã chọn path. Nhập từ khóa và bấm <strong>Tìm</strong> (hoặc Enter) để gọi Python với path vừa chọn.</p>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -172,11 +172,11 @@ export class DashboardPage implements OnInit {
   getWorkTypeDisplayName(workType: string | undefined): string {
     if (!workType) return 'Không xác định';
     const workTypeMap: { [key: string]: string } = {
-      'Core Design': 'Thiết kế ruột',
-      'Casing Design': 'Thiết kế vỏ',
-      'Core Review': 'Kiểm soát ruột',
-      'Casing Review': 'Kiểm soát vỏ',
-      'Material Leveling': 'Cân bằng vật tư'
+      'Core Design': 'T.Kế ruột',
+      'Core Review': 'K.Soát ruột',
+      'Casing Design': 'T.Kế vỏ',
+      'Casing Review': 'K.Soát vỏ',
+      'Material Leveling': 'Đ.mức vật tư'
     };
     return workTypeMap[workType] || workType;
   }

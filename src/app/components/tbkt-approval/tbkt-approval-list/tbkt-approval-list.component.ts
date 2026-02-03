@@ -788,42 +788,15 @@ export class TBKTRequestEditDialogComponent {
             </div>
             <div class="detail-item">
               <span class="detail-label">Ngày giao hàng:</span>
-              <span class="detail-value">{{ formatDate(data.sheet.deliveryDate) }}</span>
+              <span class="detail-value">{{ formatDate(getDeliveryDateFromAssignment()) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Thông tin người phụ trách: panel expand/collapse Thiết kế vỏ, Thiết kế ruột -->
+        <!-- Thông tin người phụ trách: thứ tự T.Kế ruột, K.Soát ruột, T.Kế vỏ, K.Soát vỏ -->
         <div class="detail-section">
           <h3 class="section-title">Thông tin người phụ trách</h3>
           <mat-accordion class="responsible-accordion">
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>{{ getCasingPanelTitle() }}</mat-panel-title>
-              </mat-expansion-panel-header>
-              <div class="work-items-list" *ngIf="getCasingWorkItems().length > 0; else emptyCasing">
-                <ng-container *ngFor="let wi of getCasingWorkItems()">
-                <div class="work-item-row" *ngIf="hasWorkItemData(wi)">
-                  <div class="wi-dates">
-                    <span class="wi-date"><strong>Ngày bắt đầu:</strong> {{ formatDate(wi.startDate) }}</span>
-                    <span class="wi-date"><strong>Ngày hoàn thành:</strong> {{ formatDate(wi.actualFinish) || formatDate(wi.expectedFinish) }}</span>
-                  </div>
-                  <div class="wi-files" *ngIf="getFilesForWorkItem(wi).length > 0">
-                    <span class="wi-files-label">File thiết kế:</span>
-                    <span class="wi-file-link" *ngFor="let f of getFilesForWorkItem(wi)">
-                      <button type="button" mat-button color="primary" (click)="downloadFile(f)">
-                        <mat-icon>download</mat-icon>
-                        {{ f.fileName || ('File ' + (f.id || f.fileID)) }}
-                      </button>
-                    </span>
-                  </div>
-                </div>
-                </ng-container>
-              </div>
-              <ng-template #emptyCasing>
-                <p class="empty-hint">Chưa có thông tin thiết kế vỏ</p>
-              </ng-template>
-            </mat-expansion-panel>
             <mat-expansion-panel>
               <mat-expansion-panel-header>
                 <mat-panel-title>{{ getCorePanelTitle() }}</mat-panel-title>
@@ -849,6 +822,33 @@ export class TBKTRequestEditDialogComponent {
               </div>
               <ng-template #emptyCore>
                 <p class="empty-hint">Chưa có thông tin thiết kế ruột</p>
+              </ng-template>
+            </mat-expansion-panel>
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>{{ getCasingPanelTitle() }}</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div class="work-items-list" *ngIf="getCasingWorkItems().length > 0; else emptyCasing">
+                <ng-container *ngFor="let wi of getCasingWorkItems()">
+                <div class="work-item-row" *ngIf="hasWorkItemData(wi)">
+                  <div class="wi-dates">
+                    <span class="wi-date"><strong>Ngày bắt đầu:</strong> {{ formatDate(wi.startDate) }}</span>
+                    <span class="wi-date"><strong>Ngày hoàn thành:</strong> {{ formatDate(wi.actualFinish) || formatDate(wi.expectedFinish) }}</span>
+                  </div>
+                  <div class="wi-files" *ngIf="getFilesForWorkItem(wi).length > 0">
+                    <span class="wi-files-label">File thiết kế:</span>
+                    <span class="wi-file-link" *ngFor="let f of getFilesForWorkItem(wi)">
+                      <button type="button" mat-button color="primary" (click)="downloadFile(f)">
+                        <mat-icon>download</mat-icon>
+                        {{ f.fileName || ('File ' + (f.id || f.fileID)) }}
+                      </button>
+                    </span>
+                  </div>
+                </div>
+                </ng-container>
+              </div>
+              <ng-template #emptyCasing>
+                <p class="empty-hint">Chưa có thông tin thiết kế vỏ</p>
               </ng-template>
             </mat-expansion-panel>
           </mat-accordion>
@@ -1086,11 +1086,11 @@ export class TBKTDetailDialogComponent implements OnInit {
   readonly filesByAssignmentMap = signal<Map<number, FileDocument[]>>(new Map());
 
   private readonly workTypeLabel: Record<string, string> = {
-    'Casing Design': 'Thiết kế vỏ',
-    'Casing Review': 'Kiểm soát vỏ',
-    'Core Design': 'Thiết kế ruột',
-    'Core Review': 'Kiểm soát ruột',
-    'Material Leveling': 'Định mức vật tư'
+    'Casing Design': 'T.Kế vỏ',
+    'Casing Review': 'K.Soát vỏ',
+    'Core Design': 'T.Kế ruột',
+    'Core Review': 'K.Soát ruột',
+    'Material Leveling': 'Đ.mức vật tư'
   };
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: { sheet: TechnicalSheet; assignments?: MachineAssignment[] }) {}
@@ -1113,13 +1113,13 @@ export class TBKTDetailDialogComponent implements OnInit {
   getCasingPanelTitle(): string {
     const design = this.getCasingWorkItems().find(wi => wi.workType === 'Casing Design');
     const name = design ? (design.fullName ?? design.personName ?? '').trim() : '';
-    return name ? `Thiết kế vỏ - ${name}` : 'Thiết kế vỏ';
+    return name ? `T.Kế vỏ - ${name}` : 'T.Kế vỏ';
   }
 
   getCorePanelTitle(): string {
     const design = this.getCoreWorkItems().find(wi => wi.workType === 'Core Design');
     const name = design ? (design.fullName ?? design.personName ?? '').trim() : '';
-    return name ? `Thiết kế ruột - ${name}` : 'Thiết kế ruột';
+    return name ? `T.Kế ruột - ${name}` : 'T.Kế ruột';
   }
 
   hasWorkItemData(wi: WorkItem): boolean {
@@ -1128,12 +1128,14 @@ export class TBKTDetailDialogComponent implements OnInit {
 
   getCasingWorkItems(): WorkItem[] {
     const ass = this.data.assignments ?? [];
-    return ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Casing Design' || wi.workType === 'Casing Review')));
+    const items = ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Casing Design' || wi.workType === 'Casing Review')));
+    return items.sort((a, b) => (a.workType === 'Casing Design' ? 0 : 1) - (b.workType === 'Casing Design' ? 0 : 1));
   }
 
   getCoreWorkItems(): WorkItem[] {
     const ass = this.data.assignments ?? [];
-    return ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Core Design' || wi.workType === 'Core Review')));
+    const items = ass.flatMap(a => (a.workItems ?? []).filter(wi => (wi.workType === 'Core Design' || wi.workType === 'Core Review')));
+    return items.sort((a, b) => (a.workType === 'Core Design' ? 0 : 1) - (b.workType === 'Core Design' ? 0 : 1));
   }
 
   getFilesForWorkItem(wi: WorkItem): FileDocument[] {
@@ -1226,6 +1228,14 @@ export class TBKTDetailDialogComponent implements OnInit {
       case 'pending': return 'status-pending';
       default: return 'status-pending';
     }
+  }
+
+  /** Ngày giao hàng lấy từ bảng MachineAssignment (assignment đầu tiên của TBKT), fallback sang sheet nếu không có. */
+  getDeliveryDateFromAssignment(): Date | string | null | undefined {
+    const assignments = this.data.assignments ?? [];
+    const first = assignments[0];
+    if (first?.deliveryDate != null) return first.deliveryDate;
+    return this.data.sheet?.deliveryDate;
   }
 
   onClose(): void {

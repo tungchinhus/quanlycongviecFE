@@ -59,26 +59,22 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="detail-label">Ngày giao hàng:</span>
-            <span class="detail-value">{{ formatDate(technicalSheet.deliveryDate) }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">Ngày vẽ:</span>
-            <span class="detail-value">{{ formatDate(technicalSheet.drawingDate) }}</span>
+            <span class="detail-value">{{ formatDate(deliveryDateFromAssignment ?? technicalSheet.deliveryDate) }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Thông tin người phụ trách -->
+      <!-- Thông tin người phụ trách: thứ tự Thiết kế ruột, Thiết kế vỏ, Định mức vật tư -->
       <div class="detail-section">
         <h3 class="section-title">Thông tin người phụ trách</h3>
         <div class="detail-grid detail-grid-3">
           <div class="detail-item">
-            <span class="detail-label">Thiết kế vỏ:</span>
-            <span class="detail-value">{{ casingDesignerName }}</span>
-          </div>
-          <div class="detail-item">
             <span class="detail-label">Thiết kế ruột:</span>
             <span class="detail-value">{{ coreDesignerName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Thiết kế vỏ:</span>
+            <span class="detail-value">{{ casingDesignerName }}</span>
           </div>
           <div class="detail-item">
             <span class="detail-label">Định mức vật tư:</span>

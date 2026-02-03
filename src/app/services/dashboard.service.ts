@@ -110,13 +110,13 @@ export class DashboardService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7); // 7 ngày trước
 
-    // Tất cả work types cần hiển thị: thiết kế, kiểm soát, vật tư
+    // Tất cả work types cần hiển thị (thứ tự: T.Kế ruột, K.Soát ruột, T.Kế vỏ, K.Soát vỏ, Đ.mức vật tư)
     const workTypes = [
-      'Core Design',      // Thiết kế ruột
-      'Casing Design',    // Thiết kế vỏ
-      'Core Review',      // Kiểm soát ruột
-      'Casing Review',    // Kiểm soát vỏ
-      'Material Leveling' // Vật tư
+      'Core Design',      // T.Kế ruột
+      'Core Review',      // K.Soát ruột
+      'Casing Design',    // T.Kế vỏ
+      'Casing Review',    // K.Soát vỏ
+      'Material Leveling' // Đ.mức vật tư
     ];
     
     // Build query string

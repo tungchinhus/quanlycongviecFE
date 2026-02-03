@@ -96,6 +96,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'tra-cuu-files',
+    loadComponent: () => import('./components/tra-cuu-files/tra-cuu-files.component').then(m => m.TraCuuFilesComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'tsmay',
     loadComponent: () => import('./components/tsmay/tsmay-list/tsmay-list.component').then(m => m.TSMayListComponent),
     canActivate: [authGuard]

@@ -8,7 +8,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { AssignmentService } from '../../../services/assignment.service';
-import { MachineAssignment } from '../../../models/machine-assignment.model';
+import { MachineAssignment, WorkItem } from '../../../models/machine-assignment.model';
 import { UsersService } from '../../../services/users.service';
 import { AuthUser } from '../../../services/auth.service';
 
@@ -68,16 +68,32 @@ export class AssignmentDetailComponent implements OnInit {
     });
   }
 
-  getDesignerName(designerId: string | undefined): string | null {
-    if (!designerId) return null;
-    const user = this.users.find(u => u.id === designerId || u.id?.toString() === designerId);
-    return user ? (user.name || user.userName || null) : null;
+  /** Hiển thị tên người giao việc: ưu tiên giá trị từ API (tên đầy đủ), không thì tra users theo id/userId/userName. */
+  getDesignerName(designerId: string | number | undefined): string | null {
+    if (designerId == null || designerId === '') return null;
+    const s = String(designerId).trim();
+    if (!s) return null;
+    if (s.includes(' ') || isNaN(Number(s))) return s;
+    const user = this.users.find(u =>
+      u.id === s || u.id?.toString() === s ||
+      u.userId?.toString() === s ||
+      (u.userName && (u.userName as string).trim().toLowerCase() === s.toLowerCase())
+    );
+    return user ? (user.name || user.userName || null) : s;
   }
 
-  getTeamLeaderName(teamLeaderId: string | undefined): string | null {
-    if (!teamLeaderId) return null;
-    const user = this.users.find(u => u.id === teamLeaderId || u.id?.toString() === teamLeaderId);
-    return user ? (user.name || user.userName || null) : null;
+  /** Hiển thị tên trưởng đơn vị: ưu tiên giá trị từ API (tên đầy đủ), không thì tra users theo id/userId/userName. */
+  getTeamLeaderName(teamLeaderId: string | number | undefined): string | null {
+    if (teamLeaderId == null || teamLeaderId === '') return null;
+    const s = String(teamLeaderId).trim();
+    if (!s) return null;
+    if (s.includes(' ') || isNaN(Number(s))) return s;
+    const user = this.users.find(u =>
+      u.id === s || u.id?.toString() === s ||
+      u.userId?.toString() === s ||
+      (u.userName && (u.userName as string).trim().toLowerCase() === s.toLowerCase())
+    );
+    return user ? (user.name || user.userName || null) : s;
   }
 
   getPersonName(personId: string | undefined): string | null {
@@ -98,12 +114,24 @@ export class AssignmentDetailComponent implements OnInit {
     return workTypeMap[workType] || workType;
   }
 
+  /** Thứ tự: Thiết kế ruột, Kiểm soát ruột, Thiết kế vỏ, Kiểm soát vỏ, Định mức vật tư */
+  private readonly workTypeOrder = ['Core Design', 'Core Review', 'Casing Design', 'Casing Review', 'Material Leveling'];
+
+  getSortedWorkItems(): WorkItem[] {
+    if (!this.assignment?.workItems?.length) return [];
+    return [...this.assignment.workItems].sort((a, b) => {
+      const ia = this.workTypeOrder.indexOf(a.workType || '');
+      const ib = this.workTypeOrder.indexOf(b.workType || '');
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+  }
+
   getAssignedUsersWithWorkTypes(): Array<{ userName: string; workTypes: string[] }> {
     if (!this.assignment || !this.assignment.workItems) {
       return [];
     }
     
-    // Nhóm work items theo personName
+    const workTypeNameOrder = ['Thiết kế ruột', 'Kiểm soát ruột', 'Thiết kế vỏ', 'Kiểm soát vỏ', 'Định mức vật tư'];
     const userWorkMap = new Map<string, Set<string>>();
     
     this.assignment.workItems.forEach(item => {
@@ -121,15 +149,15 @@ export class AssignmentDetailComponent implements OnInit {
       }
     });
     
-    // Chuyển đổi Map thành mảng
     const result: Array<{ userName: string; workTypes: string[] }> = [];
-    userWorkMap.forEach((workTypes, userName) => {
-      result.push({
-        userName: userName,
-        workTypes: Array.from(workTypes)
+    userWorkMap.forEach((workTypesSet, userName) => {
+      const workTypes = Array.from(workTypesSet).sort((a, b) => {
+        const ia = workTypeNameOrder.indexOf(a);
+        const ib = workTypeNameOrder.indexOf(b);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
       });
+      result.push({ userName, workTypes });
     });
-    
     return result;
   }
 }

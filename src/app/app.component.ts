@@ -59,6 +59,7 @@ export class AppComponent implements OnInit, OnDestroy {
   
   isLoginPage = false;
   currentYear = new Date().getFullYear();
+  readonly traCuuExpanded = signal<boolean>(false);
   readonly unreadNotificationCount = signal<number>(0);
   readonly showNotificationBadge = signal<boolean>(false);
   readonly notifications = signal<Notification[]>([]);
@@ -78,6 +79,7 @@ export class AppComponent implements OnInit, OnDestroy {
     '/approvals': '/approvals',
     '/work-items': '/work-items',
     '/excel-reader': '/excel-reader',
+    '/tra-cuu-files': '/tra-cuu-files',
     '/tbkt-management': '/tbkt-list',
     '/users': '/users',
     '/roles': '/roles',
@@ -102,6 +104,10 @@ export class AppComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       this.isLoginPage = event.url === '/login' || event.urlAfterRedirects === '/login';
+      const url = event.urlAfterRedirects || event.url || '';
+      if (url.includes('/excel-reader') || url.includes('/tra-cuu-files')) {
+        this.traCuuExpanded.set(true);
+      }
       this.cdr.detectChanges();
     });
     
@@ -149,6 +155,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    if (this.router.url.includes('/excel-reader') || this.router.url.includes('/tra-cuu-files')) {
+      this.traCuuExpanded.set(true);
+    }
     // Load notification preference and unread count if already authenticated
     if (this.isAuthenticated) {
       this.loadNotificationPreference();
@@ -219,6 +228,19 @@ export class AppComponent implements OnInit, OnDestroy {
     
     // Kiểm tra canView
     return permission.canView;
+  }
+
+  isTraCuuActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/excel-reader') || url.includes('/tra-cuu-files');
+  }
+
+  toggleTraCuu(): void {
+    this.traCuuExpanded.update(v => !v);
+  }
+
+  navigateToTraCuu(route: string): void {
+    this.router.navigate([route]);
   }
 
   ngOnDestroy() {
