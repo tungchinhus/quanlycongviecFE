@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TraCuuFilesService, TraCuuFilesApiResponse, TraCuuFilesSearchResult } from '../../services/tra-cuu-files.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed } from '@angular/core';
@@ -26,7 +27,8 @@ import { computed } from '@angular/core';
     MatTooltipModule,
     MatTableModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatCheckboxModule
   ],
   templateUrl: './tra-cuu-files.component.html',
   styleUrls: ['./tra-cuu-files.component.css']
@@ -34,7 +36,9 @@ import { computed } from '@angular/core';
 export class TraCuuFilesComponent {
   readonly folderPath = signal<string>('');
   readonly searchTerm = signal<string>('');
+  readonly useAi = signal<boolean>(false);
   readonly loading = signal<boolean>(false);
+  readonly pickingFolder = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly searchResults = signal<TraCuuFilesSearchResult[]>([]);
   readonly pageSize = signal<number>(25);
@@ -61,24 +65,54 @@ export class TraCuuFilesComponent {
   }
 
   /**
-   * Mở hộp thoại chọn folder (chỉ lấy đường dẫn, không tải file).
-   * Chỉ dùng showDirectoryPicker — không dùng input file để tránh hộp thoại "tải X tệp lên".
+   * Xây dựng đường dẫn đầy đủ từ handle (nếu trình duyệt hỗ trợ getParent), nếu không thì trả về tên folder.
    */
-  async triggerFolderPick(): Promise<void> {
+  private async getFullPathFromHandle(handle: FileSystemDirectoryHandle): Promise<string> {
+    const segments: string[] = [];
+    let current: FileSystemDirectoryHandle | null = handle;
+    while (current) {
+      segments.unshift(current.name);
+      const withParent = current as FileSystemDirectoryHandle & { getParent?: () => Promise<FileSystemDirectoryHandle | null> };
+      if (typeof withParent.getParent !== 'function') break;
+      const parent = await withParent.getParent!().catch(() => null);
+      if (!parent || parent === current) break;
+      current = parent;
+    }
+    return segments.filter(Boolean).join('\\') || handle.name;
+  }
+
+  /**
+   * Mở hộp thoại chọn folder của trình duyệt (showDirectoryPicker) — như ban đầu.
+   * Điền tên folder hoặc đường dẫn (nếu trình duyệt hỗ trợ getParent). Có thể nhập/dán đường dẫn đầy đủ (vd. M:\...) vào ô.
+   */
+  triggerFolderPick(): void {
     this.error.set(null);
+    this.pickingFolder.set(true);
+    this.openBrowserFolderPick();
+  }
+
+  /**
+   * Hộp thoại chọn thư mục của trình duyệt (showDirectoryPicker).
+   */
+  private async openBrowserFolderPick(): Promise<void> {
     const w = window as Window & { showDirectoryPicker?: (opts?: { mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle> };
     if (typeof w.showDirectoryPicker !== 'function') {
+      this.pickingFolder.set(false);
       this.error.set('Trình duyệt không hỗ trợ chọn folder. Vui lòng dùng Chrome hoặc Edge.');
       return;
     }
     try {
       const handle = await w.showDirectoryPicker({ mode: 'read' });
-      this.folderPath.set(handle.name);
+      const fullPath = await this.getFullPathFromHandle(handle);
+      this.folderPath.set(fullPath);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
-        return; // User đã hủy chọn
+        // User hủy — không báo lỗi
+      } else {
+        this.error.set(err instanceof Error ? err.message : 'Không chọn được folder.');
       }
-      this.error.set(err instanceof Error ? err.message : 'Không chọn được folder.');
+    } finally {
+      this.pickingFolder.set(false);
     }
   }
 
@@ -151,7 +185,7 @@ export class TraCuuFilesComponent {
     }
     this.error.set(null);
     this.loading.set(true);
-    this.traCuuFilesService.search(path, query).subscribe({
+    this.traCuuFilesService.search(path, query, this.useAi()).subscribe({
       next: (res: TraCuuFilesApiResponse) => {
         this.loading.set(false);
         const errMsg = res['error'] as string | undefined;

@@ -32,15 +32,26 @@ export class TraCuuFilesService {
 
   /**
    * Gọi API Python service tìm kiếm file theo đường dẫn folder và từ khóa.
-   * GET /search?folderPath=...&q=...
+   * useAi=true: backend dùng AI để chuyển câu tự nhiên thành từ khóa.
    */
-  search(folderPath: string, query: string): Observable<TraCuuFilesApiResponse> {
+  search(folderPath: string, query: string, useAi = false): Observable<TraCuuFilesApiResponse> {
     const params = new HttpParams()
       .set('folderPath', folderPath)
-      .set('q', query);
+      .set('q', query)
+      .set('useAi', String(useAi));
     return this.http
       .get<TraCuuFilesApiResponse>(`${this.baseUrl}/search`, { params })
       .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  /**
+   * Gọi API Python để mở hộp thoại chọn thư mục (native Windows) và trả về đường dẫn đầy đủ.
+   * GET /pick-folder → { path: "M:\\..." | null }
+   */
+  pickFolder(): Observable<{ path: string | null; error?: string }> {
+    return this.http
+      .get<{ path: string | null; error?: string }>(`${this.baseUrl}/pick-folder`)
+      .pipe(timeout(90000)); // 90 giây — tránh spinner quay vô hạn; nếu hộp thoại mở phía sau sẽ kịp chọn
   }
 
   /**

@@ -25,6 +25,12 @@
   margin-bottom: 20px;
 }
 
+.picking-hint {
+  margin: -8px 0 12px 0;
+  font-size: 0.85rem;
+  color: #5f6368;
+}
+
 .folder-label {
   font-size: 14px;
   color: #5f6368;
@@ -50,6 +56,31 @@
 .search-field {
   flex: 1;
   min-width: 220px;
+}
+
+.search-field .ai-mode-btn {
+  margin-right: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 16px;
+  border: 1px solid #dadce0;
+  background: #fff;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.search-field .ai-mode-btn:hover {
+  background: #f1f3f4;
+  color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.search-field .ai-mode-btn.ai-mode-on {
+  background: #e8f0fe;
+  color: #1a73e8;
+  border-color: #1a73e8;
 }
 
 .loading-row {

@@ -13,8 +13,12 @@
             (input)="onFolderPathChange($any($event.target).value)"
             placeholder="Nhập đường dẫn tuyệt đối (vd: M:\P. Thiet Ke) hoặc bấm icon folder">
           <mat-icon matPrefix>folder</mat-icon>
-          <button mat-icon-button matSuffix type="button" (click)="triggerFolderPick(); $event.stopPropagation()" matTooltip="Chọn folder (điền tên; Python cần đường dẫn tuyệt đối thì nhập tay vd: M:\P. Thiet Ke)">
-            <mat-icon>folder_open</mat-icon>
+          <button mat-icon-button matSuffix type="button" (click)="triggerFolderPick(); $event.stopPropagation()" [disabled]="pickingFolder()" matTooltip="Chọn folder (hộp thoại trình duyệt). Có thể nhập/dán đường dẫn đầy đủ (vd. M:\P. Thiet Ke) vào ô.">
+            @if (pickingFolder()) {
+              <mat-spinner diameter="24"></mat-spinner>
+            } @else {
+              <mat-icon>folder_open</mat-icon>
+            }
           </button>
         </mat-form-field>
         <mat-form-field appearance="outline" class="search-field">
@@ -24,8 +28,17 @@
             [value]="searchTerm()"
             (input)="onSearchChange($any($event.target).value)"
             (keydown.enter)="onSearchKeydown($event)"
-            placeholder="Nhập từ khóa rồi nhấn Enter...">
+            placeholder="Từ khóa hoặc câu tự nhiên (vd: báo cáo tháng 1)...">
           <mat-icon matPrefix>search</mat-icon>
+          <button
+            matSuffix
+            type="button"
+            class="ai-mode-btn"
+            [class.ai-mode-on]="useAi()"
+            (click)="useAi.set(!useAi())"
+            matTooltip="Bật để AI chuyển câu tự nhiên thành từ khóa (Gemini/OpenAI).">
+            Chế độ AI
+          </button>
           @if (searchTerm()) {
             <button mat-icon-button matSuffix (click)="onSearchChange('')" type="button" [attr.aria-label]="'Xóa'">
               <mat-icon>clear</mat-icon>
@@ -37,6 +50,10 @@
           Tìm
         </button>
       </div>
+
+      @if (pickingFolder()) {
+        <p class="picking-hint">Đang mở hộp thoại chọn thư mục...</p>
+      }
 
       @if (error()) {
         <div class="error-row">
@@ -100,7 +117,7 @@
       @if (!loading() && !folderPath() && searchResults().length === 0) {
         <div class="empty-state">
           <mat-icon>folder_open</mat-icon>
-          <p>Nhập <strong>đường dẫn tuyệt đối</strong> (vd: <strong>M:\P. Thiet Ke</strong>) hoặc bấm icon folder để chọn (trình duyệt chỉ cho tên folder; Python cần path đầy đủ thì nhập/dán vào ô). Sau đó nhập từ khóa và bấm <strong>Tìm</strong>.</p>
+          <p>Bấm icon folder để chọn thư mục hoặc nhập/dán <strong>đường dẫn</strong> (vd: M:\P. Thiet Ke). Nhập <strong>từ khóa</strong> hoặc câu tự nhiên (vd: báo cáo tháng 1) — bật <strong>AI</strong> để hiểu ngôn ngữ tự nhiên — rồi bấm <strong>Tìm</strong>.</p>
         </div>
       }
 
