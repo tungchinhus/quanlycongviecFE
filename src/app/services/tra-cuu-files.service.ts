@@ -22,6 +22,7 @@ export interface TraCuuFilesApiResponse {
 })
 export class TraCuuFilesService {
   private get baseUrl(): string {
+    // Service chạy từ C:\python-service, mặc định localhost:8000
     return (environment as { pythonServiceUrl?: string }).pythonServiceUrl ?? 'http://localhost:8000';
   }
 

@@ -278,11 +278,13 @@ export class AuthService {
                         this.currentUserSignal.set(authUser);
                         localStorage.setItem('user_session', JSON.stringify(authUser));
                         
-                        // Nếu rememberMe được bật, lưu username/email để khôi phục sau
+                        // Nếu rememberMe được bật, lưu username/email và mật khẩu để khôi phục sau
                         if (rememberMe) {
                           localStorage.setItem('remembered_username', usernameOrEmail);
+                          localStorage.setItem('remembered_password', password);
                         } else {
                           localStorage.removeItem('remembered_username');
+                          localStorage.removeItem('remembered_password');
                         }
                       
                       // Đồng bộ user và roles xuống local DB để đảm bảo danh sách Users hiển thị đúng
@@ -395,6 +397,13 @@ export class AuthService {
    */
   getRememberedUsername(): string | null {
     return localStorage.getItem('remembered_username');
+  }
+
+  /**
+   * Lấy mật khẩu đã được lưu khi ghi nhớ đăng nhập (nếu có)
+   */
+  getRememberedPassword(): string | null {
+    return localStorage.getItem('remembered_password');
   }
 
   /**

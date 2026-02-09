@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -31,7 +31,7 @@ import { Subject, takeUntil } from 'rxjs';
   templateUrl: './login.page.html',
   styleUrl: './login.page.css'
 })
-export class LoginPage implements OnDestroy {
+export class LoginPage implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
@@ -45,12 +45,13 @@ export class LoginPage implements OnDestroy {
   errorMessage = '';
 
   constructor() {
-    // Khôi phục username/email đã lưu nếu có
+    // Khôi phục username/email và mật khẩu đã lưu (khi ghi nhớ đăng nhập) nếu có
     const rememberedUsername = this.authService.getRememberedUsername();
+    const rememberedPassword = this.authService.getRememberedPassword();
     
     this.loginForm = this.fb.group({
       usernameOrEmail: [rememberedUsername || '', [Validators.required]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: [rememberedPassword || '', [Validators.required, Validators.minLength(6)]]
     });
 
     // Nếu có username đã lưu, tự động bật rememberMe
@@ -61,6 +62,17 @@ export class LoginPage implements OnDestroy {
     // Nếu đã đăng nhập, chuyển hướng về đúng Dashboard dựa trên role
     if (this.authService.isAuthenticated()) {
       this.redirectToDashboard();
+    }
+  }
+
+  ngOnInit(): void {
+    // Nếu đã có thông tin ghi nhớ đăng nhập (username + password) và chưa đăng nhập → tự động đăng nhập, không cần hiện form và bấm nút
+    if (!this.authService.isAuthenticated()) {
+      const rememberedUsername = this.authService.getRememberedUsername();
+      const rememberedPassword = this.authService.getRememberedPassword();
+      if (rememberedUsername && rememberedPassword && this.loginForm.valid) {
+        this.onSubmit();
+      }
     }
   }
 

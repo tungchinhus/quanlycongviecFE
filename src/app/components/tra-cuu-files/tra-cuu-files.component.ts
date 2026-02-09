@@ -126,11 +126,11 @@ export class TraCuuFilesComponent {
   /** Thông báo lỗi dễ hiểu khi gọi Python service thất bại. */
   private getErrorMessage(err: unknown): string {
     if (err && typeof err === 'object' && 'name' in err && err.name === 'TimeoutError') {
-      return 'Hết thời gian chờ (90s). Kiểm tra Python service đã chạy chưa (uvicorn ... --port 8000).';
+      return 'Hết thời gian chờ (90s). Kiểm tra Python service đã chạy từ C:\\python-service chưa (port 8000).';
     }
     if (err instanceof HttpErrorResponse) {
       if (err.status === 0) {
-        return 'Không kết nối được Python service. Kiểm tra: 1) Đã chạy python-service chưa (port 8000)? 2) CORS đã bật?';
+        return 'Không kết nối được Python service. Kiểm tra: 1) Đã chạy từ C:\\python-service chưa (port 8000)? 2) CORS đã bật?';
       }
       if (err.status === 404) {
         return 'Python service không có endpoint /search. Kiểm tra lại API.';
@@ -166,7 +166,7 @@ export class TraCuuFilesComponent {
         }
       },
       error: () => {
-        this.error.set('Không mở được Explorer. Kiểm tra Python service đang chạy (port 8000).');
+        this.error.set('Không mở được Explorer. Kiểm tra Python service từ C:\\python-service đang chạy (port 8000).');
       },
     });
   }

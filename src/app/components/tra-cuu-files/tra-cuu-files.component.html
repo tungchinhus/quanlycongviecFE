@@ -65,8 +65,15 @@
             <strong>Để search ổ mạng (M:\...):</strong>
             <ol>
               <li>Chạy Python service trên <strong>chính máy bạn</strong> (máy đã map ổ M:).</li>
-              <li>Mở PowerShell → <code>cd d:\Project\thibidi\quanlyfiles\python-service</code> → <code>.\start.ps1</code></li>
-              <li>Giữ cửa sổ PowerShell mở, quay lại trang này và bấm <strong>Tìm</strong> lại.</li>
+              <li>
+                <strong>Nếu đã cài Windows Service:</strong> Service tự chạy khi Windows khởi động. Kiểm tra: 
+                <code>.\manage-service.ps1 status</code> hoặc khởi động: <code>.\manage-service.ps1 start</code>
+              </li>
+              <li>
+                <strong>Nếu chưa cài Service:</strong> Mở PowerShell → <code>cd C:\python-service</code> → <code>.\start.ps1</code>
+                <br>(Hoặc cài Windows Service để tự chạy: <code>.\manage-service.ps1 install</code> - cần quyền Admin)
+              </li>
+              <li>Giữ cửa sổ PowerShell mở (nếu chạy thủ công), quay lại trang này và bấm <strong>Tìm</strong> lại.</li>
             </ol>
           </div>
         }
