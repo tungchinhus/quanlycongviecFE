@@ -1,0 +1,67 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Hồ sơ thầu</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="toolbar">
+      <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
+        <mat-icon>add</mat-icon>
+        Thêm mới
+      </button>
+      <button mat-raised-button (click)="loadData()" [disabled]="isLoading()">
+        <mat-icon>refresh</mat-icon>
+        Làm mới
+      </button>
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Đang tải...</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" class="data-table">
+          <ng-container matColumnDef="soHST">
+            <th mat-header-cell *matHeaderCellDef>Số HST</th>
+            <td mat-cell *matCellDef="let row">{{ row.soHST || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="donViMoiThau">
+            <th mat-header-cell *matHeaderCellDef>Đơn vị mời thầu</th>
+            <td mat-cell *matCellDef="let row">{{ row.donViMoiThau || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="soTBMTIB">
+            <th mat-header-cell *matHeaderCellDef>Số TBMT IB</th>
+            <td mat-cell *matCellDef="let row">{{ row.soTBMTIB || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ngayNhan">
+            <th mat-header-cell *matHeaderCellDef>Ngày nhận</th>
+            <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayNhan) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ngayGiaoPhongKD">
+            <th mat-header-cell *matHeaderCellDef>Ngày giao P. KD</th>
+            <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayGiaoPhongKD) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button (click)="openEdit(row)" matTooltip="Sửa">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Xóa">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell" [attr.colspan]="displayedColumns.length">Không có dữ liệu</td>
+          </tr>
+        </table>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

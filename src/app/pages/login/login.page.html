@@ -5,6 +5,9 @@
     </mat-card-header>
     <mat-card-content>
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        @if (sessionExpiredMessage) {
+          <div class="session-expired-message">{{ sessionExpiredMessage }}</div>
+        }
         @if (errorMessage) {
           <div class="error-message">{{ errorMessage }}</div>
         }

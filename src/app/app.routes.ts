@@ -116,6 +116,16 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'tiep-nhan-thong-tin',
+    loadComponent: () => import('./components/tiep-nhan-thong-tin/tiep-nhan-thong-tin-list/tiep-nhan-thong-tin-list.component').then(m => m.TiepNhanThongTinListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'ho-so-thau',
+    loadComponent: () => import('./components/ho-so-thau/ho-so-thau-list/ho-so-thau-list.component').then(m => m.HoSoThauListComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'personal-info',
     loadComponent: () => import('./pages/personal-info/personal-info.page').then(m => m.PersonalInfoPage),
     canActivate: [authGuard]

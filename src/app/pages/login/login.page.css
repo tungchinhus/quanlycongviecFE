@@ -105,6 +105,16 @@ mat-card-header {
   font-size: 14px;
 }
 
+.session-expired-message {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid #e65100;
+  font-size: 14px;
+}
+
 .error-message {
   background-color: #ffebee;
   color: #c62828;

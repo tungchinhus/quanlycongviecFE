@@ -1,0 +1,43 @@
+mat-card {
+  margin: 20px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  gap: 12px;
+}
+
+.loading-container p {
+  margin: 0;
+  color: #666;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 800px;
+}
+
+.data-table th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.data-table td, .data-table th {
+  padding: 8px 12px;
+}

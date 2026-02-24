@@ -10,6 +10,6 @@ export const environment = {
     measurementId: "G-GJTTZC70Y2"
   },
   apiUrl: 'http://172.20.115.40:8080/api', // Cập nhật URL API production của bạn
-  pythonServiceUrl: 'http://172.20.115.40:8000' // Python service Tra Cứu Files
+  pythonServiceUrl: 'http://localhost:8000' // Python service Tra Cứu Files
 };
 

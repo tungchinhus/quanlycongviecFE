@@ -6,10 +6,14 @@ import { environment } from '../../environments/environment';
 export interface SystemSettings {
   fileStoragePath: string;
   signatureStoragePath?: string;
+  /** Đường dẫn ổ mạng (Tra Cứu Files + sync service dùng chung). Key: INDEX_ROOTS */
+  indexRoots?: string;
   sendEmailNotifications: boolean;
   designerWarningDays?: number;
   reviewerWarningDays?: number;
   syncIntervalMinutes?: number;
+  /** Giờ chạy indexer trong ngày (HH:mm), ví dụ "02:00" */
+  indexerScheduledTime?: string;
   [key: string]: any; // Cho phép các settings khác trong tương lai
 }
 
@@ -130,6 +134,36 @@ export class SettingsService {
    */
   updateSignatureStoragePath(path: string): Observable<{ signatureStoragePath: string; message: string }> {
     return this.http.put<{ signatureStoragePath: string; message: string }>(`${this.apiUrl}/signature-storage-path`, { Path: path });
+  }
+
+  /**
+   * Lấy đường dẫn ổ mạng (INDEX_ROOTS) - dùng chung Tra Cứu Files + sync service
+   */
+  getIndexRoots(): Observable<{ indexRoots: string }> {
+    return this.http.get<{ indexRoots: string }>(`${this.apiUrl}/index-roots`);
+  }
+
+  /**
+   * Cập nhật đường dẫn ổ mạng (INDEX_ROOTS)
+   */
+  updateIndexRoots(path: string): Observable<{ indexRoots: string; message: string }> {
+    return this.http.put<{ indexRoots: string; message: string }>(`${this.apiUrl}/index-roots`, { Path: path });
+  }
+
+  /**
+   * Lấy giờ chạy indexer trong ngày (HH:mm)
+   */
+  getIndexerScheduledTime(): Observable<{ indexerScheduledTime: string }> {
+    return this.http.get<{ indexerScheduledTime: string }>(`${this.apiUrl}/indexer-scheduled-time`);
+  }
+
+  /**
+   * Cập nhật giờ chạy indexer trong ngày (HH:mm)
+   */
+  updateIndexerScheduledTime(indexerScheduledTime: string): Observable<{ indexerScheduledTime: string }> {
+    return this.http.put<{ indexerScheduledTime: string }>(`${this.apiUrl}/indexer-scheduled-time`, {
+      indexerScheduledTime: (indexerScheduledTime || '').trim()
+    });
   }
 }
 

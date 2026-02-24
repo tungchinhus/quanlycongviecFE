@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TraCuuFilesService, TraCuuFilesApiResponse, TraCuuFilesSearchResult } from '../../services/tra-cuu-files.service';
+import { SettingsService } from '../../services/settings.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed } from '@angular/core';
 
@@ -33,7 +34,7 @@ import { computed } from '@angular/core';
   templateUrl: './tra-cuu-files.component.html',
   styleUrls: ['./tra-cuu-files.component.css']
 })
-export class TraCuuFilesComponent {
+export class TraCuuFilesComponent implements OnInit {
   readonly folderPath = signal<string>('');
   readonly searchTerm = signal<string>('');
   readonly useAi = signal<boolean>(false);
@@ -54,7 +55,19 @@ export class TraCuuFilesComponent {
 
   displayedColumns: string[] = ['name', 'path'];
 
-  constructor(private traCuuFilesService: TraCuuFilesService) {}
+  constructor(
+    private traCuuFilesService: TraCuuFilesService,
+    private settingsService: SettingsService
+  ) {}
+
+  ngOnInit(): void {
+    this.settingsService.getIndexRoots().subscribe({
+      next: (res) => {
+        const path = res?.indexRoots?.trim();
+        if (path) this.folderPath.set(path);
+      }
+    });
+  }
 
   onFolderPathChange(value: string): void {
     this.folderPath.set(value ?? '');

@@ -14,208 +14,195 @@
       </div>
     </mat-card>
   } @else {
-    <mat-card class="settings-card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>folder</mat-icon>
-          Cấu hình lưu file & cảnh báo
-        </mat-card-title>
-      </mat-card-header>
-      
-      <mat-card-content>
-        @if (isLoading()) {
-          <div class="loading-container">
-            <mat-spinner diameter="40"></mat-spinner>
-            <p>Đang tải cài đặt...</p>
-          </div>
-        } @else {
-          <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
-            <div class="settings-grid">
-              <div class="settings-col">
-                <div class="field-block">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Đường dẫn lưu file</mat-label>
-                    <input 
-                      matInput 
-                      formControlName="fileStoragePath"
-                      placeholder="C:\Files\Uploads"
-                      [readonly]="isSaving()">
-                    <mat-icon matPrefix>folder_open</mat-icon>
-                    @if (settingsForm.get('fileStoragePath')?.hasError('required') && settingsForm.get('fileStoragePath')?.touched) {
-                      <mat-error>Vui lòng nhập đường dẫn lưu file</mat-error>
-                    }
-                    @if (settingsForm.get('fileStoragePath')?.hasError('minlength') && settingsForm.get('fileStoragePath')?.touched) {
-                      <mat-error>Đường dẫn phải có ít nhất 1 ký tự</mat-error>
-                    }
-                  </mat-form-field>
-                  <div class="button-group">
-                    <button 
-                      mat-raised-button 
-                      type="button"
-                      color="accent" 
-                      (click)="validatePath('fileStoragePath')"
-                      [disabled]="isValidating() || isSaving() || !settingsForm.get('fileStoragePath')?.value">
-                      @if (isValidating()) {
-                        <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-                      } @else {
-                        <mat-icon>check_circle</mat-icon>
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Đang tải cài đặt...</p>
+      </div>
+    } @else {
+      <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+        <div class="settings-grid">
+          <!-- Đường dẫn -->
+          <mat-card class="grid-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>folder</mat-icon>
+                Đường dẫn
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Lưu file</mat-label>
+                <input matInput formControlName="fileStoragePath" placeholder="C:\Files\Uploads" [readonly]="isSaving()">
+                <mat-icon matPrefix>folder_open</mat-icon>
+                @if (settingsForm.get('fileStoragePath')?.hasError('required') && settingsForm.get('fileStoragePath')?.touched) {
+                  <mat-error>Vui lòng nhập đường dẫn</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Chữ ký điện tử</mat-label>
+                <input matInput formControlName="signatureStoragePath" placeholder="C:\Files\Signatures" [readonly]="isSaving()">
+                <mat-icon matPrefix>draw</mat-icon>
+                @if (settingsForm.get('signatureStoragePath')?.hasError('required') && settingsForm.get('signatureStoragePath')?.touched) {
+                  <mat-error>Vui lòng nhập đường dẫn</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Ổ mạng (INDEX_ROOTS)</mat-label>
+                <input matInput formControlName="indexRoots" placeholder="M:\..." [readonly]="isSaving()">
+                <mat-icon matPrefix>dns</mat-icon>
+              </mat-form-field>
+              <button mat-stroked-button type="button" color="primary" class="check-paths-btn"
+                (click)="validateAllPaths()"
+                [disabled]="isValidating() || isSaving()">
+                @if (isValidating()) {
+                  <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
+                } @else {
+                  <mat-icon>check_circle</mat-icon>
+                }
+                Kiểm tra đường dẫn
+              </button>
+              <mat-checkbox formControlName="sendEmailNotifications" class="full-width email-check">
+                Gửi thông báo qua email
+              </mat-checkbox>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Cảnh báo -->
+          <mat-card class="grid-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>warning</mat-icon>
+                Cảnh báo
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Số ngày cảnh báo (Thiết kế)</mat-label>
+                <input matInput type="number" formControlName="designerWarningDays" placeholder="2" min="0" max="30" [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                @if (settingsForm.get('designerWarningDays')?.hasError('required') && settingsForm.get('designerWarningDays')?.touched) {
+                  <mat-error>Vui lòng nhập số ngày</mat-error>
+                }
+                @if (settingsForm.get('designerWarningDays')?.touched && (settingsForm.get('designerWarningDays')?.hasError('min') || settingsForm.get('designerWarningDays')?.hasError('max'))) {
+                  <mat-error>0–30 ngày</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Số ngày cảnh báo (Kiểm soát)</mat-label>
+                <input matInput type="number" formControlName="reviewerWarningDays" placeholder="1" min="0" max="30" [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                @if (settingsForm.get('reviewerWarningDays')?.hasError('required') && settingsForm.get('reviewerWarningDays')?.touched) {
+                  <mat-error>Vui lòng nhập số ngày</mat-error>
+                }
+                @if (settingsForm.get('reviewerWarningDays')?.touched && (settingsForm.get('reviewerWarningDays')?.hasError('min') || settingsForm.get('reviewerWarningDays')?.hasError('max'))) {
+                  <mat-error>0–30 ngày</mat-error>
+                }
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Đồng bộ -->
+          <mat-card class="grid-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>sync</mat-icon>
+                Đồng bộ file
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Chu kỳ đồng bộ (phút)</mat-label>
+                <input matInput type="number" formControlName="syncIntervalMinutes" placeholder="2" min="1" max="1440" [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+                @if (settingsForm.get('syncIntervalMinutes')?.hasError('required') && settingsForm.get('syncIntervalMinutes')?.touched) {
+                  <mat-error>Vui lòng nhập số phút</mat-error>
+                }
+                @if (settingsForm.get('syncIntervalMinutes')?.touched && (settingsForm.get('syncIntervalMinutes')?.hasError('min') || settingsForm.get('syncIntervalMinutes')?.hasError('max'))) {
+                  <mat-error>1–1440 phút</mat-error>
+                }
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Indexer -->
+          <mat-card class="grid-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>search</mat-icon>
+                Tìm file (Indexer)
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Giờ chạy trong ngày</mat-label>
+                <input matInput type="time" formControlName="indexerScheduledTime" [readonly]="isSaving()">
+                <mat-icon matPrefix>schedule</mat-icon>
+              </mat-form-field>
+              <button mat-raised-button type="button" color="primary" class="run-indexer-btn"
+                (click)="runIndexerNow()"
+                [disabled]="isTriggeringIndex() || isSaving()">
+                @if (isTriggeringIndex()) {
+                  <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
+                } @else {
+                  <mat-icon>play_arrow</mat-icon>
+                }
+                Chạy Indexer ngay
+              </button>
+              <button mat-button type="button" (click)="loadIndexStatus()" [disabled]="isSaving()" class="refresh-status-btn">
+                <mat-icon>refresh</mat-icon>
+                Làm mới trạng thái
+              </button>
+
+              <!-- Trạng thái / log indexer -->
+              @if (indexStatus(); as status) {
+                <div class="indexer-status" [class.status-running]="status.status === 'running'" [class.status-success]="status.status === 'success'" [class.status-error]="status.status === 'error'">
+                  <div class="status-row">
+                    <span class="status-label">Trạng thái:</span>
+                    <span class="status-value">
+                      @switch (status.status) {
+                        @case ('idle') { Chưa chạy }
+                        @case ('running') { <mat-icon class="inline-icon spin">sync</mat-icon> Đang chạy... }
+                        @case ('success') { <mat-icon class="inline-icon success">check_circle</mat-icon> Thành công }
+                        @case ('error') { <mat-icon class="inline-icon error">error</mat-icon> Thất bại }
                       }
-                      Kiểm tra đường dẫn
-                    </button>
+                    </span>
                   </div>
-                </div>
-
-                <div class="field-block">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Đường dẫn lưu chữ ký điện tử</mat-label>
-                    <input 
-                      matInput 
-                      formControlName="signatureStoragePath"
-                      placeholder="C:\Files\Signatures"
-                      [readonly]="isSaving()">
-                    <mat-icon matPrefix>draw</mat-icon>
-                    @if (settingsForm.get('signatureStoragePath')?.hasError('required') && settingsForm.get('signatureStoragePath')?.touched) {
-                      <mat-error>Vui lòng nhập đường dẫn lưu chữ ký</mat-error>
-                    }
-                    @if (settingsForm.get('signatureStoragePath')?.hasError('minlength') && settingsForm.get('signatureStoragePath')?.touched) {
-                      <mat-error>Đường dẫn phải có ít nhất 1 ký tự</mat-error>
-                    }
-                  </mat-form-field>
-                  <div class="button-group">
-                    <button 
-                      mat-raised-button 
-                      type="button"
-                      color="accent" 
-                      (click)="validatePath('signatureStoragePath')"
-                      [disabled]="isValidating() || isSaving() || !settingsForm.get('signatureStoragePath')?.value">
-                      @if (isValidating()) {
-                        <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-                      } @else {
-                        <mat-icon>check_circle</mat-icon>
-                      }
-                      Kiểm tra đường dẫn
-                    </button>
-                  </div>
-                </div>
-
-                <div class="notification-setting">
-                  <mat-checkbox formControlName="sendEmailNotifications" class="full-width">
-                    Gửi thông báo qua email
-                  </mat-checkbox>
-                </div>
-              </div>
-
-              <div class="settings-col">
-                <div class="warning-days-settings">
-                  <h3 class="section-title">
-                    <mat-icon>warning</mat-icon>
-                    Cấu hình cảnh báo
-                  </h3>
-                  
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Số ngày cảnh báo (User thiết kế)</mat-label>
-                    <input 
-                      matInput 
-                      type="number"
-                      formControlName="designerWarningDays"
-                      placeholder="2"
-                      min="0"
-                      max="30"
-                      [readonly]="isSaving()">
-                    <mat-icon matPrefix>schedule</mat-icon>
-                    @if (settingsForm.get('designerWarningDays')?.hasError('required') && settingsForm.get('designerWarningDays')?.touched) {
-                      <mat-error>Vui lòng nhập số ngày cảnh báo</mat-error>
-                    }
-                    @if (settingsForm.get('designerWarningDays')?.hasError('min') && settingsForm.get('designerWarningDays')?.touched) {
-                      <mat-error>Số ngày phải lớn hơn hoặc bằng 0</mat-error>
-                    }
-                    @if (settingsForm.get('designerWarningDays')?.hasError('max') && settingsForm.get('designerWarningDays')?.touched) {
-                      <mat-error>Số ngày không được vượt quá 30</mat-error>
-                    }
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Số ngày cảnh báo (User kiểm soát)</mat-label>
-                    <input 
-                      matInput 
-                      type="number"
-                      formControlName="reviewerWarningDays"
-                      placeholder="1"
-                      min="0"
-                      max="30"
-                      [readonly]="isSaving()">
-                    <mat-icon matPrefix>schedule</mat-icon>
-                    @if (settingsForm.get('reviewerWarningDays')?.hasError('required') && settingsForm.get('reviewerWarningDays')?.touched) {
-                      <mat-error>Vui lòng nhập số ngày cảnh báo</mat-error>
-                    }
-                    @if (settingsForm.get('reviewerWarningDays')?.hasError('min') && settingsForm.get('reviewerWarningDays')?.touched) {
-                      <mat-error>Số ngày phải lớn hơn hoặc bằng 0</mat-error>
-                    }
-                    @if (settingsForm.get('reviewerWarningDays')?.hasError('max') && settingsForm.get('reviewerWarningDays')?.touched) {
-                      <mat-error>Số ngày không được vượt quá 30</mat-error>
-                    }
-                  </mat-form-field>
-                </div>
-
-                <div class="sync-settings">
-                  <h3 class="section-title">
-                    <mat-icon>sync</mat-icon>
-                    Cấu hình đồng bộ file về server
-                  </h3>
-
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Thời gian đồng bộ (phút)</mat-label>
-                    <input
-                      matInput
-                      type="number"
-                      formControlName="syncIntervalMinutes"
-                      placeholder="2"
-                      min="1"
-                      max="1440"
-                      [readonly]="isSaving()">
-                    <mat-icon matPrefix>schedule</mat-icon>
-                    @if (settingsForm.get('syncIntervalMinutes')?.hasError('required') && settingsForm.get('syncIntervalMinutes')?.touched) {
-                      <mat-error>Vui lòng nhập thời gian đồng bộ</mat-error>
-                    }
-                    @if (settingsForm.get('syncIntervalMinutes')?.hasError('min') && settingsForm.get('syncIntervalMinutes')?.touched) {
-                      <mat-error>Thời gian đồng bộ phải lớn hơn hoặc bằng 1 phút</mat-error>
-                    }
-                    @if (settingsForm.get('syncIntervalMinutes')?.hasError('max') && settingsForm.get('syncIntervalMinutes')?.touched) {
-                      <mat-error>Thời gian đồng bộ không được vượt quá 1440 phút (24 giờ)</mat-error>
-                    }
-                  </mat-form-field>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <div class="action-buttons">
-                <button 
-                  mat-button 
-                  type="button"
-                  (click)="resetForm()"
-                  [disabled]="isSaving() || isLoading()">
-                  <mat-icon>refresh</mat-icon>
-                  Khôi phục
-                </button>
-                <button 
-                  mat-raised-button 
-                  type="submit" 
-                  color="primary"
-                  [disabled]="isSaving() || settingsForm.invalid">
-                  @if (isSaving()) {
-                    <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-                  } @else {
-                    <mat-icon>save</mat-icon>
+                  @if (status.lastRunAt) {
+                    <div class="status-row">
+                      <span class="status-label">Lần chạy gần nhất:</span>
+                      <span class="status-value">{{ status.lastRunAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                    </div>
                   }
-                  Lưu cài đặt
-                </button>
-              </div>
-            </div>
-          </form>
-        }
-      </mat-card-content>
-    </mat-card>
+                  @if (status.lastMessage) {
+                    <div class="status-row message">{{ status.lastMessage }}</div>
+                  }
+                  @if (status.lastError) {
+                    <div class="status-row error-msg">{{ status.lastError }}</div>
+                  }
+                </div>
+              } @else if (isAdmin()) {
+                <p class="indexer-status-hint">Không kết nối được service tìm file (port 8000). Kiểm tra Python service đã chạy.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="form-actions">
+          <button mat-button type="button" (click)="resetForm()" [disabled]="isSaving() || isLoading()">
+            <mat-icon>refresh</mat-icon>
+            Khôi phục
+          </button>
+          <button mat-raised-button type="submit" color="primary" [disabled]="isSaving() || settingsForm.invalid">
+            @if (isSaving()) {
+              <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+            } @else {
+              <mat-icon>save</mat-icon>
+            }
+            Lưu cài đặt
+          </button>
+        </div>
+      </form>
+    }
   }
 </div>
-

@@ -80,7 +80,12 @@ export class AuthService {
   private restoreUserSession(): void {
     const userSession = localStorage.getItem('user_session');
     const token = localStorage.getItem('token');
-    
+    // Token hết hạn thì không khôi phục session (tham khảo dieuxe)
+    if (token && !this.isTokenValid(token)) {
+      localStorage.removeItem('user_session');
+      localStorage.removeItem('token');
+      return;
+    }
     if (userSession && token) {
       try {
         const user = JSON.parse(userSession) as AuthUser;
@@ -113,7 +118,27 @@ export class AuthService {
     // Kiểm tra cả user signal và JWT token
     const user = this.currentUserSignal();
     const token = localStorage.getItem('token');
-    return user !== null && token !== null;
+    return user !== null && token !== null && this.isTokenValid(token);
+  }
+
+  /**
+   * Kiểm tra JWT token còn hạn hay đã hết hạn (tham khảo dieuxe).
+   * Decode payload và so sánh exp với thời gian hiện tại.
+   */
+  isTokenValid(tokenToCheck?: string | null): boolean {
+    const token = tokenToCheck ?? localStorage.getItem('token');
+    if (!token) return false;
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return false;
+      const data = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      const exp = data?.exp;
+      if (!exp) return true; // Không có exp thì coi như còn hạn
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      return nowSeconds < exp;
+    } catch {
+      return false;
+    }
   }
 
   hasRole(required: UserRole | UserRole[] | string | string[]): boolean {
@@ -379,6 +404,17 @@ export class AuthService {
   }
 
   /**
+   * Xóa session khi token hết hạn (đồng bộ, cho guard dùng).
+   * Giữ lại remembered_username/remembered_password để trang login có thể tự đăng nhập lại (tham khảo dieuxe).
+   */
+  clearSessionBecauseExpired(): void {
+    this.currentUserSignal.set(null);
+    localStorage.removeItem('user_session');
+    localStorage.removeItem('token');
+    signOut(this.auth).catch(() => {});
+  }
+
+  /**
    * Đăng xuất
    */
   logout(): Observable<void> {
@@ -387,7 +423,9 @@ export class AuthService {
         this.currentUserSignal.set(null);
         localStorage.removeItem('user_session');
         localStorage.removeItem('token'); // Xóa JWT token khi đăng xuất
-        // Không xóa remembered_username để giữ lại cho lần đăng nhập sau
+        // Xóa thông tin ghi nhớ đăng nhập để sau logout không tự động đăng nhập lại, cho phép đăng nhập user khác
+        localStorage.removeItem('remembered_username');
+        localStorage.removeItem('remembered_password');
       })
     );
   }

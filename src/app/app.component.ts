@@ -81,6 +81,8 @@ export class AppComponent implements OnInit, OnDestroy {
     '/excel-reader': '/excel-reader',
     '/tra-cuu-files': '/tra-cuu-files',
     '/tbkt-management': '/tbkt-list',
+    '/tiep-nhan-thong-tin': '/tiep-nhan-thong-tin',
+    '/ho-so-thau': '/ho-so-thau',
     '/users': '/users',
     '/roles': '/roles',
     '/page-permissions': '/page-permissions',

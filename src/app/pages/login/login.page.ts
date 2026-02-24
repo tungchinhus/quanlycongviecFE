@@ -1,6 +1,6 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -34,6 +34,7 @@ import { Subject, takeUntil } from 'rxjs';
 export class LoginPage implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroy$ = new Subject<void>();
@@ -43,6 +44,8 @@ export class LoginPage implements OnInit, OnDestroy {
   isLoading = false;
   rememberMe = false;
   errorMessage = '';
+  /** Thông báo phiên hết hạn (khi redirect từ guard với expired=true - tham khảo dieuxe) */
+  sessionExpiredMessage = '';
 
   constructor() {
     // Khôi phục username/email và mật khẩu đã lưu (khi ghi nhớ đăng nhập) nếu có
@@ -66,7 +69,21 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Nếu đã có thông tin ghi nhớ đăng nhập (username + password) và chưa đăng nhập → tự động đăng nhập, không cần hiện form và bấm nút
+    // Hiển thị thông báo phiên hết hạn khi redirect từ guard với expired=true (tham khảo dieuxe)
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      if (params['expired'] === 'true') {
+        this.sessionExpiredMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        this.snackBar.open(this.sessionExpiredMessage, 'Đóng', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+
+    // Chỉ tự động đăng nhập khi có thông tin ghi nhớ và chưa đăng nhập (tự login lại - tham khảo dieuxe).
+    // Sau khi bấm Logout thì remembered_* đã bị xóa nên không tự động đăng nhập lại, user có thể đăng nhập user khác.
     if (!this.authService.isAuthenticated()) {
       const rememberedUsername = this.authService.getRememberedUsername();
       const rememberedPassword = this.authService.getRememberedPassword();
@@ -174,9 +191,14 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Redirect đến đúng dashboard dựa trên role của user
+   * Redirect đến returnUrl (nếu có từ guard) hoặc đúng dashboard theo role (tham khảo dieuxe).
    */
   private redirectToDashboard(): void {
+    const returnUrl = this.route.snapshot.queryParams['returnUrl'] as string | undefined;
+    if (returnUrl && returnUrl !== '/login' && returnUrl.startsWith('/')) {
+      this.router.navigateByUrl(returnUrl);
+      return;
+    }
     // Kiểm tra nếu user là Manager, ManagerL1, hoặc Administrator
     const isManager = this.authService.hasAnyRole([
       UserRole.Manager,
@@ -188,8 +210,6 @@ export class LoginPage implements OnInit, OnDestroy {
       'Administrator',
       'Admin'
     ]);
-
-    // Redirect đến manager dashboard nếu là manager, ngược lại đến dashboard thường
     if (isManager) {
       this.router.navigate(['/manager-dashboard']);
     } else {

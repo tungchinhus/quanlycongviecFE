@@ -28,8 +28,8 @@ export class TraCuuFilesService {
 
   constructor(private http: HttpClient) {}
 
-  /** Timeout 90 giây - search ổ mạng có thể chậm. */
-  private readonly requestTimeoutMs = 90000;
+  /** Timeout 30 giây - search qua index (SQL Server/Backend) thường < 5s. */
+  private readonly requestTimeoutMs = 30000;
 
   /**
    * Gọi API Python service tìm kiếm file theo đường dẫn folder và từ khóa.
@@ -65,4 +65,33 @@ export class TraCuuFilesService {
       .get<{ ok: boolean; error?: string }>(`${this.baseUrl}/open-in-explorer`, { params })
       .pipe(timeout(this.requestTimeoutMs));
   }
+
+  /**
+   * Kích hoạt chạy indexer ngay lập tức (Python service GET /index/trigger).
+   * Index chạy nền, API trả về ngay.
+   */
+  triggerIndexNow(): Observable<{ ok: boolean; message?: string; error?: string }> {
+    return this.http
+      .get<{ ok: boolean; message?: string; error?: string }>(`${this.baseUrl}/index/trigger`)
+      .pipe(timeout(15000));
+  }
+
+  /**
+   * Trạng thái lần chạy indexer gần nhất (GET /index/status).
+   * status: idle | running | success | error
+   */
+  getIndexStatus(): Observable<IndexStatus> {
+    return this.http
+      .get<IndexStatus>(`${this.baseUrl}/index/status`)
+      .pipe(timeout(10000));
+  }
+}
+
+export interface IndexStatus {
+  lastRunAt: string | null;
+  status: 'idle' | 'running' | 'success' | 'error';
+  lastError: string | null;
+  lastMessage: string | null;
+  lastTotal: number | null;
+  lastDurationSec: number | null;
 }
