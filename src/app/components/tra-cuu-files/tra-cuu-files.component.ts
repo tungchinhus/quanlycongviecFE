@@ -146,14 +146,14 @@ export class TraCuuFilesComponent implements OnInit {
   /** Thông báo lỗi dễ hiểu khi gọi Python service thất bại. */
   private getErrorMessage(err: unknown): string {
     if (err && typeof err === 'object' && 'name' in err && err.name === 'TimeoutError') {
-      return 'Hết thời gian chờ (90s). Kiểm tra Python service đã chạy từ C:\\python-service chưa (port 8000).';
+      return 'Hết thời gian chờ khi gọi API backend. Vui lòng kiểm tra server backend có đang chạy không.';
     }
     if (err instanceof HttpErrorResponse) {
       if (err.status === 0) {
-        return 'Không kết nối được Python service. Kiểm tra: 1) Đã chạy từ C:\\python-service chưa (port 8000)? 2) CORS đã bật?';
+        return 'Không kết nối được API backend. Kiểm tra kết nối mạng hoặc server backend.';
       }
       if (err.status === 404) {
-        return 'Python service không có endpoint /search. Kiểm tra lại API.';
+        return 'API backend không có endpoint /settings/search-file-index. Kiểm tra lại cấu hình backend.';
       }
       const msg = err.error?.error ?? err.error?.message ?? err.message;
       if (msg) return String(msg);
@@ -191,6 +191,29 @@ export class TraCuuFilesComponent implements OnInit {
     });
   }
 
+  /** Chuẩn hóa path Windows (backslash, bỏ \\ cuối). */
+  private normalizePathForCompare(path: string): string {
+    return path.replace(/\//g, '\\').replace(/[\\]+$/, '').toLowerCase();
+  }
+
+  /** Sinh đường dẫn tương đối từ folder gốc + fullPath (giống Python). */
+  private buildRelativePath(baseFolder: string, fullPath: string | undefined, fallbackName: string | undefined): string | undefined {
+    if (!fullPath || !baseFolder) return fallbackName;
+    const baseNormRaw = baseFolder.trim();
+    if (!baseNormRaw) return fallbackName;
+    const baseNorm = baseNormRaw.replace(/\//g, '\\').replace(/[\\]+$/, '');
+    const fullNorm = fullPath.replace(/\//g, '\\');
+    const baseLower = baseNorm.toLowerCase();
+    const fullLower = fullNorm.toLowerCase();
+    if (fullLower === baseLower) {
+      return '';
+    }
+    if (fullLower.startsWith(baseLower + '\\')) {
+      return fullNorm.substring(baseNorm.length).replace(/^\\+/, '');
+    }
+    return fallbackName;
+  }
+
   /** Dựa vào path đã chọn + từ khóa, gọi API Python để tìm thông tin. */
   doSearch(): void {
     const path = this.folderPath().trim();
@@ -214,7 +237,24 @@ export class TraCuuFilesComponent implements OnInit {
           this.searchResults.set([]);
           return;
         }
-        const list = res.results ?? (res.files ? res.files.map(f => ({ path: f, name: f })) : []);
+        const baseFolder = path;
+        let list: TraCuuFilesSearchResult[] = [];
+        if (Array.isArray(res.results) && res.results.length > 0) {
+          list = res.results.map((item) => {
+            const name = (item.name ?? (item as any).Name) as string | undefined;
+            const fullPath = (item.fullPath ?? (item as any).fullPath ?? (item as any).FullPath) as string | undefined;
+            const existingPath = (item.path ?? (item as any).path) as string | undefined;
+            const relPath = existingPath ?? this.buildRelativePath(baseFolder, fullPath, name);
+            return {
+              ...item,
+              name,
+              fullPath,
+              path: relPath
+            };
+          });
+        } else if (res.files) {
+          list = res.files.map(f => ({ path: f, name: f }));
+        }
         this.searchResults.set(list);
         this.pageIndex.set(0); // Reset về trang đầu khi có kết quả mới
       },

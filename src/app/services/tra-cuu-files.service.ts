@@ -30,7 +30,10 @@ export interface TraCuuFilesApiResponse {
   providedIn: 'root'
 })
 export class TraCuuFilesService {
-  /** Python service trên SERVER: search + indexer. */
+  /** API backend chính (ASP.NET). */
+  private readonly backendApiUrl = environment.apiUrl;
+
+  /** Python service trên SERVER: chỉ còn dùng cho indexer. */
   private get serverBaseUrl(): string {
     const env = environment as { pythonServerUrl?: string; pythonServiceUrl?: string };
     return env.pythonServerUrl ?? env.pythonServiceUrl ?? 'http://localhost:8000';
@@ -45,18 +48,136 @@ export class TraCuuFilesService {
   constructor(private http: HttpClient) {}
 
   private readonly requestTimeoutMs = 30000;
+  /** Giới hạn số kết quả search giống Python (mặc định 500). */
+  private readonly maxResults = 500;
+
+  /** Từ thừa khi tách keyword (giống _SEARCH_STOPWORDS trong Python). */
+  private readonly searchStopwords = new Set<string>([
+    'file',
+    'files',
+    'có',
+    'co',
+    'bao',
+    'nhieu',
+    'nhiêu',
+    'how',
+    'many',
+    'tat',
+    'ca',
+    'all',
+    'tim',
+    'tìm',
+    'search',
+    'find'
+  ]);
+
+  /** Map loại file → đuôi file (giống _FILE_TYPE_TO_EXTENSIONS trong Python, rút gọn cho FE). */
+  private readonly fileTypeToExtensions: Record<string, string[]> = {
+    excel: ['.xlsx', '.xls'],
+    xlsx: ['.xlsx'],
+    xls: ['.xls'],
+    pdf: ['.pdf'],
+    word: ['.doc', '.docx'],
+    doc: ['.doc'],
+    docx: ['.docx'],
+    anh: ['.jpg', '.jpeg', '.png', '.gif', '.bmp'],
+    image: ['.jpg', '.jpeg', '.png', '.gif', '.bmp'],
+    video: ['.mp4', '.avi', '.mkv', '.mov', '.wmv'],
+    mp4: ['.mp4']
+  };
+
+  /** Bỏ dấu tiếng Việt để khớp với NameNormalized trong DB (port từ _normalize_vi trong Python). */
+  private normalizeVi(text: string): string {
+    if (!text) return text;
+    const map: Record<string, string> = {
+      à: 'a', á: 'a', ạ: 'a', ả: 'a', ã: 'a',
+      â: 'a', ầ: 'a', ấ: 'a', ậ: 'a', ẩ: 'a', ẫ: 'a',
+      ă: 'a', ằ: 'a', ắ: 'a', ặ: 'a', ẳ: 'a', ẵ: 'a',
+      À: 'a', Á: 'a', Ạ: 'a', Ả: 'a', Ã: 'a',
+      Â: 'a', Ầ: 'a', Ấ: 'a', Ậ: 'a', Ẩ: 'a', Ẫ: 'a',
+      Ă: 'a', Ằ: 'a', Ắ: 'a', Ặ: 'a', Ẳ: 'a', Ẵ: 'a',
+      è: 'e', é: 'e', ẹ: 'e', ẻ: 'e', ẽ: 'e',
+      ê: 'e', ề: 'e', ế: 'e', ệ: 'e', ể: 'e', ễ: 'e',
+      È: 'e', É: 'e', Ẹ: 'e', Ẻ: 'e', Ẽ: 'e',
+      Ê: 'e', Ề: 'e', Ế: 'e', Ệ: 'e', Ể: 'e', Ễ: 'e',
+      ì: 'i', í: 'i', ị: 'i', ỉ: 'i', ĩ: 'i',
+      Ì: 'i', Í: 'i', Ị: 'i', Ỉ: 'i', Ĩ: 'i',
+      ò: 'o', ó: 'o', ọ: 'o', ỏ: 'o', õ: 'o',
+      ô: 'o', ồ: 'o', ố: 'o', ộ: 'o', ổ: 'o', ỗ: 'o',
+      ơ: 'o', ờ: 'o', ớ: 'o', ợ: 'o', ở: 'o', ỡ: 'o',
+      Ò: 'o', Ó: 'o', Ọ: 'o', Ỏ: 'o', Õ: 'o',
+      Ô: 'o', Ồ: 'o', Ố: 'o', Ộ: 'o', Ổ: 'o', Ỗ: 'o',
+      Ơ: 'o', Ờ: 'o', Ớ: 'o', Ợ: 'o', Ở: 'o', Ỡ: 'o',
+      ù: 'u', ú: 'u', ụ: 'u', ủ: 'u', ũ: 'u',
+      ư: 'u', ừ: 'u', ứ: 'u', ự: 'u', ử: 'u', ữ: 'u',
+      Ù: 'u', Ú: 'u', Ụ: 'u', Ủ: 'u', Ũ: 'u',
+      Ư: 'u', Ừ: 'u', Ứ: 'u', Ự: 'u', Ử: 'u', Ữ: 'u',
+      ỳ: 'y', ý: 'y', ỵ: 'y', ỷ: 'y', ỹ: 'y',
+      Ỳ: 'y', Ý: 'y', Ỵ: 'y', Ỷ: 'y', Ỹ: 'y',
+      đ: 'd', Đ: 'd'
+    };
+    return text
+      .split('')
+      .map((ch) => map[ch] ?? ch)
+      .join('');
+  }
 
   /**
-   * Gọi API Python service tìm kiếm file theo đường dẫn folder và từ khóa.
-   * useAi=true: Python dùng AI chuyển câu tự nhiên thành từ khóa.
+   * Build query params cho API backend /settings/search-file-index
+   * sao cho gần giống logic Python (_search_via_backend_api).
+   */
+  private buildBackendSearchParams(folderPath: string, query: string): HttpParams {
+    const rawKeywords = (query || '')
+      .split(/\s+/)
+      .map((k) => k.trim().toLowerCase())
+      .filter(Boolean);
+
+    const extFilters = new Set<string>();
+    const nameKeywords: string[] = [];
+
+    for (const kw of rawKeywords) {
+      if (kw.startsWith('.')) {
+        extFilters.add(kw);
+        continue;
+      }
+      const mapped = this.fileTypeToExtensions[kw];
+      if (mapped && mapped.length) {
+        mapped.forEach((e) => extFilters.add(e));
+        continue;
+      }
+      if (!this.searchStopwords.has(kw)) {
+        nameKeywords.push(kw);
+      }
+    }
+
+    const normalizedKeywords = nameKeywords
+      .map((k) => this.normalizeVi(k))
+      .filter(Boolean);
+
+    let params = new HttpParams()
+      .set('folderPath', folderPath.trim())
+      .set('maxResults', String(this.maxResults));
+
+    if (normalizedKeywords.length > 0) {
+      params = params.set('q', normalizedKeywords.join(' '));
+    }
+    if (extFilters.size > 0) {
+      params = params.set('ext', Array.from(extFilters).sort().join(','));
+    }
+
+    return params;
+  }
+
+  /**
+   * Gọi API backend (ASP.NET) tìm kiếm file theo index SQL Server (FilesController.SearchFiles).
+   * Backend đã implement logic bỏ dấu, synonym, match giống Python qua FileSearchKeywordHelper.
    */
   search(folderPath: string, query: string, useAi = false): Observable<TraCuuFilesApiResponse> {
     const params = new HttpParams()
       .set('folderPath', folderPath)
-      .set('q', query)
-      .set('useAi', String(useAi));
+      .set('q', query);
     return this.http
-      .get<TraCuuFilesApiResponse>(`${this.serverBaseUrl}/search`, { params })
+      .get<TraCuuFilesApiResponse>(`${this.backendApiUrl}/files/search`, { params })
       .pipe(timeout(this.requestTimeoutMs));
   }
 

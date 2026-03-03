@@ -10,6 +10,9 @@ export const environment = {
     measurementId: "G-GJTTZC70Y2"
   },
   apiUrl: 'http://172.20.115.40:8080/api', // Cập nhật URL API production của bạn
-  pythonServiceUrl: 'http://localhost:8000' // Python service Tra Cứu Files
+  // Python service Tra Cứu Files (SERVER) — hiện dùng cho indexer.
+  pythonServiceUrl: 'http://localhost:8000',
+  // Python helper trên CLIENT — mở Explorer / chọn thư mục. Chạy local trên mỗi máy user.
+  pythonClientUrl: 'http://localhost:8000'
 };
 
