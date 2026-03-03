@@ -22,21 +22,13 @@
   flex-wrap: wrap;
 }
 
+.year-field {
+  min-width: 120px;
+}
+
 .search-field {
   flex: 1;
   min-width: 300px;
-}
-
-.filter-field {
-  min-width: 140px;
-  max-width: 180px;
-}
-
-.dropdown-chevron {
-  margin-left: 4px;
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
 }
 
 .loading-container {
@@ -89,7 +81,7 @@ mat-paginator {
 
 .data-table {
   width: 100%;
-  min-width: 1400px;
+  min-width: 1200px;
 }
 
 .data-table th {

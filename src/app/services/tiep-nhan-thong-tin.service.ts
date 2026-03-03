@@ -12,8 +12,11 @@ export class TiepNhanThongTinService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<TiepNhanThongTin[]> {
-    return this.http.get<TiepNhanThongTin[]>(this.apiUrl);
+  getAll(search?: string): Observable<TiepNhanThongTin[]> {
+    const params = search?.trim()
+      ? { params: { search: search.trim() } }
+      : {};
+    return this.http.get<TiepNhanThongTin[]>(this.apiUrl, params);
   }
 
   getById(id: number): Observable<TiepNhanThongTin> {

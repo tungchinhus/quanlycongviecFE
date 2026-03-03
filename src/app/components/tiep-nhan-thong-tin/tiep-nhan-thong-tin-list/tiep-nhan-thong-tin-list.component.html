@@ -1,38 +1,105 @@
-<mat-card>
-  <mat-card-header>
-    <mat-card-title>Tiếp nhận thông tin</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <div class="toolbar">
-      <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
-        <mat-icon>add</mat-icon>
-        Thêm mới
-      </button>
-      <button mat-raised-button (click)="loadData()" [disabled]="isLoading()">
-        <mat-icon>refresh</mat-icon>
-        Làm mới
-      </button>
-    </div>
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <h1>Quản Lý Tiếp Nhận Thông Tin</h1>
+  </div>
 
-    @if (isLoading()) {
-      <div class="loading-container">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Đang tải...</p>
-      </div>
-    } @else {
+  <!-- Search, Phân loại and Add Bar -->
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Tìm kiếm</mat-label>
+      <input
+        matInput
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Số TNTT, điện áp, khách hàng, tiêu chuẩn...">
+      <mat-icon matPrefix>search</mat-icon>
+      <button
+        *ngIf="searchTerm()"
+        mat-icon-button
+        matSuffix
+        (click)="clearSearch()"
+        [attr.aria-label]="'Xóa tìm kiếm'">
+        <mat-icon>clear</mat-icon>
+      </button>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Phân loại</mat-label>
+      <mat-select [value]="phanLoaiFilter()" (selectionChange)="onPhanLoaiChange($event.value)" placeholder="Tất cả">
+        <mat-option value="">Tất cả</mat-option>
+        <mat-option value="Tiếp nhận mới">Tiếp nhận mới</mat-option>
+        <mat-option value="Xuất Khẩu">Xuất Khẩu</mat-option>
+        <mat-option value="DVKH">DVKH</mat-option>
+        <mat-option value="VPMB">VPMB</mat-option>
+        <mat-option value="Đơn Hàng">Đơn Hàng</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-raised-button color="primary" [matMenuTriggerFor]="addMenu" [disabled]="isLoading()">
+      <mat-icon>add</mat-icon>
+      Thêm mới
+      <mat-icon class="dropdown-chevron">arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #addMenu="matMenu" class="add-menu">
+      <button mat-menu-item (click)="openImportExcel()">
+        <mat-icon>upload_file</mat-icon>
+        <span>Import từ Excel</span>
+      </button>
+      <button mat-menu-item (click)="openAdd()">
+        <mat-icon>post_add</mat-icon>
+        <span>Thêm mới (mở dialog)</span>
+      </button>
+    </mat-menu>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !isLoading()) {
+    <div class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="loadData()">Thử lại</button>
+    </div>
+  }
+
+  <!-- Table -->
+  @if (dataSource.data.length > 0 && !isLoading() && !error()) {
+    <mat-card class="table-card">
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSource" class="data-table">
           <ng-container matColumnDef="soTNTT">
-            <th mat-header-cell *matHeaderCellDef>Số TNTT</th>
-            <td mat-cell *matCellDef="let row">{{ row.soTNTT || '-' }}</td>
+            <th mat-header-cell *matHeaderCellDef class="id-header">Số TNTT</th>
+            <td mat-cell *matCellDef="let row" class="id-cell">{{ row.soTNTT || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="thangNam">
+            <th mat-header-cell *matHeaderCellDef>Tháng/Năm</th>
+            <td mat-cell *matCellDef="let row">{{ row.thangNam || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="tenNVPKD">
+            <th mat-header-cell *matHeaderCellDef>Tên (P. KD)</th>
+            <td mat-cell *matCellDef="let row">{{ row.tenNVPKD || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="skVA">
+            <th mat-header-cell *matHeaderCellDef>S (kVA)</th>
+            <td mat-cell *matCellDef="let row">{{ row.skVA || '-' }}</td>
           </ng-container>
           <ng-container matColumnDef="dienAp">
-            <th mat-header-cell *matHeaderCellDef>Điện áp</th>
+            <th mat-header-cell *matHeaderCellDef>Biến áp</th>
             <td mat-cell *matCellDef="let row">{{ row.dienAp || '-' }}</td>
           </ng-container>
           <ng-container matColumnDef="soLuong">
             <th mat-header-cell *matHeaderCellDef>Số lượng</th>
             <td mat-cell *matCellDef="let row">{{ row.soLuong ?? '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="tieuChuan">
+            <th mat-header-cell *matHeaderCellDef>Tiêu chuẩn</th>
+            <td mat-cell *matCellDef="let row">{{ row.tieuChuan || '-' }}</td>
           </ng-container>
           <ng-container matColumnDef="khachHang">
             <th mat-header-cell *matHeaderCellDef>Khách hàng</th>
@@ -43,7 +110,7 @@
             <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayNhan) }}</td>
           </ng-container>
           <ng-container matColumnDef="ngayGiao">
-            <th mat-header-cell *matHeaderCellDef>Ngày giao</th>
+            <th mat-header-cell *matHeaderCellDef>Ngày giao P. KD</th>
             <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayGiao) }}</td>
           </ng-container>
           <ng-container matColumnDef="ngayLuu">
@@ -51,25 +118,49 @@
             <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayLuu) }}</td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+            <th mat-header-cell *matHeaderCellDef>Menu</th>
             <td mat-cell *matCellDef="let row">
-              <button mat-icon-button (click)="openEdit(row)" matTooltip="Sửa">
-                <mat-icon>edit</mat-icon>
+              <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matTooltip]="'Tùy chọn'">
+                <mat-icon>more_vert</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Xóa">
-                <mat-icon>delete</mat-icon>
-              </button>
+              <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item (click)="openEdit(row)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Chỉnh sửa</span>
+                </button>
+                <button mat-menu-item (click)="delete(row)" class="delete-action">
+                  <mat-icon>delete</mat-icon>
+                  <span>Xóa</span>
+                </button>
+              </mat-menu>
             </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" [attr.colspan]="displayedColumns.length">Không có dữ liệu</td>
-          </tr>
         </table>
       </div>
-    }
-  </mat-card-content>
-</mat-card>
+      <mat-paginator
+        #paginator
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        [pageSize]="10"
+        showFirstLastButtons
+        aria-label="Phân trang danh sách">
+      </mat-paginator>
+    </mat-card>
+  }
+
+  <!-- Empty State -->
+  @if (dataSource.data.length === 0 && !isLoading() && !error()) {
+    <div class="empty-container">
+      <mat-icon>inbox</mat-icon>
+      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có dữ liệu tiếp nhận thông tin' }}</p>
+      @if (!searchTerm()) {
+        <button mat-raised-button color="primary" (click)="openAdd()">
+          <mat-icon>add</mat-icon>
+          Thêm bản ghi đầu tiên
+        </button>
+      }
+    </div>
+  }
+</div>

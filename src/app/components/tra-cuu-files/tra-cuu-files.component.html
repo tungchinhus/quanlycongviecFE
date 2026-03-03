@@ -60,19 +60,20 @@
           <mat-icon>error_outline</mat-icon>
           <span>{{ error() }}</span>
         </div>
-        @if (error() && (error()?.includes('ổ mạng') || error()?.includes('Folder không tồn tại'))) {
+        @if (error() && (error()?.includes('ổ mạng') || error()?.includes('Folder không tồn tại') || error()?.includes('Python'))) {
           <div class="help-box">
             <strong>Để search ổ mạng (M:\...):</strong>
             <ol>
               <li>Chạy Python service trên <strong>chính máy bạn</strong> (máy đã map ổ M:).</li>
               <li>
-                <strong>Nếu đã cài Windows Service:</strong> Service tự chạy khi Windows khởi động. Kiểm tra: 
+                <strong>Nếu đã cài Windows Service:</strong> Service tự chạy khi Windows khởi động. Kiểm tra:
                 <code>.\manage-service.ps1 status</code> hoặc khởi động: <code>.\manage-service.ps1 start</code>
               </li>
               <li>
                 <strong>Nếu chưa cài Service:</strong> Mở PowerShell → <code>cd C:\python-service</code> → <code>.\start.ps1</code>
                 <br>(Hoặc cài Windows Service để tự chạy: <code>.\manage-service.ps1 install</code> - cần quyền Admin)
               </li>
+              <li><strong>Nếu chạy bằng Windows Service mà vẫn báo "Folder không tồn tại":</strong> Service thường không thấy ổ map (M:). Thử (a) Nhập đường dẫn UNC thay vì M: (vd: <code>\\server\share\P. Thiet Ke\LUU TRU</code>), hoặc (b) Services.msc → Python service → Đăng nhập → chọn tài khoản người dùng (có map ổ M:) thay vì Local System.</li>
               <li>Giữ cửa sổ PowerShell mở (nếu chạy thủ công), quay lại trang này và bấm <strong>Tìm</strong> lại.</li>
             </ol>
           </div>
@@ -93,7 +94,7 @@
         <div class="table-wrapper">
           <table mat-table [dataSource]="paginatedResults()" class="file-table">
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Tên file</th>
+              <th mat-header-cell *matHeaderCellDef>TBKT file</th>
               <td mat-cell *matCellDef="let row" class="name-cell">
                 <button type="button" class="file-link" (click)="openInExplorer(row)" matTooltip="Mở trong Explorer và chọn file này">
                   <mat-icon class="cell-icon">description</mat-icon>
@@ -103,8 +104,20 @@
               </td>
             </ng-container>
             <ng-container matColumnDef="path">
-              <th mat-header-cell *matHeaderCellDef>Đường dẫn</th>
+              <th mat-header-cell *matHeaderCellDef>TBKT url</th>
               <td mat-cell *matCellDef="let row" class="path-cell">{{ row.path ?? '–' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="bomName">
+              <th mat-header-cell *matHeaderCellDef>Tên file BOM</th>
+              <td mat-cell *matCellDef="let row" class="name-cell">
+                <span>{{ row.bomName ?? '–' }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="bomPath">
+              <th mat-header-cell *matHeaderCellDef>Đường dẫn BOM</th>
+              <td mat-cell *matCellDef="let row" class="path-cell">
+                <span>{{ row.bomPath ?? '–' }}</span>
+              </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>

@@ -1,18 +1,27 @@
 <div class="page-container">
   <!-- Header -->
   <div class="page-header">
-    <h1>Quản Lý Hồ Sơ Thầu</h1>
+    <h1>Quản Lý Máy Sửa Chữa</h1>
   </div>
 
-  <!-- Search, Refresh and Add Bar -->
+  <!-- Year dropdown, Search and Add Bar -->
   <div class="search-bar">
+    <mat-form-field appearance="outline" class="year-field">
+      <mat-label>Năm</mat-label>
+      <mat-select [value]="selectedYear()" (selectionChange)="onYearChange($event.value)">
+        <mat-option [value]="2026">2026</mat-option>
+        <mat-option [value]="2025">2025</mat-option>
+        <mat-option [value]="2024">2024</mat-option>
+        <mat-option [value]="2023">2023</mat-option>
+      </mat-select>
+    </mat-form-field>
     <mat-form-field appearance="outline" class="search-field">
       <mat-label>Tìm kiếm</mat-label>
       <input
         matInput
         [value]="searchTerm()"
         (input)="onSearchChange($any($event.target).value)"
-        placeholder="Số HST, đơn vị mời thầu, Số TBMT IB...">
+        placeholder="Số TNTT, khách hàng, điện áp...">
       <mat-icon matPrefix>search</mat-icon>
       <button
         *ngIf="searchTerm()"
@@ -23,9 +32,6 @@
         <mat-icon>clear</mat-icon>
       </button>
     </mat-form-field>
-    <button mat-icon-button (click)="loadData()" [disabled]="isLoading()" matTooltip="Làm mới">
-      <mat-icon>refresh</mat-icon>
-    </button>
     <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
       <mat-icon>add</mat-icon>
       Thêm mới
@@ -54,25 +60,45 @@
     <mat-card class="table-card">
       <div class="table-wrapper">
         <table mat-table [dataSource]="dataSource" class="data-table">
-          <ng-container matColumnDef="soHST">
-            <th mat-header-cell *matHeaderCellDef class="id-header">Số HST</th>
-            <td mat-cell *matCellDef="let row" class="id-cell">{{ row.soHST || '-' }}</td>
+          <ng-container matColumnDef="soTNTT_DV_DH_PKD">
+            <th mat-header-cell *matHeaderCellDef class="id-header">Số TNTT/DV/ĐH-P.KD</th>
+            <td mat-cell *matCellDef="let row" class="id-cell">{{ row.soTNTT_DV_DH_PKD || '-' }}</td>
           </ng-container>
-          <ng-container matColumnDef="donViMoiThau">
-            <th mat-header-cell *matHeaderCellDef>Đơn vị mời thầu</th>
-            <td mat-cell *matCellDef="let row">{{ row.donViMoiThau || '-' }}</td>
+          <ng-container matColumnDef="thongTinKhachHang">
+            <th mat-header-cell *matHeaderCellDef>Thông tin khách hàng</th>
+            <td mat-cell *matCellDef="let row">{{ row.thongTinKhachHang || '-' }}</td>
           </ng-container>
-          <ng-container matColumnDef="soTBMTIB">
-            <th mat-header-cell *matHeaderCellDef>Số TBMT IB</th>
-            <td mat-cell *matCellDef="let row">{{ row.soTBMTIB || '-' }}</td>
+          <ng-container matColumnDef="skVA">
+            <th mat-header-cell *matHeaderCellDef>S (kVA)</th>
+            <td mat-cell *matCellDef="let row">{{ row.skVA || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="dienAp">
+            <th mat-header-cell *matHeaderCellDef>Điện áp</th>
+            <td mat-cell *matCellDef="let row">{{ row.dienAp || '-' }}</td>
           </ng-container>
           <ng-container matColumnDef="ngayNhan">
             <th mat-header-cell *matHeaderCellDef>Ngày nhận</th>
             <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayNhan) }}</td>
           </ng-container>
-          <ng-container matColumnDef="ngayGiaoPhongKD">
-            <th mat-header-cell *matHeaderCellDef>Ngày giao P. KD</th>
-            <td mat-cell *matCellDef="let row">{{ formatDateValue(row.ngayGiaoPhongKD) }}</td>
+          <ng-container matColumnDef="nguoiThucHien">
+            <th mat-header-cell *matHeaderCellDef>Người thực hiện</th>
+            <td mat-cell *matCellDef="let row">{{ row.nguoiThucHien || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="soMay">
+            <th mat-header-cell *matHeaderCellDef>Số máy</th>
+            <td mat-cell *matCellDef="let row">{{ row.soMay || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="soTBKTSua">
+            <th mat-header-cell *matHeaderCellDef>Số TBKT sửa</th>
+            <td mat-cell *matCellDef="let row">{{ row.soTBKTSua || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="giaoPKD">
+            <th mat-header-cell *matHeaderCellDef>Giao P.KD</th>
+            <td mat-cell *matCellDef="let row">{{ row.giaoPKD || '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ghiChu">
+            <th mat-header-cell *matHeaderCellDef>Ghi chú</th>
+            <td mat-cell *matCellDef="let row">{{ row.ghiChu || '-' }}</td>
           </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Menu</th>
@@ -110,8 +136,8 @@
   <!-- Empty State -->
   @if (dataSource.data.length === 0 && !isLoading() && !error()) {
     <div class="empty-container">
-      <mat-icon>inbox</mat-icon>
-      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có dữ liệu hồ sơ thầu' }}</p>
+      <mat-icon>build</mat-icon>
+      <p>{{ searchTerm() ? 'Không tìm thấy kết quả' : 'Chưa có dữ liệu máy sửa chữa năm ' + selectedYear() }}</p>
       @if (!searchTerm()) {
         <button mat-raised-button color="primary" (click)="openAdd()">
           <mat-icon>add</mat-icon>

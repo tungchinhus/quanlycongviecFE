@@ -1,0 +1,79 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" class="dialog-form">
+    <!-- Số TNTT/DV/ĐH-P.KD | Thông tin khách hàng -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số TNTT/DV/ĐH-P.KD</mat-label>
+        <input matInput formControlName="soTNTT_DV_DH_PKD" placeholder="VD: 08/2026-DV" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Thông tin khách hàng</mat-label>
+        <input matInput formControlName="thongTinKhachHang" placeholder="Tên khách hàng / công ty" />
+      </mat-form-field>
+    </div>
+    <!-- S (kVA) | Điện áp -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>S (kVA)</mat-label>
+        <input matInput formControlName="skVA" placeholder="VD: 3" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Điện áp</mat-label>
+        <input matInput formControlName="dienAp" placeholder="VD: 750, 1000" />
+      </mat-form-field>
+    </div>
+    <!-- Ngày nhận | Người thực hiện -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày nhận</mat-label>
+        <input matInput [matDatepicker]="picker1" formControlName="ngayNhan" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker1" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker1></mat-datepicker>
+        @if (form.get('ngayNhan')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Người thực hiện</mat-label>
+        <input matInput formControlName="nguoiThucHien" placeholder="Tên người thực hiện" />
+      </mat-form-field>
+    </div>
+    <!-- Số máy | Số TBKT sửa -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số máy</mat-label>
+        <input matInput formControlName="soMay" placeholder="Số máy" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số TBKT sửa</mat-label>
+        <input matInput formControlName="soTBKTSua" placeholder="Số TBKT sửa" />
+      </mat-form-field>
+    </div>
+    <!-- Giao P.KD -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Giao P.KD</mat-label>
+        <input matInput formControlName="giaoPKD" placeholder="Giao P.KD" />
+      </mat-form-field>
+    </div>
+    <!-- Ghi chú -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Ghi chú</mat-label>
+        <textarea matInput formControlName="ghiChu" rows="3" placeholder="Nhập ghi chú"></textarea>
+      </mat-form-field>
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
+  <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || isSaving">
+    <mat-icon *ngIf="!isSaving">save</mat-icon>
+    <mat-spinner *ngIf="isSaving" diameter="20" class="btn-spinner"></mat-spinner>
+    Lưu
+  </button>
+</mat-dialog-actions>

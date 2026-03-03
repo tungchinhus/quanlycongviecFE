@@ -12,8 +12,11 @@ export class HoSoThauService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<HoSoThau[]> {
-    return this.http.get<HoSoThau[]>(this.apiUrl);
+  getAll(search?: string): Observable<HoSoThau[]> {
+    const params = search?.trim()
+      ? { params: { search: search.trim() } }
+      : {};
+    return this.http.get<HoSoThau[]>(this.apiUrl, params);
   }
 
   getById(id: number): Observable<HoSoThau> {

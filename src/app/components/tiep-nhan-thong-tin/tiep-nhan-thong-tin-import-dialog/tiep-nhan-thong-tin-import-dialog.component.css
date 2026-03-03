@@ -1,0 +1,62 @@
+.hint {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: var(--thibidi-text-secondary, #666);
+  line-height: 1.4;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+  min-width: 320px;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-name {
+  font-size: 13px;
+  color: var(--thibidi-text-secondary, #666);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.preview-info {
+  margin: 0;
+  font-size: 14px;
+  color: var(--thibidi-text-secondary, #666);
+}
+
+.preview-info strong {
+  color: var(--thibidi-text-primary, #333);
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}

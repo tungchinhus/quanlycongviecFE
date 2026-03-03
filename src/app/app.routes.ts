@@ -126,6 +126,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'may-sua-chua',
+    loadComponent: () => import('./components/may-sua-chua/may-sua-chua-list/may-sua-chua-list.component').then(m => m.MaySuaChuaListComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'personal-info',
     loadComponent: () => import('./pages/personal-info/personal-info.page').then(m => m.PersonalInfoPage),
     canActivate: [authGuard]

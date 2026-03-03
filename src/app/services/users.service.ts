@@ -24,6 +24,8 @@ export interface UserDto {
   email: string | null;
   firebaseUID: string | null;
   isActive: boolean;
+  /** True nếu user là nhân viên thiết kế. */
+  isDesigner?: boolean;
   createdAt: string;
   roles: string[];
 }
@@ -119,6 +121,7 @@ export class UsersService {
       email: dto.email || '',
       roles: roles, // Luôn là array, có thể rỗng
       isActive: dto.isActive !== undefined ? dto.isActive : true,
+      isDesigner: dto.isDesigner === true,
       createdAt: dto.createdAt || ''
     };
   }

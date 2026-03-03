@@ -18,6 +18,8 @@ export interface AuthUser {
   email: string;
   roles: string[]; // Lưu tên role thực từ DB (có thể là ManagerL1, ManagerL2, etc.)
   isActive?: boolean;
+  /** True nếu user là nhân viên thiết kế (cột IsDesigner từ DB). */
+  isDesigner?: boolean;
   createdAt?: string;
 }
 

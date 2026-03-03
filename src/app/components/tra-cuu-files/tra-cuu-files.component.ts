@@ -53,7 +53,14 @@ export class TraCuuFilesComponent implements OnInit {
     return results.slice(start, start + size);
   });
 
-  displayedColumns: string[] = ['name', 'path'];
+  /**
+   * Thứ tự cột hiển thị trên bảng:
+   * - name:      TBKT file
+   * - path:      TBKT url
+   * - bomName:   Tên file BOM
+   * - bomPath:   Đường dẫn BOM
+   */
+  displayedColumns: string[] = ['name', 'path', 'bomName', 'bomPath'];
 
   constructor(
     private traCuuFilesService: TraCuuFilesService,

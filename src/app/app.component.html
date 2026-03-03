@@ -260,6 +260,80 @@
               </mat-menu>
             }
           }
+          @if (canViewNghiepVu()) {
+            @if (!sidenavService.isCollapsed()) {
+              <button type="button"
+                      class="nav-item nav-parent"
+                      [class.active]="isNghiepVuActive()"
+                      (click)="toggleNghiepVu()">
+                <div class="nav-icon">
+                  <mat-icon>business_center</mat-icon>
+                </div>
+                <span class="nav-text">Quản lý TNTT - HST</span>
+                <mat-icon class="nav-chevron">{{ nghiepVuExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              @if (nghiepVuExpanded()) {
+                @if (canViewPage('/tiep-nhan-thong-tin')) {
+                  <a href="#" role="button" class="nav-item nav-sub-item" [class.active]="isRouteActive('/tiep-nhan-thong-tin')"
+                     (click)="navigateToNghiepVu('/tiep-nhan-thong-tin'); $event.preventDefault()">
+                    <div class="nav-icon">
+                      <mat-icon>inbox</mat-icon>
+                    </div>
+                    <span class="nav-text">Tiếp Nhận Thông Tin</span>
+                  </a>
+                }
+                @if (canViewPage('/ho-so-thau')) {
+                  <a href="#" role="button" class="nav-item nav-sub-item" [class.active]="isRouteActive('/ho-so-thau')"
+                     (click)="navigateToNghiepVu('/ho-so-thau'); $event.preventDefault()">
+                    <div class="nav-icon">
+                      <mat-icon>folder_special</mat-icon>
+                    </div>
+                    <span class="nav-text">Hồ Sơ Thầu</span>
+                  </a>
+                }
+                @if (canViewNghiepVu()) {
+                  <a href="#" role="button" class="nav-item nav-sub-item" [class.active]="isRouteActive('/may-sua-chua')"
+                     (click)="navigateToNghiepVu('/may-sua-chua'); $event.preventDefault()">
+                    <div class="nav-icon">
+                      <mat-icon>build</mat-icon>
+                    </div>
+                    <span class="nav-text">Máy Sửa Chữa</span>
+                  </a>
+                }
+              }
+            } @else {
+              <button type="button"
+                      class="nav-item"
+                      [matMenuTriggerFor]="nghiepVuMenu"
+                      [class.active]="isNghiepVuActive()"
+                      [matTooltip]="'Quản lý TNTT - HST'"
+                      matTooltipPosition="right">
+                <div class="nav-icon">
+                  <mat-icon>business_center</mat-icon>
+                </div>
+              </button>
+              <mat-menu #nghiepVuMenu="matMenu" class="nghiep-vu-submenu">
+                @if (canViewPage('/tiep-nhan-thong-tin')) {
+                  <button mat-menu-item (click)="navigateToNghiepVu('/tiep-nhan-thong-tin')">
+                    <mat-icon>inbox</mat-icon>
+                    <span>Tiếp Nhận Thông Tin</span>
+                  </button>
+                }
+                @if (canViewPage('/ho-so-thau')) {
+                  <button mat-menu-item (click)="navigateToNghiepVu('/ho-so-thau')">
+                    <mat-icon>folder_special</mat-icon>
+                    <span>Hồ Sơ Thầu</span>
+                  </button>
+                }
+                @if (canViewNghiepVu()) {
+                  <button mat-menu-item (click)="navigateToNghiepVu('/may-sua-chua')">
+                    <mat-icon>build</mat-icon>
+                    <span>Máy Sửa Chữa</span>
+                  </button>
+                }
+              </mat-menu>
+            }
+          }
           @if (canViewPage('/tbkt-management')) {
             <a routerLink="/tbkt-management"
                routerLinkActive="active"
@@ -270,30 +344,6 @@
                 <mat-icon>description</mat-icon>
               </div>
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Quản Lý Đề Nghị TBKT</span>
-            </a>
-          }
-          @if (canViewPage('/tiep-nhan-thong-tin')) {
-            <a routerLink="/tiep-nhan-thong-tin"
-               routerLinkActive="active"
-               [matTooltip]="sidenavService.isCollapsed() ? 'Tiếp nhận thông tin' : ''"
-               matTooltipPosition="right"
-               class="nav-item">
-              <div class="nav-icon">
-                <mat-icon>inbox</mat-icon>
-              </div>
-              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Tiếp nhận thông tin</span>
-            </a>
-          }
-          @if (canViewPage('/ho-so-thau')) {
-            <a routerLink="/ho-so-thau"
-               routerLinkActive="active"
-               [matTooltip]="sidenavService.isCollapsed() ? 'Hồ sơ thầu' : ''"
-               matTooltipPosition="right"
-               class="nav-item">
-              <div class="nav-icon">
-                <mat-icon>folder_special</mat-icon>
-              </div>
-              <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Hồ sơ thầu</span>
             </a>
           }
           @if (hasAdminRole() && canViewPage('/users')) {

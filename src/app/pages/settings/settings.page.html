@@ -177,6 +177,12 @@
                   @if (status.lastMessage) {
                     <div class="status-row message">{{ status.lastMessage }}</div>
                   }
+                  @if (status.lastStoredCount != null) {
+                    <div class="status-row">
+                      <span class="status-label">Số bản ghi trong DB (khớp với SELECT COUNT(*)):</span>
+                      <span class="status-value">{{ status.lastStoredCount | number }}</span>
+                    </div>
+                  }
                   @if (status.lastError) {
                     <div class="status-row error-msg">{{ status.lastError }}</div>
                   }

@@ -1,67 +1,127 @@
 <h2 mat-dialog-title>{{ title }}</h2>
 <mat-dialog-content>
-  <form [formGroup]="form" class="form-fields">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Số TNTT</mat-label>
-      <input matInput formControlName="soTNTT" placeholder="Số TNTT" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Điện áp</mat-label>
-      <input matInput formControlName="dienAp" placeholder="Điện áp" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Số lượng</mat-label>
-      <input matInput type="number" formControlName="soLuong" min="0" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Tiêu chuẩn</mat-label>
-      <input matInput formControlName="tieuChuan" placeholder="VD: 96,18" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Phụ kiện kèm theo</mat-label>
-      <input matInput formControlName="phuKienKemTheo" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Khách hàng</mat-label>
-      <input matInput formControlName="khachHang" placeholder="Khách hàng" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày nhận</mat-label>
-      <input matInput [matDatepicker]="picker1" formControlName="ngayNhan" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker1"></mat-datepicker-toggle>
-      <mat-datepicker #picker1></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày giao</mat-label>
-      <input matInput [matDatepicker]="picker2" formControlName="ngayGiao" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker2"></mat-datepicker-toggle>
-      <mat-datepicker #picker2></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày lưu</mat-label>
-      <input matInput [matDatepicker]="picker3" formControlName="ngayLuu" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker3"></mat-datepicker-toggle>
-      <mat-datepicker #picker3></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Người thực hiện (P. Kỹ thuật)</mat-label>
-      <input matInput formControlName="nguoiThucHien" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày hoàn thành</mat-label>
-      <input matInput [matDatepicker]="picker4" formControlName="ngayHoanThanh" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker4"></mat-datepicker-toggle>
-      <mat-datepicker #picker4></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ghi chú</mat-label>
-      <textarea matInput formControlName="ghiChu" rows="2"></textarea>
-    </mat-form-field>
+  <form [formGroup]="form" class="dialog-form">
+    <!-- Phân loại | Số TNTT -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Phân loại</mat-label>
+        <mat-select formControlName="phanLoai" placeholder="Chọn phân loại">
+          <mat-option value="">-- Chọn phân loại --</mat-option>
+          <mat-option value="Tiếp nhận mới">Tiếp nhận mới</mat-option>
+          <mat-option value="Xuất Khẩu">Xuất Khẩu</mat-option>
+          <mat-option value="DVKH">DVKH</mat-option>
+          <mat-option value="VPMB">VPMB</mat-option>
+          <mat-option value="Đơn Hàng">Đơn Hàng</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số TNTT</mat-label>
+        <input matInput formControlName="soTNTT" placeholder="Số TNTT" />
+      </mat-form-field>
+    </div>
+    <!-- Tháng/Năm | Tên (P. KD) -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Tháng/Năm</mat-label>
+        <input matInput formControlName="thangNam" placeholder="VD: 12/2025, 01/2026" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Tên (P. KD)</mat-label>
+        <input matInput formControlName="tenNVPKD" placeholder="Tên nhân viên phòng kinh doanh" />
+      </mat-form-field>
+    </div>
+    <!-- S (kVA) | Biến áp -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>S (kVA)</mat-label>
+        <input matInput formControlName="skVA" placeholder="VD: 2500, 2000, 1600" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Biến áp</mat-label>
+        <input matInput formControlName="dienAp" placeholder="Điện áp" />
+      </mat-form-field>
+    </div>
+    <!-- Số lượng | Tiêu chuẩn -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số lượng</mat-label>
+        <input matInput type="number" formControlName="soLuong" min="0" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Tiêu chuẩn</mat-label>
+        <input matInput formControlName="tieuChuan" placeholder="VD: 96,18" />
+      </mat-form-field>
+    </div>
+    <!-- Khách hàng | Ngày nhận -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Khách hàng</mat-label>
+        <input matInput formControlName="khachHang" placeholder="Khách hàng" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày nhận</mat-label>
+        <input matInput [matDatepicker]="picker1" formControlName="ngayNhan" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker1" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker1></mat-datepicker>
+        @if (form.get('ngayNhan')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <!-- Ngày giao P. KD | Ngày lưu -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày giao P. KD</mat-label>
+        <input matInput [matDatepicker]="picker2" formControlName="ngayGiao" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker2" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker2></mat-datepicker>
+        @if (form.get('ngayGiao')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày lưu</mat-label>
+        <input matInput [matDatepicker]="picker3" formControlName="ngayLuu" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker3" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker3></mat-datepicker>
+        @if (form.get('ngayLuu')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <!-- Người thực hiện (P. Kỹ thuật) | Ngày hoàn thành -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Người thực hiện (P. Kỹ thuật)</mat-label>
+        <input matInput formControlName="nguoiThucHien" placeholder="Nhập tên người thực hiện" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày hoàn thành</mat-label>
+        <input matInput [matDatepicker]="picker4" formControlName="ngayHoanThanh" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker4" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker4></mat-datepicker>
+        @if (form.get('ngayHoanThanh')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <!-- Ghi chú (full width cho textarea) -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Ghi chú</mat-label>
+        <textarea matInput formControlName="ghiChu" rows="3" placeholder="Nhập ghi chú"></textarea>
+      </mat-form-field>
+    </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Hủy</button>
+  <button mat-button (click)="cancel()">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
   <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || isSaving">
-    {{ isSaving ? 'Đang lưu...' : 'Lưu' }}
+    <mat-icon *ngIf="!isSaving">save</mat-icon>
+    <mat-spinner *ngIf="isSaving" diameter="20" class="btn-spinner"></mat-spinner>
+    Lưu
   </button>
 </mat-dialog-actions>

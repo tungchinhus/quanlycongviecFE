@@ -10,7 +10,12 @@ export const environment = {
     measurementId: "G-GJTTZC70Y2"
   },
   apiUrl: 'http://localhost:5000/api', // Điều chỉnh theo URL API local của bạn
-  /** URL Python service Tra Cứu Files — service chạy từ C:\\python-service, port 8000 */
-  pythonServiceUrl: 'http://localhost:8000'
+  /** URL Python service Tra Cứu Files (SERVER) — dùng cho search + indexer */
+  pythonServerUrl: 'http://localhost:8000',
+  /**
+   * URL Python helper trên CLIENT — chỉ dùng để mở Explorer / chọn thư mục.
+   * Mặc định chạy local trên mỗi máy client.
+   */
+  pythonClientUrl: 'http://localhost:8000'
 };
 

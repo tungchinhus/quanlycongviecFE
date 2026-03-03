@@ -1,39 +1,58 @@
 <h2 mat-dialog-title>{{ title }}</h2>
 <mat-dialog-content>
-  <form [formGroup]="form" class="form-fields">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Số HST</mat-label>
-      <input matInput formControlName="soHST" placeholder="VD: 01/2026" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Đơn vị mời thầu</mat-label>
-      <input matInput formControlName="donViMoiThau" placeholder="Đơn vị mời thầu" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Số TBMT IB</mat-label>
-      <input matInput formControlName="soTBMTIB" placeholder="VD: IB2500602544" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày nhận</mat-label>
-      <input matInput [matDatepicker]="picker1" formControlName="ngayNhan" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker1"></mat-datepicker-toggle>
-      <mat-datepicker #picker1></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ngày giao phòng KD</mat-label>
-      <input matInput [matDatepicker]="picker2" formControlName="ngayGiaoPhongKD" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker2"></mat-datepicker-toggle>
-      <mat-datepicker #picker2></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Ghi chú</mat-label>
-      <textarea matInput formControlName="ghiChu" rows="2"></textarea>
-    </mat-form-field>
+  <form [formGroup]="form" class="dialog-form">
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Số HST</mat-label>
+        <input matInput formControlName="soHST" placeholder="VD: 01/2026" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Đơn vị mời thầu</mat-label>
+        <input matInput formControlName="donViMoiThau" placeholder="Đơn vị mời thầu" />
+      </mat-form-field>
+    </div>
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Số TBMT IB</mat-label>
+        <input matInput formControlName="soTBMTIB" placeholder="VD: IB2500602544" />
+      </mat-form-field>
+    </div>
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày nhận</mat-label>
+        <input matInput [matDatepicker]="picker1" formControlName="ngayNhan" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker1" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker1></mat-datepicker>
+        @if (form.get('ngayNhan')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>Ngày giao phòng KD</mat-label>
+        <input matInput [matDatepicker]="picker2" formControlName="ngayGiaoPhongKD" placeholder="dd/MM/yyyy" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker2" type="button"></mat-datepicker-toggle>
+        <mat-datepicker #picker2></mat-datepicker>
+        @if (form.get('ngayGiaoPhongKD')?.hasError('invalidDate')) {
+          <mat-error>Nhập đúng định dạng ngày (dd/MM/yyyy)</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Ghi chú</mat-label>
+        <textarea matInput formControlName="ghiChu" rows="3" placeholder="Nhập ghi chú"></textarea>
+      </mat-form-field>
+    </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Hủy</button>
+  <button mat-button (click)="cancel()">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
   <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || isSaving">
-    {{ isSaving ? 'Đang lưu...' : 'Lưu' }}
+    <mat-icon *ngIf="!isSaving">save</mat-icon>
+    <mat-spinner *ngIf="isSaving" diameter="20" class="btn-spinner"></mat-spinner>
+    Lưu
   </button>
 </mat-dialog-actions>

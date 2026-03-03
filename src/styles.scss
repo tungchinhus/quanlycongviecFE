@@ -37,3 +37,14 @@ html, body {
 .bg-success { background-color: #4caf50 !important; }
 .bg-warning { background-color: #ff9800 !important; }
 .bg-error { background-color: #f44336 !important; }
+
+// Datepicker trong dialog: overlay phải nổi trên dialog (dialog thường ~1000)
+.cdk-overlay-container .mat-datepicker-content,
+.cdk-overlay-container .mat-mdc-datepicker-content,
+.cdk-overlay-container [class*="datepicker-content"] {
+  z-index: 1100 !important;
+}
+.cdk-overlay-pane:has(.mat-datepicker-content),
+.cdk-overlay-pane:has(.mat-mdc-datepicker-content) {
+  z-index: 1100 !important;
+}

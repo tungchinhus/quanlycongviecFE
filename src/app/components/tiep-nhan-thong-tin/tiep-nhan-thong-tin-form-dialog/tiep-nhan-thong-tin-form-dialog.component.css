@@ -1,8 +1,23 @@
-.form-fields {
+.dialog-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 400px;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.form-row .field {
+  flex: 1;
+}
+
+.form-row .full-width {
+  flex: 1;
+  width: 100%;
 }
 
 .full-width {
@@ -10,9 +25,17 @@
 }
 
 mat-dialog-content {
-  padding-top: 8px;
+  min-height: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 mat-dialog-actions {
-  padding: 16px 0 0;
+  padding: 16px 24px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
 }

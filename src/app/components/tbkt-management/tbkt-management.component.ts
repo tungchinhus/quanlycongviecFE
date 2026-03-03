@@ -14,6 +14,7 @@ import { MatNativeDateModule, MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } f
 import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../config/date-format.config';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AssignmentService } from '../../services/assignment.service';
 import { TechnicalSheet } from '../../models/machine-assignment.model';
@@ -39,6 +40,7 @@ import { UserRole } from '../../constants/enums';
     MatNativeDateModule,
     MatSelectModule,
     MatDialogModule,
+    MatMenuModule,
     MatSnackBarModule
   ],
   providers: [

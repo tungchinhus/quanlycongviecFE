@@ -60,6 +60,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isLoginPage = false;
   currentYear = new Date().getFullYear();
   readonly traCuuExpanded = signal<boolean>(false);
+  readonly nghiepVuExpanded = signal<boolean>(false);
   readonly unreadNotificationCount = signal<number>(0);
   readonly showNotificationBadge = signal<boolean>(false);
   readonly notifications = signal<Notification[]>([]);
@@ -83,6 +84,7 @@ export class AppComponent implements OnInit, OnDestroy {
     '/tbkt-management': '/tbkt-list',
     '/tiep-nhan-thong-tin': '/tiep-nhan-thong-tin',
     '/ho-so-thau': '/ho-so-thau',
+    '/may-sua-chua': '/may-sua-chua',
     '/users': '/users',
     '/roles': '/roles',
     '/page-permissions': '/page-permissions',
@@ -109,6 +111,9 @@ export class AppComponent implements OnInit, OnDestroy {
       const url = event.urlAfterRedirects || event.url || '';
       if (url.includes('/excel-reader') || url.includes('/tra-cuu-files')) {
         this.traCuuExpanded.set(true);
+      }
+      if (url.includes('/tiep-nhan-thong-tin') || url.includes('/ho-so-thau') || url.includes('/may-sua-chua')) {
+        this.nghiepVuExpanded.set(true);
       }
       this.cdr.detectChanges();
     });
@@ -159,6 +164,9 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (this.router.url.includes('/excel-reader') || this.router.url.includes('/tra-cuu-files')) {
       this.traCuuExpanded.set(true);
+    }
+    if (this.router.url.includes('/tiep-nhan-thong-tin') || this.router.url.includes('/ho-so-thau') || this.router.url.includes('/may-sua-chua')) {
+      this.nghiepVuExpanded.set(true);
     }
     // Load notification preference and unread count if already authenticated
     if (this.isAuthenticated) {
@@ -243,6 +251,28 @@ export class AppComponent implements OnInit, OnDestroy {
 
   navigateToTraCuu(route: string): void {
     this.router.navigate([route]);
+  }
+
+  isNghiepVuActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/tiep-nhan-thong-tin') || url.includes('/ho-so-thau') || url.includes('/may-sua-chua');
+  }
+
+  toggleNghiepVu(): void {
+    this.nghiepVuExpanded.update(v => !v);
+  }
+
+  navigateToNghiepVu(route: string): void {
+    this.router.navigate([route]);
+  }
+
+  /** Dùng cho [class.active] khi sub-item dùng (click) thay vì routerLink */
+  isRouteActive(route: string): boolean {
+    return this.router.url.includes(route);
+  }
+
+  canViewNghiepVu(): boolean {
+    return this.canViewPage('/tiep-nhan-thong-tin') || this.canViewPage('/ho-so-thau') || this.canViewPage('/may-sua-chua');
   }
 
   ngOnDestroy() {

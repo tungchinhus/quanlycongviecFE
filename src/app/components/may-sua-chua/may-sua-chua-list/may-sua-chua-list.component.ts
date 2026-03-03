@@ -12,13 +12,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { HoSoThauService } from '../../../services/ho-so-thau.service';
-import { HoSoThau } from '../../../models/ho-so-thau.model';
+import { MatSelectModule } from '@angular/material/select';
+import { MaySuaChuaService } from '../../../services/may-sua-chua.service';
+import { MaySuaChua } from '../../../models/may-sua-chua.model';
 import { formatDate } from '../../../utils/date.util';
-import { HoSoThauFormDialogComponent } from '../ho-so-thau-form-dialog/ho-so-thau-form-dialog.component';
+import { MaySuaChuaFormDialogComponent } from '../may-sua-chua-form-dialog/may-sua-chua-form-dialog.component';
 
 @Component({
-  selector: 'app-ho-so-thau-list',
+  selector: 'app-may-sua-chua-list',
   standalone: true,
   imports: [
     CommonModule,
@@ -32,22 +33,36 @@ import { HoSoThauFormDialogComponent } from '../ho-so-thau-form-dialog/ho-so-tha
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatSelectModule
   ],
-  templateUrl: './ho-so-thau-list.component.html',
-  styleUrls: ['./ho-so-thau-list.component.css']
+  templateUrl: './may-sua-chua-list.component.html',
+  styleUrls: ['./may-sua-chua-list.component.css']
 })
-export class HoSoThauListComponent implements OnInit, OnDestroy, AfterViewInit {
+export class MaySuaChuaListComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
-  readonly dataSource = new MatTableDataSource<HoSoThau>([]);
+  readonly dataSource = new MatTableDataSource<MaySuaChua>([]);
   readonly searchTerm = signal('');
+  readonly selectedYear = signal<number>(Math.min(2026, Math.max(2023, new Date().getFullYear())));
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
-  readonly displayedColumns = ['soHST', 'donViMoiThau', 'soTBMTIB', 'ngayNhan', 'ngayGiaoPhongKD', 'actions'];
+  readonly displayedColumns = [
+    'soTNTT_DV_DH_PKD',
+    'thongTinKhachHang',
+    'skVA',
+    'dienAp',
+    'ngayNhan',
+    'nguoiThucHien',
+    'soMay',
+    'soTBKTSua',
+    'giaoPKD',
+    'ghiChu',
+    'actions'
+  ];
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
 
   constructor(
-    private service: HoSoThauService,
+    private service: MaySuaChuaService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
@@ -65,12 +80,12 @@ export class HoSoThauListComponent implements OnInit, OnDestroy, AfterViewInit {
   loadData(): void {
     this.isLoading.set(true);
     this.error.set(null);
+    const nam = this.selectedYear();
     const search = this.searchTerm().trim() || undefined;
-    this.service.getAll(search).subscribe({
+    this.service.getAll(nam, search).subscribe({
       next: (list) => {
         this.dataSource.data = list;
         this.isLoading.set(false);
-        // Paginator nằm trong @if, cần chờ view render xong rồi mới gán
         setTimeout(() => {
           if (this.paginator) {
             this.dataSource.paginator = this.paginator;
@@ -87,6 +102,11 @@ export class HoSoThauListComponent implements OnInit, OnDestroy, AfterViewInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  onYearChange(year: number): void {
+    this.selectedYear.set(year);
+    this.loadData();
   }
 
   onSearchChange(value: string): void {
@@ -109,32 +129,32 @@ export class HoSoThauListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   openAdd(): void {
-    const ref = this.dialog.open(HoSoThauFormDialogComponent, {
+    const ref = this.dialog.open(MaySuaChuaFormDialogComponent, {
       width: '90%',
       maxWidth: '1000px',
       minWidth: '320px',
       maxHeight: '90vh',
-      data: { mode: 'add' }
+      data: { mode: 'add', nam: this.selectedYear() }
     });
     ref.afterClosed().subscribe((ok) => {
       if (ok) this.loadData();
     });
   }
 
-  openEdit(item: HoSoThau): void {
-    const ref = this.dialog.open(HoSoThauFormDialogComponent, {
+  openEdit(item: MaySuaChua): void {
+    const ref = this.dialog.open(MaySuaChuaFormDialogComponent, {
       width: '90%',
       maxWidth: '1000px',
       minWidth: '320px',
       maxHeight: '90vh',
-      data: { mode: 'edit', item }
+      data: { mode: 'edit', item, nam: this.selectedYear() }
     });
     ref.afterClosed().subscribe((ok) => {
       if (ok) this.loadData();
     });
   }
 
-  delete(item: HoSoThau): void {
+  delete(item: MaySuaChua): void {
     if (item.id == null) return;
     if (!confirm('Bạn có chắc muốn xóa bản ghi này?')) return;
     this.isLoading.set(true);

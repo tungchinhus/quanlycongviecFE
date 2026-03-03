@@ -10,12 +10,11 @@ import { MatNativeDateModule, MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } f
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { HoSoThauService } from '../../../services/ho-so-thau.service';
-import { HoSoThau } from '../../../models/ho-so-thau.model';
+import { MaySuaChuaService } from '../../../services/may-sua-chua.service';
+import { MaySuaChua } from '../../../models/may-sua-chua.model';
 import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../../config/date-format.config';
 import { parseDateSafe, formatDateOnly } from '../../../utils/date.util';
 
-/** Validator: chỉ chấp nhận giá trị là Date hợp lệ hoặc chuỗi ngày dd/MM/yyyy */
 function dateOnlyValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const v = control.value;
@@ -27,7 +26,7 @@ function dateOnlyValidator(): ValidatorFn {
 }
 
 @Component({
-  selector: 'app-ho-so-thau-form-dialog',
+  selector: 'app-may-sua-chua-form-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -47,27 +46,31 @@ function dateOnlyValidator(): ValidatorFn {
     { provide: MAT_DATE_FORMATS, useValue: DD_MM_YYYY_FORMAT },
     { provide: MAT_DATE_LOCALE, useValue: 'vi-VN' }
   ],
-  templateUrl: './ho-so-thau-form-dialog.component.html',
-  styleUrls: ['./ho-so-thau-form-dialog.component.css']
+  templateUrl: './may-sua-chua-form-dialog.component.html',
+  styleUrls: ['./may-sua-chua-form-dialog.component.css']
 })
-export class HoSoThauFormDialogComponent implements OnInit {
+export class MaySuaChuaFormDialogComponent implements OnInit {
   form: FormGroup;
   isSaving = false;
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<HoSoThauFormDialogComponent>,
-    private service: HoSoThauService,
+    private dialogRef: MatDialogRef<MaySuaChuaFormDialogComponent>,
+    private service: MaySuaChuaService,
     private snackBar: MatSnackBar,
-    @Inject(MAT_DIALOG_DATA) public data: { mode: 'add' | 'edit'; item?: HoSoThau }
+    @Inject(MAT_DIALOG_DATA) public data: { mode: 'add' | 'edit'; item?: MaySuaChua; nam: number }
   ) {
     const dateValidators = [dateOnlyValidator()];
     this.form = this.fb.group({
-      soHST: ['', Validators.required],
-      donViMoiThau: ['', Validators.required],
-      soTBMTIB: [''],
-      ngayNhan: [null as Date | null, [Validators.required, ...dateValidators]],
-      ngayGiaoPhongKD: [null as Date | null, dateValidators],
+      soTNTT_DV_DH_PKD: [''],
+      thongTinKhachHang: [''],
+      skVA: [''],
+      dienAp: [''],
+      ngayNhan: [null as Date | null, dateValidators],
+      nguoiThucHien: [''],
+      soMay: [''],
+      soTBKTSua: [''],
+      giaoPKD: [''],
       ghiChu: ['']
     });
   }
@@ -76,29 +79,38 @@ export class HoSoThauFormDialogComponent implements OnInit {
     if (this.data.mode === 'edit' && this.data.item) {
       const item = this.data.item;
       this.form.patchValue({
-        soHST: item.soHST ?? '',
-        donViMoiThau: item.donViMoiThau ?? '',
-        soTBMTIB: item.soTBMTIB ?? '',
-        ngayNhan: parseDateSafe(item.ngayNhan),
-        ngayGiaoPhongKD: parseDateSafe(item.ngayGiaoPhongKD ?? null),
+        soTNTT_DV_DH_PKD: item.soTNTT_DV_DH_PKD ?? '',
+        thongTinKhachHang: item.thongTinKhachHang ?? '',
+        skVA: item.skVA ?? '',
+        dienAp: item.dienAp ?? '',
+        ngayNhan: parseDateSafe(item.ngayNhan ?? null),
+        nguoiThucHien: item.nguoiThucHien ?? '',
+        soMay: item.soMay ?? '',
+        soTBKTSua: item.soTBKTSua ?? '',
+        giaoPKD: item.giaoPKD ?? '',
         ghiChu: item.ghiChu ?? ''
       });
     }
   }
 
   get title(): string {
-    return this.data.mode === 'add' ? 'Thêm hồ sơ thầu' : 'Sửa hồ sơ thầu';
+    return this.data.mode === 'add' ? 'Thêm máy sửa chữa' : 'Sửa máy sửa chữa';
   }
 
   save(): void {
     if (this.form.invalid || this.isSaving) return;
     const v = this.form.value;
-    const payload: HoSoThau = {
-      soHST: v.soHST,
-      donViMoiThau: v.donViMoiThau,
-      soTBMTIB: v.soTBMTIB || null,
-      ngayNhan: formatDateOnly(v.ngayNhan) ?? '',
-      ngayGiaoPhongKD: formatDateOnly(v.ngayGiaoPhongKD) ?? null,
+    const payload: MaySuaChua = {
+      nam: this.data.nam,
+      soTNTT_DV_DH_PKD: v.soTNTT_DV_DH_PKD || null,
+      thongTinKhachHang: v.thongTinKhachHang || null,
+      skVA: v.skVA || null,
+      dienAp: v.dienAp || null,
+      ngayNhan: formatDateOnly(v.ngayNhan) ?? null,
+      nguoiThucHien: v.nguoiThucHien || null,
+      soMay: v.soMay || null,
+      soTBKTSua: v.soTBKTSua || null,
+      giaoPKD: v.giaoPKD || null,
       ghiChu: v.ghiChu || null
     };
     this.isSaving = true;
@@ -135,22 +147,4 @@ export class HoSoThauFormDialogComponent implements OnInit {
   cancel(): void {
     this.dialogRef.close(false);
   }
-
-  // #region agent log
-  private static readonly _LOG_ENDPOINT = 'http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3';
-  private static _log(location: string, message: string, data: Record<string, unknown>, hypothesisId: string): void {
-    fetch(HoSoThauFormDialogComponent._LOG_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd73c6a' },
-      body: JSON.stringify({
-        sessionId: 'd73c6a',
-        location,
-        message,
-        data,
-        timestamp: Date.now(),
-        hypothesisId
-      })
-    }).catch(() => {});
-  }
-  // #endregion
 }
