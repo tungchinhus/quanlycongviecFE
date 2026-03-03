@@ -42,7 +42,16 @@ export class TraCuuFilesService {
   /** Python helper trên CLIENT: mở Explorer / chọn folder. */
   private get clientBaseUrl(): string {
     const env = environment as { pythonClientUrl?: string };
-    return env.pythonClientUrl ?? 'http://localhost:8001';
+    return env.pythonClientUrl ?? 'http://localhost:8000';
+  }
+
+  /** Endpoint mở Explorer: dùng backend khi openInExplorerUseBackend (Explorer mở trên server). */
+  private get openInExplorerEndpoint(): string {
+    const env = environment as { openInExplorerUseBackend?: boolean };
+    if (env.openInExplorerUseBackend) {
+      return `${this.backendApiUrl}/files/open-in-explorer`;
+    }
+    return `${this.clientBaseUrl}/open-in-explorer`;
   }
 
   constructor(private http: HttpClient) {}
@@ -198,7 +207,7 @@ export class TraCuuFilesService {
   openInExplorer(fullPath: string): Observable<{ ok: boolean; error?: string }> {
     const params = new HttpParams().set('path', fullPath);
     return this.http
-      .get<{ ok: boolean; error?: string }>(`${this.clientBaseUrl}/open-in-explorer`, { params })
+      .get<{ ok: boolean; error?: string }>(this.openInExplorerEndpoint, { params })
       .pipe(timeout(this.requestTimeoutMs));
   }
 
@@ -209,7 +218,8 @@ export class TraCuuFilesService {
   triggerIndexNow(): Observable<{ ok: boolean; message?: string; error?: string }> {
     return this.http
       .get<{ ok: boolean; message?: string; error?: string }>(`${this.serverBaseUrl}/index/trigger`)
-      .pipe(timeout(15000));
+      // Indexer chỉ được trigger nền, nhưng network/host có thể chậm → tăng timeout để tránh lỗi giả.
+      .pipe(timeout(60000));
   }
 
   /**
@@ -219,7 +229,8 @@ export class TraCuuFilesService {
   getIndexStatus(): Observable<IndexStatus> {
     return this.http
       .get<IndexStatus>(`${this.serverBaseUrl}/index/status`)
-      .pipe(timeout(10000));
+      // Khi indexer đang chạy hoặc server chậm có thể lâu hơn 10s, tăng timeout để tránh spam TimeoutError.
+      .pipe(timeout(30000));
   }
 }
 

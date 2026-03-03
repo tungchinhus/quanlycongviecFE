@@ -70,9 +70,6 @@ export class PagePermissionService {
    * Lấy tất cả page permissions
    */
   getPagePermissions(): Observable<PagePermission[]> {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permission.service.ts:70',message:'getPagePermissions called',data:{apiUrl:this.apiUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     return this.http.get<PagePermission[]>(this.apiUrl);
   }
 
@@ -80,10 +77,7 @@ export class PagePermissionService {
    * Lấy page permissions của một user
    */
   getUserPagePermissions(userId: number): Observable<UserPagePermission[]> {
-    // #region agent log
     const fullUrl = `${this.apiUrl}/user/${userId}`;
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permission.service.ts:82',message:'getUserPagePermissions called',data:{userId,apiUrl:this.apiUrl,fullUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     return this.http.get<UserPagePermission[]>(fullUrl);
   }
 

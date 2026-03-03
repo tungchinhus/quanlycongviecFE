@@ -11,8 +11,11 @@ export const environment = {
   },
   apiUrl: 'http://172.20.115.40:8080/api', // Cập nhật URL API production của bạn
   // Python service Tra Cứu Files (SERVER) — hiện dùng cho indexer.
-  pythonServiceUrl: 'http://localhost:8000',
+  // LƯU Ý: phải dùng IP/host của server, KHÔNG dùng localhost (localhost sẽ là máy người dùng).
+  pythonServiceUrl: 'http://172.20.115.40:8000',
   // Python helper trên CLIENT — mở Explorer / chọn thư mục. Chạy local trên mỗi máy user.
-  pythonClientUrl: 'http://localhost:8000'
+  pythonClientUrl: 'http://localhost:8000',
+  // true = gọi backend /api/files/open-in-explorer (Explorer mở trên server). Dùng khi user dùng app từ server và không cần Python trên máy mình.
+  openInExplorerUseBackend: true
 };
 

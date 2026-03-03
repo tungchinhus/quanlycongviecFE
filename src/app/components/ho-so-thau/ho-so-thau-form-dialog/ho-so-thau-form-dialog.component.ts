@@ -135,22 +135,4 @@ export class HoSoThauFormDialogComponent implements OnInit {
   cancel(): void {
     this.dialogRef.close(false);
   }
-
-  // #region agent log
-  private static readonly _LOG_ENDPOINT = 'http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3';
-  private static _log(location: string, message: string, data: Record<string, unknown>, hypothesisId: string): void {
-    fetch(HoSoThauFormDialogComponent._LOG_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd73c6a' },
-      body: JSON.stringify({
-        sessionId: 'd73c6a',
-        location,
-        message,
-        data,
-        timestamp: Date.now(),
-        hypothesisId
-      })
-    }).catch(() => {});
-  }
-  // #endregion
 }

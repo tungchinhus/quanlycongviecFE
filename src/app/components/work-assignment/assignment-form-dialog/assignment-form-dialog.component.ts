@@ -210,16 +210,10 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
     this.settingsService.getNotificationPreference().pipe(
       catchError(err => {
         console.warn('Không lấy được setting sendEmailNotifications, tắt gửi email.', err);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H1',location:'assignment-form-dialog.component.ts:loadNotificationPreference:catchError',message:'Failed to load notification preference',data:{error: String(err)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return of({ sendEmailNotifications: false });
       })
     ).subscribe(pref => {
       this.sendEmailNotificationsEnabled = !!pref?.sendEmailNotifications;
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H1',location:'assignment-form-dialog.component.ts:loadNotificationPreference:success',message:'Loaded notification preference',data:{sendEmailNotifications:this.sendEmailNotificationsEnabled},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     });
   }
 
@@ -575,18 +569,11 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
     if (formValue.casingReviewUser) recipients.push({ userId: formValue.casingReviewUser, workType: 'Casing Review' });
     if (formValue.materialLevelingUser) recipients.push({ userId: formValue.materialLevelingUser, workType: 'Material Leveling' });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H2',location:'assignment-form-dialog.component.ts:sendAssignmentEmails:start',message:'sendAssignmentEmails entry',data:{enabled:this.sendEmailNotificationsEnabled,recipientCount:recipients.length,assignmentId,hasTbktId:!!formValue.tbktId},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     recipients.forEach(recipient => {
       const user = this.resolveUserById(recipient.userId);
       const to = user?.email || user?.userName || user?.name;
       if (!to) {
         console.warn('Không tìm thấy email/userName để gửi cho user', recipient.userId);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H2',location:'assignment-form-dialog.component.ts:sendAssignmentEmails:noRecipient',message:'Missing recipient contact',data:{userId:recipient.userId,workType:recipient.workType},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return;
       }
 
@@ -604,15 +591,9 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
       }).pipe(
         catchError(err => {
           console.warn('Ghi mail_events thất bại', err);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H3',location:'assignment-form-dialog.component.ts:sendAssignmentEmails:logMailEvent:error',message:'logMailEvent failed',data:{error:String(err),to,subject},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           return of(null);
         })
       ).subscribe(result => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H3',location:'assignment-form-dialog.component.ts:sendAssignmentEmails:logMailEvent:success',message:'logMailEvent success',data:{to,subject,docRef:result?.id || null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       });
     });
   }
@@ -704,9 +685,6 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
     if (workItemObservables.length > 0) {
       forkJoin(workItemObservables).subscribe({
         next: (results) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H4',location:'assignment-form-dialog.component.ts:createWorkItemsAndChanges:next',message:'forkJoin completed',data:{isEditMode:this.isEditMode,resultsCount:results?.length || 0},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           if (!this.isEditMode) {
             this.sendAssignmentEmails(assignmentId, formValue);
           }
@@ -748,9 +726,6 @@ export class AssignmentFormDialogComponent implements OnInit, AfterViewInit {
       });
     } else {
       // Không có work items hoặc work changes, chỉ upload files nếu có
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H4',location:'assignment-form-dialog.component.ts:createWorkItemsAndChanges:noWorkItems',message:'No work items/changes',data:{isEditMode:this.isEditMode},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (!this.isEditMode) {
         this.sendAssignmentEmails(assignmentId, formValue);
       }

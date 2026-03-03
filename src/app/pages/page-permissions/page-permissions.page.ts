@@ -72,21 +72,12 @@ export class PagePermissionsPage implements OnInit {
 
   loadPages(): void {
     this.isLoading.set(true);
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:73',message:'loadPages called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     this.pagePermissionService.getPagePermissions().subscribe({
       next: (pages) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:77',message:'Pages loaded successfully',data:{count:pages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         this.pages.set(pages);
         this.isLoading.set(false);
       },
       error: (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:81',message:'Error loading pages',data:{status:error.status,statusText:error.statusText,url:error.url,message:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.error('Error loading pages:', error);
         this.snackBar.open('Lỗi khi tải danh sách pages', 'Đóng', { duration: 3000 });
         this.isLoading.set(false);
@@ -120,21 +111,12 @@ export class PagePermissionsPage implements OnInit {
 
   loadUserPermissions(userId: number): void {
     this.isLoading.set(true);
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:121',message:'loadUserPermissions called',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     this.pagePermissionService.getUserPagePermissions(userId).subscribe({
       next: (permissions) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:125',message:'User permissions loaded successfully',data:{userId,count:permissions.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         this.userPermissions.set(permissions);
         this.isLoading.set(false);
       },
       error: (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/57bffb22-7512-45e6-b9e1-e296b244dac3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page-permissions.page.ts:129',message:'Error loading user permissions',data:{userId,status:error.status,statusText:error.statusText,url:error.url,message:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.error('Error loading user permissions:', error);
         this.snackBar.open('Lỗi khi tải permissions của user', 'Đóng', { duration: 3000 });
         this.isLoading.set(false);

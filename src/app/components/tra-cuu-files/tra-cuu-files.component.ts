@@ -164,17 +164,20 @@ export class TraCuuFilesComponent implements OnInit {
 
   /**
    * Mở Explorer và focus đúng file (gọi Python service trên máy user).
-   * Ưu tiên dùng row.fullPath (backend trả về) nếu có, nếu không thì combine base + row.path.
+   * Ưu tiên: row.fullPath → nếu row.path đã là đường dẫn tuyệt đối (UNC hoặc X:\...) thì dùng luôn → còn không thì base + row.path.
    */
   openInExplorer(row: TraCuuFilesSearchResult): void {
     let fullPath: string;
-    if (row.fullPath && typeof row.fullPath === 'string') {
-      // Backend đã trả về đường dẫn đầy đủ (có thể UNC nếu đã resolve)
-      fullPath = row.fullPath.trim();
+    const pathStr = (row.path ?? '').trim();
+    const fullPathFromApi = row.fullPath && typeof row.fullPath === 'string' ? row.fullPath.trim() : '';
+    if (fullPathFromApi) {
+      fullPath = fullPathFromApi;
+    } else if (pathStr && this.isAbsolutePath(pathStr)) {
+      // Cột "TBKT url" có thể đã hiển thị đường dẫn đầy đủ (backend trả path = FullPath)
+      fullPath = pathStr;
     } else {
-      // Fallback: combine từ folderPath input + row.path
       const base = this.folderPath().trim().replace(/[\\/]+$/, '');
-      const rel = (row.path ?? row.name ?? '').trim();
+      const rel = pathStr || (row.name ?? '').trim();
       if (!base || !rel) return;
       fullPath = `${base}\\${rel}`.replace(/\\+/g, '\\');
     }
@@ -186,9 +189,17 @@ export class TraCuuFilesComponent implements OnInit {
         }
       },
       error: () => {
-        this.error.set('Không mở được Explorer. Kiểm tra Python service từ C:\\python-service đang chạy (port 8000).');
+        this.error.set('Không mở được Explorer. Nếu dùng backend: kiểm tra API server. Nếu dùng Python: chạy service từ C:\\python-service (port 8000).');
       },
     });
+  }
+
+  /** Kiểm tra path đã là đường dẫn tuyệt đối (UNC \\server\... hoặc ổ đĩa X:\...). */
+  private isAbsolutePath(path: string): boolean {
+    if (!path || path.length < 2) return false;
+    if (path.startsWith('\\\\') || path.startsWith('//')) return true;
+    const drive = path.slice(0, 2).toUpperCase();
+    return /^[A-Z]:$/.test(drive) && (path.length === 2 || path[2] === '\\' || path[2] === '/');
   }
 
   /** Chuẩn hóa path Windows (backslash, bỏ \\ cuối). */
