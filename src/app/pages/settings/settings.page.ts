@@ -52,6 +52,11 @@ export class SettingsPage implements OnInit, OnDestroy {
 
   settingsForm!: FormGroup;
 
+  /** URL service indexer đang dùng (để hiển thị khi không kết nối được). */
+  get indexerServiceUrl(): string {
+    return this.traCuuFilesService.getIndexerBaseUrl();
+  }
+
   ngOnInit() {
     this.initForm();
     this.loadSettings();
@@ -419,7 +424,7 @@ export class SettingsPage implements OnInit, OnDestroy {
       error: (err) => {
         this.isTriggeringIndex.set(false);
         console.error('Error triggering index:', err);
-        const msg = err.error?.error || err.message || 'Không thể kết nối tới service tìm file. Kiểm tra Python service đã chạy (port 8000).';
+        const msg = err.error?.error || err.message || `Không thể kết nối tới service tìm file tại ${this.indexerServiceUrl}. Khởi động Python service (C:\\python-service\\start-service.bat hoặc trên server tương ứng).`;
         this.snackBar.open(msg, 'Đóng', {
           duration: 6000,
           horizontalPosition: 'center',

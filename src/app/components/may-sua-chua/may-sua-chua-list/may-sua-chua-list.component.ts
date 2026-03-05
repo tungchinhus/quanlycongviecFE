@@ -17,6 +17,7 @@ import { MaySuaChuaService } from '../../../services/may-sua-chua.service';
 import { MaySuaChua } from '../../../models/may-sua-chua.model';
 import { formatDate } from '../../../utils/date.util';
 import { MaySuaChuaFormDialogComponent } from '../may-sua-chua-form-dialog/may-sua-chua-form-dialog.component';
+import { MaySuaChuaImportDialogComponent } from '../may-sua-chua-import-dialog/may-sua-chua-import-dialog.component';
 
 @Component({
   selector: 'app-may-sua-chua-list',
@@ -135,6 +136,18 @@ export class MaySuaChuaListComponent implements OnInit, OnDestroy, AfterViewInit
       minWidth: '320px',
       maxHeight: '90vh',
       data: { mode: 'add', nam: this.selectedYear() }
+    });
+    ref.afterClosed().subscribe((ok) => {
+      if (ok) this.loadData();
+    });
+  }
+
+  openImport(): void {
+    const ref = this.dialog.open(MaySuaChuaImportDialogComponent, {
+      width: '520px',
+      minWidth: '320px',
+      disableClose: false,
+      data: { nam: this.selectedYear() }
     });
     ref.afterClosed().subscribe((ok) => {
       if (ok) this.loadData();

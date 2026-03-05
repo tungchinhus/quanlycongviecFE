@@ -1,6 +1,6 @@
-import { Component, Inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,69 +8,52 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import * as XLSX from 'xlsx';
-import { TiepNhanThongTinService } from '../../../services/tiep-nhan-thong-tin.service';
-import { TiepNhanThongTin } from '../../../models/tiep-nhan-thong-tin.model';
+import { MaySuaChuaService } from '../../../services/may-sua-chua.service';
+import { MaySuaChua } from '../../../models/may-sua-chua.model';
 
-const PHAN_LOAI_OPTIONS = [
-  { value: 'Tiếp nhận mới', label: 'Tiếp nhận mới' },
-  { value: 'Xuất Khẩu', label: 'Xuất Khẩu' },
-  { value: 'DVKH', label: 'DVKH' },
-  { value: 'VPMB', label: 'VPMB' },
-  { value: 'Đơn Hàng', label: 'Đơn Hàng' }
-];
-
-/** Map Excel header (normalized) -> model key. Nhiều biến thể tên cột. */
-const HEADER_MAP: Record<string, keyof TiepNhanThongTin> = {
-  'số tntt': 'soTNTT',
-  'so tntt': 'soTNTT',
-  'stt': 'soTNTT',
-  'số tntt/dv/đh-p.kd': 'soTNTT',
-  'số tntt/dv/đh-p kd': 'soTNTT',
-  'tháng/năm': 'thangNam',
-  'thang nam': 'thangNam',
-  'tên (p. kd)': 'tenNVPKD',
-  'tên (p.kd)': 'tenNVPKD',
-  'ten (p. kd)': 'tenNVPKD',
-  'tên p. kd': 'tenNVPKD',
+/** Map Excel header (normalized) -> model key */
+const HEADER_MAP: Record<string, keyof MaySuaChua> = {
+  'số tntt': 'soTNTT_DV_DH_PKD',
+  'so tntt': 'soTNTT_DV_DH_PKD',
+  'số tntt/dv/đh-p.kd': 'soTNTT_DV_DH_PKD',
+  'so tntt/dv/đh-p kd': 'soTNTT_DV_DH_PKD',
+  'số tntt/dv/đh-p kd': 'soTNTT_DV_DH_PKD',
+  'thông tin khách hàng': 'thongTinKhachHang',
+  'thong tin khach hang': 'thongTinKhachHang',
+  'khách hàng': 'thongTinKhachHang',
+  'khach hang': 'thongTinKhachHang',
   's (kva)': 'skVA',
   'skva': 'skVA',
   'biến áp': 'dienAp',
   'bien ap': 'dienAp',
   'điện áp': 'dienAp',
   'dien ap': 'dienAp',
-  'số lượng': 'soLuong',
-  'so luong': 'soLuong',
-  'tiêu chuẩn': 'tieuChuan',
-  'tieu chuan': 'tieuChuan',
-  'khách hàng': 'khachHang',
-  'khach hang': 'khachHang',
-  'thông tin khách hàng': 'khachHang',
-  'thong tin khach hang': 'khachHang',
   'ngày nhận': 'ngayNhan',
   'ngay nhan': 'ngayNhan',
-  'ngày giao': 'ngayGiao',
-  'ngay giao': 'ngayGiao',
-  'ngày giao p. kd': 'ngayGiao',
-  'ngay giao p. kd': 'ngayGiao',
-  'giao p.kd': 'ngayGiao',
-  'ngày lưu': 'ngayLuu',
-  'ngay luu': 'ngayLuu',
   'người thực hiện': 'nguoiThucHien',
   'nguoi thuc hien': 'nguoiThucHien',
-  'ngày hoàn thành': 'ngayHoanThanh',
-  'ngay hoan thanh': 'ngayHoanThanh',
+  'số máy': 'soMay',
+  'so may': 'soMay',
+  'số tbkt sửa': 'soTBKTSua',
+  'so tbkt sua': 'soTBKTSua',
+  'giao p.kd': 'giaoPKD',
+  'giao pkd': 'giaoPKD',
   'ghi chú': 'ghiChu',
-  'ghi chu': 'ghiChu',
-  'phụ kiện': 'phuKienKemTheo',
-  'phu kien': 'phuKienKemTheo',
-  'phụ kiện kèm theo': 'phuKienKemTheo',
-  'phu kien kem theo': 'phuKienKemTheo'
+  'ghi chu': 'ghiChu'
 };
 
-/** Thứ tự cột mặc định khi map theo index (dòng 1 = header có thể không khớp) */
-const DEFAULT_COLUMN_ORDER: (keyof TiepNhanThongTin)[] = [
-  'soTNTT', 'thangNam', 'tenNVPKD', 'skVA', 'dienAp', 'soLuong', 'tieuChuan', 'khachHang',
-  'ngayNhan', 'ngayGiao', 'ngayLuu', 'nguoiThucHien', 'ngayHoanThanh', 'ghiChu'
+/** Thứ tự cột mặc định khi map theo index */
+const DEFAULT_COLUMN_ORDER: (keyof MaySuaChua)[] = [
+  'soTNTT_DV_DH_PKD',
+  'thongTinKhachHang',
+  'skVA',
+  'dienAp',
+  'ngayNhan',
+  'nguoiThucHien',
+  'soMay',
+  'soTBKTSua',
+  'giaoPKD',
+  'ghiChu'
 ];
 
 function normalizeHeader(h: string): string {
@@ -80,7 +63,6 @@ function normalizeHeader(h: string): string {
 function excelDateToISO(value: unknown): string | null {
   if (value == null || value === '') return null;
   if (typeof value === 'number') {
-    // Excel serial date: days since 1900-01-01 (with 1900 leap bug)
     const d = new Date((value - 25569) * 86400 * 1000);
     if (isNaN(d.getTime())) return null;
     return d.toISOString().slice(0, 10);
@@ -88,7 +70,6 @@ function excelDateToISO(value: unknown): string | null {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return null;
-    // DD/MM/YYYY or YYYY-MM-DD
     const m = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) {
       const [, day, month, year] = m;
@@ -107,7 +88,7 @@ function cellStr(value: unknown): string {
   return String(value).trim();
 }
 
-/** Chuẩn hóa ngày về YYYY-MM-DD để so sánh trùng. */
+/** Chuẩn hóa ngày về YYYY-MM-DD để so sánh trùng (API có thể trả DD/MM/YYYY hoặc ISO). */
 function normalizeDateForSignature(value: string | null | undefined): string {
   if (value == null || String(value).trim() === '') return '';
   const s = String(value).trim();
@@ -123,31 +104,25 @@ function normalizeDateForSignature(value: string | null | undefined): string {
 }
 
 /** Chuỗi đại diện toàn bộ cột data để so sánh trùng (bỏ id). */
-function dataSignature(row: TiepNhanThongTin): string {
-  const n = (v: string | number | null | undefined) =>
-    v == null || (typeof v === 'string' && v.trim() === '') ? '' : String(v).trim();
+function dataSignature(row: MaySuaChua): string {
+  const n = (v: string | null | undefined) => (v == null || String(v).trim() === '' ? '' : String(v).trim());
   return [
-    n(row.phanLoai),
-    n(row.soTNTT),
-    n(row.dienAp),
-    row.soLuong,
-    n(row.khachHang),
-    normalizeDateForSignature(row.ngayNhan),
-    n(row.thangNam),
-    n(row.tenNVPKD),
+    row.nam,
+    n(row.soTNTT_DV_DH_PKD),
+    n(row.thongTinKhachHang),
     n(row.skVA),
-    n(row.tieuChuan),
-    n(row.phuKienKemTheo),
-    normalizeDateForSignature(row.ngayGiao),
-    normalizeDateForSignature(row.ngayLuu),
+    n(row.dienAp),
+    normalizeDateForSignature(row.ngayNhan),
     n(row.nguoiThucHien),
-    normalizeDateForSignature(row.ngayHoanThanh),
+    n(row.soMay),
+    n(row.soTBKTSua),
+    normalizeDateForSignature(row.giaoPKD),
     n(row.ghiChu)
   ].join('|');
 }
 
 @Component({
-  selector: 'app-tiep-nhan-thong-tin-import-dialog',
+  selector: 'app-may-sua-chua-import-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -159,31 +134,36 @@ function dataSignature(row: TiepNhanThongTin): string {
     MatProgressSpinnerModule,
     MatSnackBarModule
   ],
-  templateUrl: './tiep-nhan-thong-tin-import-dialog.component.html',
-  styleUrls: ['./tiep-nhan-thong-tin-import-dialog.component.css']
+  templateUrl: './may-sua-chua-import-dialog.component.html',
+  styleUrls: ['./may-sua-chua-import-dialog.component.css']
 })
-export class TiepNhanThongTinImportDialogComponent {
+export class MaySuaChuaImportDialogComponent {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   selectedFile: File | null = null;
   sheetNames: string[] = [];
   selectedSheetName = '';
-  selectedPhanLoai = '';
-  phanLoaiOptions = PHAN_LOAI_OPTIONS;
   workbook: XLSX.WorkBook | null = null;
   isImporting = false;
   previewRowCount = 0;
 
   constructor(
-    private dialogRef: MatDialogRef<TiepNhanThongTinImportDialogComponent>,
-    private service: TiepNhanThongTinService,
-    private snackBar: MatSnackBar
+    private dialogRef: MatDialogRef<MaySuaChuaImportDialogComponent>,
+    private service: MaySuaChuaService,
+    private snackBar: MatSnackBar,
+    @Inject(MAT_DIALOG_DATA) public data: { nam: number }
   ) {}
+
+  /** Năm dùng cho import và so sánh trùng (trùng với dữ liệu theo năm). */
+  private get nam(): number {
+    return this.data?.nam ?? new Date().getFullYear();
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input?.files?.[0];
     if (!file) return;
+
     const name = file.name.toLowerCase();
     if (!name.endsWith('.xlsx') && !name.endsWith('.xls')) {
       this.snackBar.open('Vui lòng chọn file Excel (.xlsx hoặc .xls).', 'Đóng', {
@@ -192,6 +172,7 @@ export class TiepNhanThongTinImportDialogComponent {
       });
       return;
     }
+
     this.selectedFile = file;
     this.workbook = null;
     this.sheetNames = [];
@@ -213,7 +194,7 @@ export class TiepNhanThongTinImportDialogComponent {
           this.selectedSheetName = this.sheetNames[0];
           this.updatePreviewCount();
         }
-      } catch (err) {
+      } catch {
         this.snackBar.open('Không đọc được file Excel.', 'Đóng', {
           duration: 3000,
           panelClass: ['error-snackbar']
@@ -243,7 +224,6 @@ export class TiepNhanThongTinImportDialogComponent {
       return;
     }
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown as unknown[][];
-    // First row = header, data rows after
     this.previewRowCount = Math.max(0, rows.length - 1);
   }
 
@@ -252,7 +232,6 @@ export class TiepNhanThongTinImportDialogComponent {
       this.selectedFile &&
       this.workbook &&
       this.selectedSheetName &&
-      this.selectedPhanLoai &&
       this.previewRowCount > 0 &&
       !this.isImporting
     );
@@ -272,23 +251,22 @@ export class TiepNhanThongTinImportDialogComponent {
       return;
     }
 
-    const phanLoai = this.selectedPhanLoai;
     let headerRow = rows[0] as unknown[];
     let dataRows = rows.slice(1) as unknown[][];
     let headers = headerRow.map((h) => normalizeHeader(String(h ?? '')));
-    let toCreate = this.buildRowsFromData(headers, dataRows, phanLoai);
+    let toCreate = this.buildRowsFromData(headers, dataRows);
 
-    // Fallback 1: nếu dòng 1 là tiêu đề (title), thử dùng dòng 2 làm header
+    // Fallback 1: nếu dòng đầu chỉ là tiêu đề nhóm, thử dùng dòng 2 làm header
     if (toCreate.length === 0 && rows.length >= 3) {
       headerRow = rows[1] as unknown[];
       dataRows = rows.slice(2) as unknown[][];
       headers = headerRow.map((h) => normalizeHeader(String(h ?? '')));
-      toCreate = this.buildRowsFromData(headers, dataRows, phanLoai);
+      toCreate = this.buildRowsFromData(headers, dataRows);
     }
 
-    // Fallback 2: map theo thứ tự cột (cột 0 = Số TNTT, 1 = Tháng/Năm, ...)
+    // Fallback 2: map theo thứ tự cột
     if (toCreate.length === 0 && dataRows.length > 0) {
-      toCreate = this.buildRowsByColumnIndex(dataRows, phanLoai);
+      toCreate = this.buildRowsByColumnIndex(dataRows);
     }
 
     if (toCreate.length === 0) {
@@ -301,7 +279,7 @@ export class TiepNhanThongTinImportDialogComponent {
 
     // Loại bỏ trùng trong file: chỉ giữ bản ghi đầu tiên khi mọi cột data giống nhau
     const seenInFile = new Set<string>();
-    const deduped: TiepNhanThongTin[] = [];
+    const deduped: MaySuaChua[] = [];
     for (const row of toCreate) {
       const sig = dataSignature(row);
       if (seenInFile.has(sig)) continue;
@@ -311,9 +289,10 @@ export class TiepNhanThongTinImportDialogComponent {
     const skippedInFile = toCreate.length - deduped.length;
 
     this.isImporting = true;
-    this.service.getAll().subscribe({
+    this.service.getAll(this.nam).subscribe({
       next: (existingList) => {
         const existingSigs = new Set(existingList.map((r) => dataSignature(r)));
+        // Bỏ qua dòng trùng với dữ liệu đã có trên hệ thống (tất cả cột data giống nhau)
         const toInsert = deduped.filter((row) => !existingSigs.has(dataSignature(row)));
         const skippedExisting = deduped.length - toInsert.length;
 
@@ -380,80 +359,97 @@ export class TiepNhanThongTinImportDialogComponent {
 
   private buildRowsFromData(
     headers: string[],
-    dataRows: unknown[][],
-    phanLoai: string
-  ): TiepNhanThongTin[] {
-    const toCreate: TiepNhanThongTin[] = [];
+    dataRows: unknown[][]
+  ): MaySuaChua[] {
+    const toCreate: MaySuaChua[] = [];
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i] as unknown[];
       const record: Record<string, unknown> = {};
+
       headers.forEach((h, colIndex) => {
         const key = HEADER_MAP[h];
         if (key) record[key] = row[colIndex];
       });
-      const soTNTT = cellStr(record['soTNTT']);
+
+      const soTNTT = cellStr(record['soTNTT_DV_DH_PKD']);
+      const thongTinKhachHang = cellStr(record['thongTinKhachHang']);
+      const skVA = cellStr(record['skVA']);
       const dienAp = cellStr(record['dienAp']);
-      const soLuong = Number(record['soLuong']) || 0;
-      const khachHang = cellStr(record['khachHang']);
       let ngayNhan = excelDateToISO(record['ngayNhan']);
-      if (!soTNTT && !khachHang && soLuong === 0 && !ngayNhan) continue;
+      const nguoiThucHien = cellStr(record['nguoiThucHien']);
+      const soMay = cellStr(record['soMay']);
+      const soTBKTSua = cellStr(record['soTBKTSua']);
+      const giaoPKD = cellStr(record['giaoPKD']);
+      const ghiChu = cellStr(record['ghiChu']);
+
+      if (
+        !soTNTT &&
+        !thongTinKhachHang &&
+        !skVA &&
+        !dienAp &&
+        !ngayNhan &&
+        !nguoiThucHien &&
+        !soMay &&
+        !soTBKTSua
+      ) {
+        continue;
+      }
       if (!ngayNhan) ngayNhan = new Date().toISOString().slice(0, 10);
+
       toCreate.push({
-        phanLoai: phanLoai || null,
-        soTNTT: soTNTT || `Row${i + 2}`,
-        dienAp: dienAp || '-',
-        soLuong,
-        khachHang: khachHang || '-',
+        nam: this.nam,
+        soTNTT_DV_DH_PKD: soTNTT || `Row${i + 2}`,
+        thongTinKhachHang: thongTinKhachHang || null,
+        skVA: skVA || null,
+        dienAp: dienAp || null,
         ngayNhan,
-        thangNam: cellStr(record['thangNam']) || null,
-        tenNVPKD: cellStr(record['tenNVPKD']) || null,
-        skVA: cellStr(record['skVA']) || null,
-        tieuChuan: cellStr(record['tieuChuan']) || null,
-        phuKienKemTheo: cellStr(record['phuKienKemTheo']) || null,
-        ngayGiao: excelDateToISO(record['ngayGiao']) ?? null,
-        ngayLuu: excelDateToISO(record['ngayLuu']) ?? null,
-        nguoiThucHien: cellStr(record['nguoiThucHien']) || null,
-        ngayHoanThanh: excelDateToISO(record['ngayHoanThanh']) ?? null,
-        ghiChu: cellStr(record['ghiChu']) || null
+        nguoiThucHien: nguoiThucHien || null,
+        soMay: soMay || null,
+        soTBKTSua: soTBKTSua || null,
+        giaoPKD: giaoPKD || null,
+        ghiChu: ghiChu || null
       });
     }
     return toCreate;
   }
 
-  /** Map theo thứ tự cột: cột 0 = Số TNTT, 1 = Tháng/Năm, 2 = Tên P.KD, 3 = S(kVA), 4 = Biến áp, 5 = Số lượng, 6 = Tiêu chuẩn, 7 = Khách hàng, 8 = Ngày nhận, ... */
-  private buildRowsByColumnIndex(dataRows: unknown[][], phanLoai: string): TiepNhanThongTin[] {
-    const toCreate: TiepNhanThongTin[] = [];
+  private buildRowsByColumnIndex(dataRows: unknown[][]): MaySuaChua[] {
+    const toCreate: MaySuaChua[] = [];
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i] as unknown[];
       const hasAnyCell = row.some((cell) => cell != null && String(cell).trim() !== '');
       if (!hasAnyCell) continue;
+
       const record: Record<string, unknown> = {};
       DEFAULT_COLUMN_ORDER.forEach((key, colIndex) => {
         if (colIndex < row.length) record[key] = row[colIndex];
       });
-      const soTNTT = cellStr(record['soTNTT']);
+
+      const soTNTT = cellStr(record['soTNTT_DV_DH_PKD']);
+      const thongTinKhachHang = cellStr(record['thongTinKhachHang']);
+      const skVA = cellStr(record['skVA']);
       const dienAp = cellStr(record['dienAp']);
-      const soLuong = Number(record['soLuong']) || 0;
-      const khachHang = cellStr(record['khachHang']);
       let ngayNhan = excelDateToISO(record['ngayNhan']);
+      const nguoiThucHien = cellStr(record['nguoiThucHien']);
+      const soMay = cellStr(record['soMay']);
+      const soTBKTSua = cellStr(record['soTBKTSua']);
+      const giaoPKD = cellStr(record['giaoPKD']);
+      const ghiChu = cellStr(record['ghiChu']);
+
       if (!ngayNhan) ngayNhan = new Date().toISOString().slice(0, 10);
+
       toCreate.push({
-        phanLoai: phanLoai || null,
-        soTNTT: soTNTT || `Row${i + 2}`,
-        dienAp: dienAp || '-',
-        soLuong,
-        khachHang: khachHang || '-',
+        nam: this.nam,
+        soTNTT_DV_DH_PKD: soTNTT || `Row${i + 2}`,
+        thongTinKhachHang: thongTinKhachHang || null,
+        skVA: skVA || null,
+        dienAp: dienAp || null,
         ngayNhan,
-        thangNam: cellStr(record['thangNam']) || null,
-        tenNVPKD: cellStr(record['tenNVPKD']) || null,
-        skVA: cellStr(record['skVA']) || null,
-        tieuChuan: cellStr(record['tieuChuan']) || null,
-        phuKienKemTheo: cellStr(record['phuKienKemTheo']) || null,
-        ngayGiao: excelDateToISO(record['ngayGiao']) ?? null,
-        ngayLuu: excelDateToISO(record['ngayLuu']) ?? null,
-        nguoiThucHien: cellStr(record['nguoiThucHien']) || null,
-        ngayHoanThanh: excelDateToISO(record['ngayHoanThanh']) ?? null,
-        ghiChu: cellStr(record['ghiChu']) || null
+        nguoiThucHien: nguoiThucHien || null,
+        soMay: soMay || null,
+        soTBKTSua: soTBKTSua || null,
+        giaoPKD: giaoPKD || null,
+        ghiChu: ghiChu || null
       });
     }
     return toCreate;
@@ -463,3 +459,4 @@ export class TiepNhanThongTinImportDialogComponent {
     this.dialogRef.close(false);
   }
 }
+

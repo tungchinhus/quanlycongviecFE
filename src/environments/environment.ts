@@ -10,15 +10,15 @@ export const environment = {
     measurementId: "G-GJTTZC70Y2"
   },
   apiUrl: 'http://localhost:5000/api', // Điều chỉnh theo URL API local của bạn
-  /** URL Python service Tra Cứu Files (SERVER) — dùng cho search + indexer */
-  // Dùng port 8100 để tránh trùng với service cũ đang chiếm 8000.
-  pythonServerUrl: 'http://localhost:8100',
+  /** URL Python service Tra Cứu Files (SERVER) — dùng cho indexer (GET /index/status, /index/trigger). Port phải trùng với lúc chạy uvicorn (vd. 8000 hoặc 8100). */
+  pythonServerUrl: 'http://localhost:8000',
   /**
    * URL Python helper trên CLIENT — chỉ dùng để mở Explorer / chọn thư mục.
    * Mặc định chạy local trên mỗi máy client.
    */
   pythonClientUrl: 'http://localhost:8000',
-  // true = gọi backend /api/files/open-in-explorer (Explorer mở trên server). Dùng khi dev muốn test mở Explorer trên API server.
-  openInExplorerUseBackend: true
+  // false = gọi Python local (pythonClientUrl) → Explorer mở trên máy dev. Chạy Python service port 8000 (hoặc 8100 nếu trùng).
+  // true = gọi backend → Explorer mở trên server.
+  openInExplorerUseBackend: false
 };
 

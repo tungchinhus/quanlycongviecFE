@@ -1,0 +1,68 @@
+<h2 mat-dialog-title>Import Hồ Sơ Thầu từ Excel</h2>
+<mat-dialog-content>
+  <p class="hint">
+    Dòng đầu tiên trong sheet là tiêu đề cột (VD: Số HST, Đơn vị mời thầu, Số TBMT IB, Ngày nhận, ...).
+    Chọn file và sheet rồi bấm Import.
+  </p>
+
+  <input
+    #fileInput
+    type="file"
+    accept=".xlsx,.xls"
+    class="file-input-hidden"
+    (change)="onFileSelected($event)" />
+
+  <div class="import-form">
+    <div class="field-row">
+      <button type="button" mat-stroked-button (click)="triggerFileInput()">
+        <mat-icon>folder_open</mat-icon>
+        Chọn file Excel
+      </button>
+      @if (selectedFile) {
+        <span class="file-name">{{ selectedFile.name }}</span>
+      }
+    </div>
+
+    @if (sheetNames.length > 0) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Chọn sheet</mat-label>
+        <mat-select [value]="selectedSheetName" (selectionChange)="selectedSheetName = $event.value; onSheetChange()">
+          @for (name of sheetNames; track name) {
+            <mat-option [value]="name">{{ name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (previewRowCount > 0) {
+        <p class="preview-info">
+          Số dòng dữ liệu (ước tính): <strong>{{ previewRowCount }}</strong>
+        </p>
+      }
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">
+    <mat-icon>close</mat-icon>
+    Hủy
+  </button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="import()"
+    [disabled]="!canImport">
+    @if (isImporting) {
+      <ng-container>
+        <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+        Đang import...
+      </ng-container>
+    } @else {
+      <ng-container>
+        <mat-icon>upload</mat-icon>
+        Import
+      </ng-container>
+    }
+  </button>
+</mat-dialog-actions>
+

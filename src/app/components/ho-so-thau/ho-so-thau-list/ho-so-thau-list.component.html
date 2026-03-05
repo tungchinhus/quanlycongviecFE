@@ -4,8 +4,17 @@
     <h1>Quản Lý Hồ Sơ Thầu</h1>
   </div>
 
-  <!-- Search, Refresh and Add Bar -->
+  <!-- Year dropdown, Search and Add Bar -->
   <div class="search-bar">
+    <mat-form-field appearance="outline" class="year-field">
+      <mat-label>Năm (theo Số HST)</mat-label>
+      <mat-select [value]="selectedYear()" (selectionChange)="onYearChange($event.value)">
+        <mat-option [value]="2026">2026</mat-option>
+        <mat-option [value]="2025">2025</mat-option>
+        <mat-option [value]="2024">2024</mat-option>
+        <mat-option [value]="2023">2023</mat-option>
+      </mat-select>
+    </mat-form-field>
     <mat-form-field appearance="outline" class="search-field">
       <mat-label>Tìm kiếm</mat-label>
       <input
@@ -23,8 +32,9 @@
         <mat-icon>clear</mat-icon>
       </button>
     </mat-form-field>
-    <button mat-icon-button (click)="loadData()" [disabled]="isLoading()" matTooltip="Làm mới">
-      <mat-icon>refresh</mat-icon>
+    <button mat-raised-button color="accent" (click)="openImport()" [disabled]="isLoading()">
+      <mat-icon>upload</mat-icon>
+      Import Excel
     </button>
     <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
       <mat-icon>add</mat-icon>

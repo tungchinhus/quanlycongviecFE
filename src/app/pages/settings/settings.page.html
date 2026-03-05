@@ -188,7 +188,10 @@
                   }
                 </div>
               } @else if (isAdmin()) {
-                <p class="indexer-status-hint">Không kết nối được service tìm file (port 8000). Kiểm tra Python service đã chạy.</p>
+                <p class="indexer-status-hint">
+                  Không kết nối được service tìm file tại <strong>{{ indexerServiceUrl }}</strong>.
+                  Khởi động Python service: máy local → chạy <code>C:\python-service\start-service.bat</code>; nếu URL là server (vd. 172.20.115.40) → chạy service trên máy server đó (port 8000).
+                </p>
               }
             </mat-card-content>
           </mat-card>

@@ -39,6 +39,11 @@ export class TraCuuFilesService {
     return env.pythonServerUrl ?? env.pythonServiceUrl ?? 'http://localhost:8000';
   }
 
+  /** URL đang dùng cho Indexer (GET /index/status, /index/trigger). Để hiển thị trong UI khi lỗi kết nối. */
+  getIndexerBaseUrl(): string {
+    return this.serverBaseUrl;
+  }
+
   /** Python helper trên CLIENT: mở Explorer / chọn folder. */
   private get clientBaseUrl(): string {
     const env = environment as { pythonClientUrl?: string };

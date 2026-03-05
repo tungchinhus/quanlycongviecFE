@@ -32,6 +32,10 @@
         <mat-icon>clear</mat-icon>
       </button>
     </mat-form-field>
+    <button mat-raised-button color="accent" (click)="openImport()" [disabled]="isLoading()">
+      <mat-icon>upload</mat-icon>
+      Import Excel
+    </button>
     <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
       <mat-icon>add</mat-icon>
       Thêm mới

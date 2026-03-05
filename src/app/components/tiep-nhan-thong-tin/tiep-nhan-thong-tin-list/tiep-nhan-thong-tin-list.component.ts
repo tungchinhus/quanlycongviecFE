@@ -46,6 +46,8 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
   readonly searchTerm = signal('');
   /** Phân loại: '' = Tất cả, hoặc Xuất Khẩu | DVKH | VPMB | Đơn Hàng */
   readonly phanLoaiFilter = signal<string>('');
+  /** Năm lọc theo Ngày nhận (2023–2026) */
+  readonly selectedYear = signal<number>(Math.min(2026, Math.max(2023, new Date().getFullYear())));
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Danh sách đầy đủ từ API (trước khi lọc phân loại) */
   private allData: TiepNhanThongTin[] = [];
@@ -90,7 +92,7 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
     this.service.getAll(search).subscribe({
       next: (list) => {
         this.allData = list;
-        this.applyPhanLoaiFilter();
+        this.applyFilters();
         this.isLoading.set(false);
         // Paginator nằm trong @if, cần chờ view render xong rồi mới gán
         setTimeout(() => {
@@ -124,7 +126,7 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
 
   onPhanLoaiChange(value: string): void {
     this.phanLoaiFilter.set(value ?? '');
-    this.applyPhanLoaiFilter();
+    this.applyFilters();
     setTimeout(() => {
       if (this.paginator) {
         this.dataSource.paginator = this.paginator;
@@ -133,13 +135,64 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
     }, 0);
   }
 
-  /** Áp dụng lọc phân loại từ allData vào dataSource */
-  private applyPhanLoaiFilter(): void {
-    const filter = this.phanLoaiFilter().trim();
-    const filtered = !filter
-      ? this.allData
-      : this.allData.filter((item) => (item.phanLoai ?? '').trim() === filter);
+  /** Áp dụng lọc phân loại + năm và sort theo Ngày nhận (mới nhất lên trên) */
+  private applyFilters(): void {
+    const phanLoai = this.phanLoaiFilter().trim();
+    const year = this.selectedYear();
+
+    let filtered = this.allData;
+
+    if (phanLoai) {
+      filtered = filtered.filter((item) => (item.phanLoai ?? '').trim() === phanLoai);
+    }
+
+    filtered = filtered.filter((item) => {
+      if (!item.ngayNhan) return false;
+      const y = Number(item.ngayNhan.slice(0, 4));
+      return !Number.isNaN(y) && y === year;
+    });
+
+    // Sort theo Ngày nhận DESC (gần nhất lên trên). Nếu không có ngày thì xuống cuối.
+    const toTime = (value: string | null | undefined): number => {
+      if (!value) return 0;
+      const d = new Date(value);
+      const t = d.getTime();
+      if (!Number.isNaN(t)) return t;
+      // Fallback cho định dạng dd/MM/yyyy nếu có
+      const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) {
+        const [, day, month, yearStr] = m;
+        const d2 = new Date(
+          Number(yearStr),
+          Number(month) - 1,
+          Number(day)
+        );
+        const t2 = d2.getTime();
+        return Number.isNaN(t2) ? 0 : t2;
+      }
+      return 0;
+    };
+
+    filtered = [...filtered].sort((a, b) => {
+      const tb = toTime(b.ngayNhan);
+      const ta = toTime(a.ngayNhan);
+      if (tb !== ta) return tb - ta;
+      // fallback: sort theo Id desc nếu cùng ngày / không có ngày
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
+
     this.dataSource.data = filtered;
+  }
+
+  onYearChange(year: number): void {
+    this.selectedYear.set(year);
+    this.applyFilters();
+    setTimeout(() => {
+      if (this.paginator) {
+        this.dataSource.paginator = this.paginator;
+        this.paginator.firstPage();
+      }
+    }, 0);
   }
 
   ngOnDestroy(): void {
