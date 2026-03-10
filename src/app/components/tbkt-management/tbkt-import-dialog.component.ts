@@ -195,8 +195,9 @@ export class TBKTImportDialogComponent {
       const standardCode = cellStr(record['standardCode']);
       const drawingDateIso = excelDateToISO(record['drawingDate']);
       const notes = cellStr(record['notes']);
-      // Người đề nghị: ghép 2 cột KS Điện, KS Cơ, ngăn cách dấu phẩy
-      const proposerText = [ksDien, ksCo].filter(v => v && v.trim().length > 0).join(', ');
+      // Người đề nghị: lưu 2 cột riêng KS Điện, KS Cơ (DB: requesterElectrical, requesterMechanical)
+      const requesterElectrical = ksDien && ksDien.trim().length > 0 ? ksDien.trim() : undefined;
+      const requesterMechanical = ksCo && ksCo.trim().length > 0 ? ksCo.trim() : undefined;
 
       if (!tbktId) continue;
 
@@ -207,7 +208,8 @@ export class TBKTImportDialogComponent {
         voltageSpec: voltageSpec || undefined,
         salesOrder: salesOrder || undefined,
         standardCode: standardCode || undefined,
-        proposer: proposerText || undefined,
+        requesterElectrical,
+        requesterMechanical,
         drawingDate: drawingDateIso || undefined,
         notes: notes || undefined
       };
@@ -411,7 +413,8 @@ export class TBKTImportDialogComponent {
             voltageSpec: toInsert[index].voltageSpec,
             salesOrder: toInsert[index].salesOrder,
             standardCode: toInsert[index].standardCode,
-            proposer: toInsert[index].proposer ?? undefined,
+            requesterElectrical: toInsert[index].requesterElectrical ?? undefined,
+            requesterMechanical: toInsert[index].requesterMechanical ?? undefined,
             drawingDate: toInsert[index].drawingDate,
             notes: toInsert[index].notes
           };

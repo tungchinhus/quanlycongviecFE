@@ -83,9 +83,26 @@
   text-align: left;
 }
 
+.menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 .tbkt-table td {
   padding: 12px 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.tbkt-table td:last-child {
+  text-align: right;
+}
+
+.menu-cell-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tbkt-table tr:nth-child(even) {

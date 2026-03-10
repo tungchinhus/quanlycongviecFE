@@ -15,6 +15,7 @@ import { DD_MM_YYYY_FORMAT, CustomDateAdapter } from '../../config/date-format.c
 import { MatSelectModule } from '@angular/material/select';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AssignmentService } from '../../services/assignment.service';
 import { TechnicalSheet } from '../../models/machine-assignment.model';
@@ -42,6 +43,7 @@ import { UserRole } from '../../constants/enums';
     MatSelectModule,
     MatDialogModule,
     MatMenuModule,
+    MatCheckboxModule,
     MatSnackBarModule
   ],
   providers: [
@@ -64,18 +66,85 @@ export class TBKTManagementComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly searchTerm = signal<string>('');
-  
-  readonly displayedColumns: string[] = [
+
+  private readonly columnsStorageKey = 'tbkt-management.visible-columns.v1';
+  readonly columnOptions: ReadonlyArray<{ id: string; label: string; togglable: boolean }> = [
+    { id: 'tbkt_ID', label: 'TBKT', togglable: false },
+    { id: 'phase', label: 'Số pha', togglable: true },
+    { id: 'power_kVA', label: 'Công suất', togglable: true },
+    { id: 'voltageSpec', label: 'Điện áp', togglable: true },
+    { id: 'salesOrder', label: 'SO (Nếu có)', togglable: true },
+    { id: 'standardCode', label: 'Tiêu chuẩn', togglable: true },
+    { id: 'requesterElectrical', label: 'KS Điện', togglable: true },
+    { id: 'requesterMechanical', label: 'KS Cơ', togglable: true },
+    { id: 'drawingDate', label: 'Ngày giao', togglable: true },
+    { id: 'actions', label: 'Menu', togglable: false }
+  ] as const;
+
+  readonly visibleColumnIds = signal<string[]>([
     'tbkt_ID',
     'phase',
     'power_kVA',
     'voltageSpec',
+    'salesOrder',
+    'standardCode',
+    'requesterElectrical',
+    'requesterMechanical',
     'drawingDate',
     'actions'
-  ];
+  ]);
+
+  displayedColumns(): string[] {
+    // đảm bảo luôn có TBKT và actions
+    const set = new Set(this.visibleColumnIds());
+    set.add('tbkt_ID');
+    set.add('actions');
+    // giữ thứ tự theo columnOptions
+    return this.columnOptions.map(c => c.id).filter(id => set.has(id));
+  }
 
   ngOnInit(): void {
+    this.loadVisibleColumnsFromStorage();
     this.loadTBKTData();
+  }
+
+  private loadVisibleColumnsFromStorage(): void {
+    try {
+      const raw = localStorage.getItem(this.columnsStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const allowed = new Set(this.columnOptions.map(c => c.id));
+      const ids = parsed.map(v => String(v)).filter(id => allowed.has(id));
+      if (ids.length > 0) this.visibleColumnIds.set(ids);
+    } catch {
+      // ignore
+    }
+  }
+
+  private saveVisibleColumnsToStorage(): void {
+    try {
+      localStorage.setItem(this.columnsStorageKey, JSON.stringify(this.visibleColumnIds()));
+    } catch {
+      // ignore
+    }
+  }
+
+  isColumnVisible(id: string): boolean {
+    return this.visibleColumnIds().includes(id);
+  }
+
+  toggleColumn(id: string, checked: boolean): void {
+    const option = this.columnOptions.find(c => c.id === id);
+    if (!option || !option.togglable) return;
+    const current = new Set(this.visibleColumnIds());
+    if (checked) current.add(id);
+    else current.delete(id);
+    // hard rules
+    current.add('tbkt_ID');
+    current.add('actions');
+    this.visibleColumnIds.set(Array.from(current));
+    this.saveVisibleColumnsToStorage();
   }
 
   loadTBKTData(): void {
@@ -86,8 +155,16 @@ export class TBKTManagementComponent implements OnInit {
     // Backend sẽ không tự động filter theo FirebaseUID khi không truyền tham số này
     this.assignmentService.getAllTechnicalSheets(undefined).subscribe({
       next: (sheets) => {
-        // Sort by TBKT_ID
-        const sorted = sheets.sort((a, b) => {
+        // Sort by ngày giao (drawingDate) mới nhất lên trên, không có ngày thì xuống cuối; cùng ngày thì sort theo TBKT_ID
+        const sorted = [...sheets].sort((a, b) => {
+          const toTime = (d: Date | string | undefined): number => {
+            if (d == null || d === '') return 0;
+            const t = typeof d === 'string' ? new Date(d).getTime() : (d instanceof Date ? d.getTime() : 0);
+            return isNaN(t) ? 0 : t;
+          };
+          const ta = toTime(a.drawingDate);
+          const tb = toTime(b.drawingDate);
+          if (ta !== tb) return tb - ta; // descending: mới nhất trước
           const aId = String(a.tbkt_ID || '');
           const bId = String(b.tbkt_ID || '');
           return aId.localeCompare(bId);
@@ -264,6 +341,10 @@ export class TBKTManagementComponent implements OnInit {
       const phase = String(sheet.phase || '').toLowerCase();
       const power = String(sheet.power_kVA || '').toLowerCase();
       const voltage = String(sheet.voltageSpec || '').toLowerCase();
+      const so = String(sheet.salesOrder || '').toLowerCase();
+      const std = String(sheet.standardCode || '').toLowerCase();
+      const reqElec = sheet.requesterElectrical ? String(sheet.requesterElectrical).toLowerCase() : '';
+      const reqMech = sheet.requesterMechanical ? String(sheet.requesterMechanical).toLowerCase() : '';
       const proposer = sheet.proposer ? String(sheet.proposer).toLowerCase() : '';
       const notes = String(sheet.notes || '').toLowerCase();
       
@@ -271,6 +352,10 @@ export class TBKTManagementComponent implements OnInit {
              phase.includes(search) ||
              power.includes(search) ||
              voltage.includes(search) ||
+             so.includes(search) ||
+             std.includes(search) ||
+             reqElec.includes(search) ||
+             reqMech.includes(search) ||
              proposer.includes(search) ||
              notes.includes(search);
     });
@@ -382,9 +467,13 @@ export class TBKTManagementComponent implements OnInit {
         </div>
 
         <div class="form-row">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Người đề nghị (KS thiết kế)</mat-label>
-            <input matInput formControlName="proposerText" placeholder="Nhập tên người đề nghị, ví dụ: D.Thanh; Dũng">
+          <mat-form-field appearance="outline">
+            <mat-label>KS Điện (Người đề nghị)</mat-label>
+            <input matInput formControlName="requesterElectrical" placeholder="Ví dụ: D.Thanh, Thành" maxlength="100">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>KS Cơ (Người đề nghị)</mat-label>
+            <input matInput formControlName="requesterMechanical" placeholder="Ví dụ: Dũng, Tuấn" maxlength="100">
           </mat-form-field>
         </div>
 
@@ -489,7 +578,14 @@ export class TBKTFormDialogComponent implements AfterViewInit {
     const tbktNumber = tbktIdStr.replace(/[^0-9]/g, ''); // Extract only numbers
     const tbktLetter = tbktIdStr.replace(/[^A-Za-z]/g, '').toUpperCase(); // Extract only letters and uppercase
 
-    const existingProposerText: string = sheet.proposer ? String(sheet.proposer) : '';
+    // KS Điện / KS Cơ: ưu tiên 2 cột; nếu trống mà có proposer cũ (chuỗi nối dấu phẩy) thì tách ra
+    let reqElec = sheet.requesterElectrical ? String(sheet.requesterElectrical).trim() : '';
+    let reqMech = sheet.requesterMechanical ? String(sheet.requesterMechanical).trim() : '';
+    if (!reqElec && !reqMech && sheet.proposer) {
+      const parts = String(sheet.proposer).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (parts.length >= 1) reqElec = parts[0];
+      if (parts.length >= 2) reqMech = parts[1];
+    }
 
     this.tbktForm = this.fb.group({
       tbktNumber: [tbktNumber, [Validators.required, Validators.pattern(/^[0-9]*$/)]],
@@ -501,7 +597,8 @@ export class TBKTFormDialogComponent implements AfterViewInit {
       standardCode: [sheet.standardCode || '', Validators.maxLength(100)],
       drawingDate: [sheet.drawingDate ? new Date(sheet.drawingDate) : null],
       notes: [sheet.notes || ''],
-      proposerText: [existingProposerText]
+      requesterElectrical: [reqElec, Validators.maxLength(100)],
+      requesterMechanical: [reqMech, Validators.maxLength(100)]
     });
 
     // Load next TBKT ID suggestion only when adding new (not editing)
@@ -623,11 +720,11 @@ export class TBKTFormDialogComponent implements AfterViewInit {
       standardCode?: string;
       drawingDate?: Date | null;
       notes?: string;
-      proposerText?: string | null;
+      requesterElectrical?: string | null;
+      requesterMechanical?: string | null;
     };
-    const proposerValue = formValue.proposerText && formValue.proposerText.trim().length > 0
-      ? formValue.proposerText.trim()
-      : undefined;
+    const requesterElectrical = formValue.requesterElectrical?.trim() || undefined;
+    const requesterMechanical = formValue.requesterMechanical?.trim() || undefined;
 
     // Combine number and letter parts to form tbkt_ID
     const tbktNumber = String(formValue.tbktNumber || '').trim();
@@ -641,7 +738,8 @@ export class TBKTFormDialogComponent implements AfterViewInit {
       voltageSpec: formValue.voltageSpec || undefined,
       salesOrder: formValue.salesOrder || undefined,
       standardCode: formValue.standardCode || undefined,
-      proposer: proposerValue,
+      requesterElectrical,
+      requesterMechanical,
       drawingDate: formValue.drawingDate ? this.formatLocalDate(formValue.drawingDate) : undefined,
       // archivedDate will be set automatically by backend when creating new (not when editing)
       archivedDate: this.isEditMode ? undefined : this.formatLocalDate(new Date()),
