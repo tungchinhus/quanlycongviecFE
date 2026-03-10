@@ -23,8 +23,9 @@
         <mat-icon>clear</mat-icon>
       </button>
     </mat-form-field>
-    <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Làm mới">
-      <mat-icon>refresh</mat-icon>
+    <button mat-raised-button color="accent" (click)="openImportDialog()" [disabled]="loading()">
+      <mat-icon>upload</mat-icon>
+      Import Excel
     </button>
     <button mat-raised-button color="primary" (click)="openAddDialog()" [disabled]="loading()">
       <mat-icon>add</mat-icon>

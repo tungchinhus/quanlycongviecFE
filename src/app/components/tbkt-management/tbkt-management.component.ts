@@ -19,6 +19,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AssignmentService } from '../../services/assignment.service';
 import { TechnicalSheet } from '../../models/machine-assignment.model';
 import { AuthUser, AuthService } from '../../services/auth.service';
+import { TBKTImportDialogComponent } from './tbkt-import-dialog.component';
 import { UserRole } from '../../constants/enums';
 
 @Component({
@@ -81,19 +82,9 @@ export class TBKTManagementComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    // Nếu là Admin/Manager, không truyền firebaseUID để xem tất cả
-    // Nếu không phải Admin/Manager, truyền firebaseUID để chỉ xem của mình
-    const currentUser = this.authService.user();
-    const isAdminOrManager = this.authService.hasAnyRole([
-      UserRole.Administrator, 
-      'Administrator', 
-      'Admin',
-      UserRole.Manager,
-      'Manager'
-    ]);
-    const firebaseUID = isAdminOrManager ? undefined : currentUser?.firebaseUid;
-
-    this.assignmentService.getAllTechnicalSheets(firebaseUID).subscribe({
+    // Cho phép tất cả user (đã có quyền vào page) xem toàn bộ danh sách TBKT
+    // Backend sẽ không tự động filter theo FirebaseUID khi không truyền tham số này
+    this.assignmentService.getAllTechnicalSheets(undefined).subscribe({
       next: (sheets) => {
         // Sort by TBKT_ID
         const sorted = sheets.sort((a, b) => {
@@ -239,6 +230,21 @@ export class TBKTManagementComponent implements OnInit {
     this.loadTBKTData();
   }
 
+  openImportDialog(): void {
+    const dialogRef = this.dialog.open(TBKTImportDialogComponent, {
+      width: '520px',
+      minWidth: '320px',
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((ok) => {
+      if (ok) {
+        this.searchTerm.set('');
+        this.loadTBKTData();
+      }
+    });
+  }
+
   onSearchChange(value: string): void {
     this.searchTerm.set(value);
     this.applyFilter();
@@ -377,6 +383,13 @@ export class TBKTManagementComponent implements OnInit {
 
         <div class="form-row">
           <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Người đề nghị (KS thiết kế)</mat-label>
+            <input matInput formControlName="proposerText" placeholder="Nhập tên người đề nghị, ví dụ: D.Thanh; Dũng">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
             <mat-label>GHI CHÚ</mat-label>
             <textarea matInput formControlName="notes" rows="3" placeholder="Nhập ghi chú"></textarea>
           </mat-form-field>
@@ -476,6 +489,8 @@ export class TBKTFormDialogComponent implements AfterViewInit {
     const tbktNumber = tbktIdStr.replace(/[^0-9]/g, ''); // Extract only numbers
     const tbktLetter = tbktIdStr.replace(/[^A-Za-z]/g, '').toUpperCase(); // Extract only letters and uppercase
 
+    const existingProposerText: string = sheet.proposer ? String(sheet.proposer) : '';
+
     this.tbktForm = this.fb.group({
       tbktNumber: [tbktNumber, [Validators.required, Validators.pattern(/^[0-9]*$/)]],
       tbktLetter: [tbktLetter, [Validators.required, Validators.pattern(/^[A-Za-z]*$/)]],
@@ -485,7 +500,8 @@ export class TBKTFormDialogComponent implements AfterViewInit {
       salesOrder: [sheet.salesOrder || '', Validators.maxLength(100)],
       standardCode: [sheet.standardCode || '', Validators.maxLength(100)],
       drawingDate: [sheet.drawingDate ? new Date(sheet.drawingDate) : null],
-      notes: [sheet.notes || '']
+      notes: [sheet.notes || ''],
+      proposerText: [existingProposerText]
     });
 
     // Load next TBKT ID suggestion only when adding new (not editing)
@@ -597,10 +613,21 @@ export class TBKTFormDialogComponent implements AfterViewInit {
     }
 
     this.saving.set(true);
-    const formValue = this.tbktForm.value;
-
-    // Proposer is always the current logged-in user's FirebaseUID (as string)
-    const proposerFirebaseUID = this.currentUser?.firebaseUid;
+    const formValue = this.tbktForm.value as {
+      tbktNumber: string;
+      tbktLetter: string;
+      phase?: string;
+      power_kVA?: number | null;
+      voltageSpec?: string;
+      salesOrder?: string;
+      standardCode?: string;
+      drawingDate?: Date | null;
+      notes?: string;
+      proposerText?: string | null;
+    };
+    const proposerValue = formValue.proposerText && formValue.proposerText.trim().length > 0
+      ? formValue.proposerText.trim()
+      : undefined;
 
     // Combine number and letter parts to form tbkt_ID
     const tbktNumber = String(formValue.tbktNumber || '').trim();
@@ -614,90 +641,125 @@ export class TBKTFormDialogComponent implements AfterViewInit {
       voltageSpec: formValue.voltageSpec || undefined,
       salesOrder: formValue.salesOrder || undefined,
       standardCode: formValue.standardCode || undefined,
-      proposer: proposerFirebaseUID, // Store FirebaseUID as string
+      proposer: proposerValue,
       drawingDate: formValue.drawingDate ? this.formatLocalDate(formValue.drawingDate) : undefined,
       // archivedDate will be set automatically by backend when creating new (not when editing)
       archivedDate: this.isEditMode ? undefined : this.formatLocalDate(new Date()),
       notes: formValue.notes || undefined
     };
 
-    const operation = this.isEditMode
-      ? this.assignmentService.updateTechnicalSheet(sheetData.tbkt_ID!, sheetData)
-      : this.assignmentService.createTechnicalSheet(sheetData);
+    const performSave = () => {
+      const operation = this.isEditMode
+        ? this.assignmentService.updateTechnicalSheet(sheetData.tbkt_ID!, sheetData)
+        : this.assignmentService.createTechnicalSheet(sheetData);
 
-    operation.subscribe({
-      next: (result) => {
-        this.snackBar.open(
-          this.isEditMode ? 'Cập nhật đề nghị TBKT thành công!' : 'Thêm đề nghị TBKT thành công!',
-          'Đóng',
-          {
-            duration: 2000,
+      operation.subscribe({
+        next: () => {
+          this.snackBar.open(
+            this.isEditMode ? 'Cập nhật đề nghị TBKT thành công!' : 'Thêm đề nghị TBKT thành công!',
+            'Đóng',
+            {
+              duration: 2000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['success-snackbar']
+            }
+          );
+          setTimeout(() => {
+            this.dialogRef.close(true);
+          }, 100);
+        },
+        error: (err) => {
+          console.error('Error saving TBKT:', err);
+          let errorMessage = this.isEditMode 
+            ? 'Không thể cập nhật đề nghị TBKT. ' 
+            : 'Không thể thêm đề nghị TBKT. ';
+          
+          const errorMsg = err.error?.message || '';
+          const isDuplicateError = err.status === 409 || 
+                                   errorMsg.toLowerCase().includes('already exists') ||
+                                   errorMsg.toLowerCase().includes('đã tồn tại');
+          
+          if (err.status === 400) {
+            errorMessage += errorMsg || 'Dữ liệu không hợp lệ.';
+          } else if (isDuplicateError) {
+            errorMessage += 'Số TBKT đã tồn tại.';
+            
+            const tbktNumberControl = this.tbktForm.get('tbktNumber');
+            const tbktLetterControl = this.tbktForm.get('tbktLetter');
+            
+            if (tbktNumberControl) {
+              const currentErrors = tbktNumberControl.errors || {};
+              tbktNumberControl.setErrors({ ...currentErrors, duplicate: true });
+              tbktNumberControl.markAsTouched();
+            }
+            
+            if (tbktLetterControl) {
+              const currentErrors = tbktLetterControl.errors || {};
+              tbktLetterControl.setErrors({ ...currentErrors, duplicate: true });
+              tbktLetterControl.markAsTouched();
+            }
+            
+            setTimeout(() => {
+              if (this.tbktNumberInput?.nativeElement) {
+                this.tbktNumberInput.nativeElement.focus();
+                this.tbktNumberInput.nativeElement.select();
+              }
+            }, 100);
+          } else if (errorMsg) {
+            errorMessage += errorMsg;
+          } else {
+            errorMessage += 'Vui lòng thử lại sau.';
+          }
+          
+          this.snackBar.open(errorMessage, 'Đóng', {
+            duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'top',
-            panelClass: ['success-snackbar']
-          }
-        );
-        // Close dialog after showing success message
-        setTimeout(() => {
-          this.dialogRef.close(true);
-        }, 100);
-      },
-      error: (err) => {
-        console.error('Error saving TBKT:', err);
-        let errorMessage = this.isEditMode 
-          ? 'Không thể cập nhật đề nghị TBKT. ' 
-          : 'Không thể thêm đề nghị TBKT. ';
-        
-        const errorMsg = err.error?.message || '';
-        const isDuplicateError = err.status === 409 || 
-                                 errorMsg.toLowerCase().includes('already exists') ||
-                                 errorMsg.toLowerCase().includes('đã tồn tại');
-        
-        if (err.status === 400) {
-          errorMessage += errorMsg || 'Dữ liệu không hợp lệ.';
-        } else if (isDuplicateError) {
-          errorMessage += 'Số TBKT đã tồn tại.';
-          
-          // Set error on both TBKT number and letter fields
+            panelClass: ['error-snackbar']
+          });
+          this.saving.set(false);
+        }
+      });
+    };
+
+    if (this.isEditMode) {
+      performSave();
+    } else {
+      // Kiểm tra trùng TBKT trước khi tạo mới
+      this.assignmentService.getTechnicalSheet(combinedTbktId).subscribe({
+        next: () => {
+          // Đã tồn tại → đánh dấu lỗi và không lưu
           const tbktNumberControl = this.tbktForm.get('tbktNumber');
           const tbktLetterControl = this.tbktForm.get('tbktLetter');
-          
           if (tbktNumberControl) {
-            // Preserve existing errors and add duplicate error
             const currentErrors = tbktNumberControl.errors || {};
             tbktNumberControl.setErrors({ ...currentErrors, duplicate: true });
             tbktNumberControl.markAsTouched();
           }
-          
           if (tbktLetterControl) {
-            // Preserve existing errors and add duplicate error
             const currentErrors = tbktLetterControl.errors || {};
             tbktLetterControl.setErrors({ ...currentErrors, duplicate: true });
             tbktLetterControl.markAsTouched();
           }
-          
-          // Focus on TBKT number input field (first field)
-          setTimeout(() => {
-            if (this.tbktNumberInput?.nativeElement) {
-              this.tbktNumberInput.nativeElement.focus();
-              this.tbktNumberInput.nativeElement.select();
-            }
-          }, 100);
-        } else if (errorMsg) {
-          errorMessage += errorMsg;
-        } else {
-          errorMessage += 'Vui lòng thử lại sau.';
+          this.snackBar.open('TBKT này đã tồn tại. Vui lòng nhập số hoặc chữ cái khác.', 'Đóng', {
+            duration: 4000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+          this.saving.set(false);
+        },
+        error: (err) => {
+          // Nếu 404 thì chưa có, cho phép lưu; các lỗi khác vẫn để backend handle
+          if (err.status === 404) {
+            performSave();
+          } else {
+            performSave();
+          }
         }
-        
-        this.snackBar.open(errorMessage, 'Đóng', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar']
-        });
-        this.saving.set(false);
-      }
-    });
+      });
+    }
   }
 
   onCancel(): void {
