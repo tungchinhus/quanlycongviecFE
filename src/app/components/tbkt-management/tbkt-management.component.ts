@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject, Inject, ViewChild, ElementRef, After
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -43,6 +44,7 @@ import { UserRole } from '../../constants/enums';
     MatSelectModule,
     MatDialogModule,
     MatMenuModule,
+    MatPaginatorModule,
     MatCheckboxModule,
     MatSnackBarModule
   ],
@@ -66,6 +68,10 @@ export class TBKTManagementComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly searchTerm = signal<string>('');
+
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
+  readonly pageSizeOptions = [10, 25, 50];
 
   private readonly columnsStorageKey = 'tbkt-management.visible-columns.v1';
   readonly columnOptions: ReadonlyArray<{ id: string; label: string; togglable: boolean }> = [
@@ -106,6 +112,14 @@ export class TBKTManagementComponent implements OnInit {
   ngOnInit(): void {
     this.loadVisibleColumnsFromStorage();
     this.loadTBKTData();
+  }
+
+  pagedList(): TechnicalSheet[] {
+    const list = this.filteredList();
+    const size = this.pageSize();
+    const index = this.pageIndex();
+    const start = index * size;
+    return list.slice(start, start + size);
   }
 
   private loadVisibleColumnsFromStorage(): void {
@@ -333,6 +347,7 @@ export class TBKTManagementComponent implements OnInit {
     
     if (!search) {
       this.filteredList.set(list);
+      this.pageIndex.set(0);
       return;
     }
 
@@ -361,6 +376,11 @@ export class TBKTManagementComponent implements OnInit {
     });
     
     this.filteredList.set(filtered);
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 }
 

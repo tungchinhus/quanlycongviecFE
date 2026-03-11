@@ -6,8 +6,14 @@
         <button mat-icon-button 
                 (click)="sidenavService.toggleCollapse()" 
                 class="menu-toggle-btn"
-                [matTooltip]="sidenavService.isCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">
-          <mat-icon>{{ sidenavService.isCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
+                [matTooltip]="sidenavService.mode() === 'over' 
+                  ? (sidenavService.isOpen() ? 'Ẩn menu' : 'Hiện menu') 
+                  : (sidenavService.isCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu')">
+          <mat-icon>
+            {{ sidenavService.mode() === 'over'
+                ? (sidenavService.isOpen() ? 'menu_open' : 'menu')
+                : (sidenavService.isCollapsed() ? 'menu_open' : 'menu') }}
+          </mat-icon>
         </button>
         <div class="project-info">
           <span class="project-name">Thibidi</span>

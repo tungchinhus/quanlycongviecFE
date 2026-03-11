@@ -53,6 +53,12 @@ export class SidenavService {
   }
 
   toggleCollapse(): void {
+    // Trên màn hình nhỏ (chế độ 'over') ưu tiên mở/đóng hẳn menu
+    if (this._mode() === 'over') {
+      this.toggle();
+      return;
+    }
+    // Trên màn hình lớn chỉ thu gọn/mở rộng chiều rộng
     this._isCollapsed.set(!this._isCollapsed());
   }
 

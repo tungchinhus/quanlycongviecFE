@@ -55,7 +55,7 @@
   @if (filteredList().length > 0 && !loading() && !error()) {
     <mat-card class="tbkt-table-card">
       <div class="table-wrapper">
-        <table mat-table [dataSource]="filteredList()" class="tbkt-table">
+        <table mat-table [dataSource]="pagedList()" class="tbkt-table">
           <!-- SỐ TBKT TỰ ĐỘNG Column -->
           <ng-container matColumnDef="tbkt_ID">
             <th mat-header-cell *matHeaderCellDef class="tbkt-id-header">TBKT</th>
@@ -114,7 +114,6 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>
               <div class="menu-header">
-                <span>Menu</span>
                 <button mat-icon-button [matMenuTriggerFor]="columnsMenu" [disabled]="loading()" matTooltip="Hiển thị/ẩn cột">
                   <mat-icon>view_column</mat-icon>
                 </button>
@@ -154,6 +153,13 @@
           <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
         </table>
       </div>
+      <mat-paginator
+        [length]="filteredList().length"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="pageSizeOptions"
+        (page)="onPageChange($event)">
+      </mat-paginator>
     </mat-card>
   }
 
