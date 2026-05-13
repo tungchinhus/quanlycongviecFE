@@ -48,3 +48,22 @@ html, body {
 .cdk-overlay-pane:has(.mat-mdc-datepicker-content) {
   z-index: 1100 !important;
 }
+
+/* Dialog báo cáo tuần: một thanh cuộn (vùng bảng), không cuộn cả khung dialog */
+.bao-cao-tuan-form-dialog-panel .mat-mdc-dialog-container {
+  max-height: 92vh;
+}
+.bao-cao-tuan-form-dialog-panel .mat-mdc-dialog-surface {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  overflow: hidden;
+}
+.bao-cao-tuan-form-dialog-panel app-bao-cao-tuan-form-dialog {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}

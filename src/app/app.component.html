@@ -213,7 +213,7 @@
               <span class="nav-text" [class.hidden]="sidenavService.isCollapsed()">Thiết Kế - Kiểm Soát</span>
             </a>
           }
-          @if (canViewPage('/excel-reader')) {
+          @if (canViewPage('/excel-reader') || canViewPage('/tra-cuu-files')) {
             @if (!sidenavService.isCollapsed()) {
               <button type="button"
                       class="nav-item nav-parent"
@@ -335,6 +335,59 @@
                   <button mat-menu-item (click)="navigateToNghiepVu('/may-sua-chua')">
                     <mat-icon>build</mat-icon>
                     <span>Máy Sửa Chữa</span>
+                  </button>
+                }
+              </mat-menu>
+            }
+          }
+          @if (canViewBaoCaoTuanMenu()) {
+            @if (!sidenavService.isCollapsed()) {
+              <button type="button"
+                      class="nav-item nav-parent"
+                      [class.active]="isBaoCaoTuanActive()"
+                      (click)="toggleBaoCaoTuan()">
+                <div class="nav-icon">
+                  <mat-icon>event_note</mat-icon>
+                </div>
+                <span class="nav-text">Báo cáo tuần</span>
+                <mat-icon class="nav-chevron">{{ baoCaoTuanExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              @if (baoCaoTuanExpanded()) {
+                @if (canViewPage('/bao-cao-tuan')) {
+                  <a href="#" role="button" class="nav-item nav-sub-item" [class.active]="isRouteExact('/bao-cao-tuan')"
+                     (click)="navigateToBaoCaoTuan('/bao-cao-tuan'); $event.preventDefault()">
+                    <div class="nav-icon"><mat-icon>description</mat-icon></div>
+                    <span class="nav-text">Báo cáo tuần cá nhân</span>
+                  </a>
+                }
+                @if (canViewBaoCaoTuanAdmin()) {
+                  <a href="#" role="button" class="nav-item nav-sub-item" [class.active]="isRouteExact('/bao-cao-tuan-admin')"
+                     (click)="navigateToBaoCaoTuan('/bao-cao-tuan-admin'); $event.preventDefault()">
+                    <div class="nav-icon"><mat-icon>assessment</mat-icon></div>
+                    <span class="nav-text">QL báo cáo tuần (toàn NV)</span>
+                  </a>
+                }
+              }
+            } @else {
+              <button type="button"
+                      class="nav-item"
+                      [matMenuTriggerFor]="baoCaoTuanMenu"
+                      [class.active]="isBaoCaoTuanActive()"
+                      [matTooltip]="'Báo cáo tuần'"
+                      matTooltipPosition="right">
+                <div class="nav-icon"><mat-icon>event_note</mat-icon></div>
+              </button>
+              <mat-menu #baoCaoTuanMenu="matMenu" class="bao-cao-tuan-submenu">
+                @if (canViewPage('/bao-cao-tuan')) {
+                  <button mat-menu-item (click)="navigateToBaoCaoTuan('/bao-cao-tuan')">
+                    <mat-icon>description</mat-icon>
+                    <span>Báo cáo tuần cá nhân</span>
+                  </button>
+                }
+                @if (canViewBaoCaoTuanAdmin()) {
+                  <button mat-menu-item (click)="navigateToBaoCaoTuan('/bao-cao-tuan-admin')">
+                    <mat-icon>assessment</mat-icon>
+                    <span>QL báo cáo tuần (toàn NV)</span>
                   </button>
                 }
               </mat-menu>

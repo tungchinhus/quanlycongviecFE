@@ -1,0 +1,146 @@
+.bcc-admin-wrap {
+  padding: 24px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.page-header h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.sub {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+}
+
+.toolbar-card {
+  margin: 16px 0;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.field-sm {
+  width: 120px;
+}
+
+.field-month {
+  min-width: 200px;
+  width: 220px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+.loading-box,
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-card mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.table-card {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.excel-like-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.excel-like-table th,
+.excel-like-table td {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.excel-like-table thead th {
+  background: #1976d2;
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.col-stt {
+  min-width: 44px;
+  text-align: center;
+}
+
+.col-dm1 {
+  min-width: 190px;
+}
+
+.col-dm2 {
+  min-width: 230px;
+}
+
+.col-user {
+  min-width: 72px;
+  text-align: center;
+}
+
+.value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tô màu các hàng tiêu đề khối (STT 1,2,3,4...) */
+.block-header-row td {
+  background: #eaf3ff;
+  font-weight: 600;
+}
+
+.stt-header {
+  color: #0d47a1;
+}
+
+/* Merge giả cột Danh mục 1: dòng không có text sẽ nhìn như ô gộp theo cụm */
+.dm1-merged {
+  color: transparent;
+  border-top-color: transparent !important;
+}
+
+.footer-note {
+  margin: 12px 8px 4px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+@media (max-width: 720px) {
+  .toolbar-row .spacer {
+    display: none;
+  }
+}

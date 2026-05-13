@@ -39,9 +39,13 @@ export class TraCuuFilesComponent implements OnInit {
   readonly searchTerm = signal<string>('');
   readonly useAi = signal<boolean>(false);
   readonly loading = signal<boolean>(false);
+  readonly loadingMessage = signal<string>('Đang tìm kiếm (backend)…');
   readonly pickingFolder = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly searchResults = signal<TraCuuFilesSearchResult[]>([]);
+  readonly currentIntent = signal<'file_search' | 'reasoning' | null>(null);
+  readonly aiAnswer = signal<string | null>(null);
+  readonly aiSource = signal<TraCuuFilesSearchResult | null>(null);
   readonly pageSize = signal<number>(25);
   readonly pageIndex = signal<number>(0);
 
@@ -66,6 +70,18 @@ export class TraCuuFilesComponent implements OnInit {
     private traCuuFilesService: TraCuuFilesService,
     private settingsService: SettingsService
   ) {}
+
+  private debugLog(
+    hypothesisId: string,
+    location: string,
+    message: string,
+    data: Record<string, unknown>,
+    runId = 'debug'
+  ): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7253/ingest/f756d36b-7fc7-4eca-a996-a24d8a1a5faf',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'da37a0'},body:JSON.stringify({sessionId:'da37a0',runId,hypothesisId,location,message,data,timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }
 
   ngOnInit(): void {
     this.settingsService.getIndexRoots().subscribe({
@@ -143,9 +159,72 @@ export class TraCuuFilesComponent implements OnInit {
     this.doSearch();
   }
 
+  private normalizeIntentText(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private inferIntentHint(query: string): 'auto' | 'file_search' | 'reasoning' {
+    const normalized = this.normalizeIntentText(query);
+    if (!normalized) return 'auto';
+    const hasFileCode =
+      /[a-z]{1,4}\s*\d{2,6}[a-z0-9-]*/i.test(normalized) ||
+      normalized.includes('tbkt') ||
+      normalized.includes('tskt') ||
+      normalized.includes('gdn');
+    const asksForContent =
+      normalized.includes('thong so') ||
+      normalized.includes('la gi') ||
+      normalized.includes('noi dung') ||
+      normalized.includes('chi tiet');
+    // Truy vấn có mã file + câu hỏi nội dung: ưu tiên reasoning theo ngữ cảnh file.
+    if (hasFileCode && asksForContent) {
+      return 'reasoning';
+    }
+    const fileSignals = [
+      'tbkt',
+      'tskt',
+      'gdn',
+      'pdf',
+      'duong dan',
+      'mo file',
+      'tim file',
+      'tai lieu'
+    ];
+    if (
+      fileSignals.some((k) => normalized.includes(k)) ||
+      hasFileCode ||
+      /\.(pdf|docx?|xlsx?|pptx?|dwg)\b/i.test(normalized)
+    ) {
+      return 'file_search';
+    }
+    const reasoningSignals = [
+      'tinh toan',
+      'so sanh',
+      'phan tich',
+      'vi sao',
+      'de xuat',
+      'tong hop',
+      'uoc luong',
+      'du doan'
+    ];
+    if (
+      reasoningSignals.some((k) => normalized.includes(k)) ||
+      /\d+\s*[\+\-\*\/]\s*\d+/i.test(normalized)
+    ) {
+      return 'reasoning';
+    }
+    return 'auto';
+  }
+
   /** Thông báo lỗi dễ hiểu khi gọi Python service thất bại. */
-  private getErrorMessage(err: unknown): string {
+  private getErrorMessage(err: unknown, useAi = false): string {
     if (err && typeof err === 'object' && 'name' in err && err.name === 'TimeoutError') {
+      if (useAi) {
+        return 'Hết thời gian chờ ở Chế độ AI. Kiểm tra API backend, Ollama (11434), Qdrant (6333). Lần gọi đầu có thể chậm do model embedding vừa khởi động.';
+      }
       return 'Hết thời gian chờ khi gọi API backend. Vui lòng kiểm tra server backend có đang chạy không.';
     }
     if (err instanceof HttpErrorResponse) {
@@ -153,7 +232,7 @@ export class TraCuuFilesComponent implements OnInit {
         return 'Không kết nối được API backend. Kiểm tra kết nối mạng hoặc server backend.';
       }
       if (err.status === 404) {
-        return 'API backend không có endpoint /settings/search-file-index. Kiểm tra lại cấu hình backend.';
+        return 'API backend không có endpoint tìm kiếm (GET /api/files/search). Kiểm tra lại cấu hình backend.';
       }
       const msg = err.error?.error ?? err.error?.message ?? err.message;
       if (msg) return String(msg);
@@ -189,7 +268,7 @@ export class TraCuuFilesComponent implements OnInit {
         }
       },
       error: () => {
-        this.error.set('Không mở được Explorer. Nếu dùng backend: kiểm tra API server. Nếu dùng Python: chạy service từ C:\\python-service (port 8000).');
+        this.error.set('Không mở được Explorer. Nếu dùng backend: kiểm tra API server. Nếu dùng Python: chạy service từ C:\\python-service (port mặc định 8001).');
       },
     });
   }
@@ -229,7 +308,9 @@ export class TraCuuFilesComponent implements OnInit {
   doSearch(): void {
     const path = this.folderPath().trim();
     const query = this.searchTerm().trim();
-    if (!path) {
+    const intentHint = this.useAi() ? this.inferIntentHint(query) : 'file_search';
+    const needsFolder = !this.useAi() || intentHint !== 'reasoning';
+    if (!path && needsFolder) {
       this.error.set('Vui lòng chọn hoặc nhập đường dẫn folder.');
       return;
     }
@@ -238,14 +319,79 @@ export class TraCuuFilesComponent implements OnInit {
       return;
     }
     this.error.set(null);
+    this.currentIntent.set(null);
+    this.aiAnswer.set(null);
+    this.aiSource.set(null);
+    if (!this.useAi()) {
+      this.loadingMessage.set('Đang tìm kiếm file trong index…');
+    } else if (intentHint === 'reasoning') {
+      this.loadingMessage.set('Đang phân tích ngữ cảnh bằng OpenClaw AI…');
+    } else {
+      this.loadingMessage.set('Đang truy vấn AI search (OpenClaw + Qdrant)…');
+    }
     this.loading.set(true);
-    this.traCuuFilesService.search(path, query, this.useAi()).subscribe({
+    // #region agent log
+    this.debugLog('H1', 'tra-cuu-files.component.ts:doSearch:before-api', 'Search triggered', {
+      useAi: this.useAi(),
+      query,
+      folderPath: path,
+      intentHint
+    }, 'run-before-fix');
+    // #endregion
+    this.traCuuFilesService.search(path, query, this.useAi(), intentHint).subscribe({
       next: (res: TraCuuFilesApiResponse) => {
         this.loading.set(false);
+        this.loadingMessage.set('Đang tìm kiếm (backend)…');
+        this.currentIntent.set((res.intent as 'file_search' | 'reasoning' | undefined) ?? 'file_search');
+        this.aiAnswer.set((res.aiAnswer as string | undefined) ?? null);
+        if (Array.isArray(res.results) && res.results.length > 0) {
+          this.aiSource.set(res.results[0]);
+        } else {
+          this.aiSource.set(null);
+        }
+        // #region agent log
+        this.debugLog('H2', 'tra-cuu-files.component.ts:doSearch:api-response', 'Raw API response summary', {
+          useAi: this.useAi(),
+          usedSemantic: (res['usedSemantic'] as boolean | undefined) ?? null,
+          usedIndex: (res['usedIndex'] as boolean | undefined) ?? null,
+          candidatesCount: (res['candidatesCount'] as number | undefined) ?? null,
+          intent: res.intent ?? 'file_search',
+          aiAnswerPreview: typeof res.aiAnswer === 'string' ? res.aiAnswer.slice(0, 220) : null,
+          aiAnswerLength: typeof res.aiAnswer === 'string' ? res.aiAnswer.length : 0,
+          resultCount: Array.isArray(res.results) ? res.results.length : 0,
+          top3: Array.isArray(res.results)
+            ? res.results.slice(0, 3).map((x) => ({
+                name: x.name ?? null,
+                path: x.path ?? null,
+                fullPath: x.fullPath ?? null,
+                score: (x['score'] as number | undefined) ?? null,
+                snippetPrefix: typeof x['snippet'] === 'string' ? (x['snippet'] as string).slice(0, 120) : null
+              }))
+            : []
+        }, 'run-before-fix');
+        // #endregion
         const errMsg = res['error'] as string | undefined;
         if (errMsg) {
           this.error.set(errMsg);
           this.searchResults.set([]);
+          // #region agent log
+          this.debugLog('H3', 'tra-cuu-files.component.ts:doSearch:error-msg', 'API returned error field', {
+            errMsg,
+            intent: this.currentIntent()
+          }, 'run-before-fix');
+          // #endregion
+          return;
+        }
+        if (this.currentIntent() === 'reasoning') {
+          this.searchResults.set([]);
+          this.pageIndex.set(0);
+          // #region agent log
+          this.debugLog('H4', 'tra-cuu-files.component.ts:doSearch:reasoning-branch', 'Reasoning branch rendered', {
+            aiAnswerPreview: (this.aiAnswer() ?? '').slice(0, 220),
+            aiSourceName: this.aiSource()?.name ?? null,
+            aiSourcePath: this.aiSource()?.fullPath ?? this.aiSource()?.path ?? null
+          }, 'run-before-fix');
+          // #endregion
           return;
         }
         const baseFolder = path;
@@ -268,11 +414,20 @@ export class TraCuuFilesComponent implements OnInit {
         }
         this.searchResults.set(list);
         this.pageIndex.set(0); // Reset về trang đầu khi có kết quả mới
+        // #region agent log
+        this.debugLog('H5', 'tra-cuu-files.component.ts:doSearch:file-search-branch', 'File-search branch rendered', {
+          listCount: list.length,
+          firstName: list[0]?.name ?? null,
+          firstPath: list[0]?.path ?? null
+        }, 'run-before-fix');
+        // #endregion
       },
       error: (err: unknown) => {
         this.loading.set(false);
+        this.loadingMessage.set('Đang tìm kiếm (backend)…');
         this.searchResults.set([]);
-        this.error.set(this.getErrorMessage(err));
+        this.aiSource.set(null);
+        this.error.set(this.getErrorMessage(err, this.useAi()));
       }
     });
   }

@@ -1,0 +1,5 @@
+{"sessionId": "30d23f", "location": "main.py:_run_index_and_update_status", "message": "entry", "data": {}, "timestamp": 1773279337741, "hypothesisId": "H5"}
+{"sessionId": "30d23f", "location": "indexer.py:get_roots", "message": "roots_parsed", "data": {"raw_len": 37, "count": 1, "paths": ["M:\\P. Thiet Ke\\LUU TRU DU LIEU (THAO)"]}, "timestamp": 1773279337752, "hypothesisId": "H1"}
+{"sessionId": "30d23f", "location": "indexer.py:index_full", "message": "conn_str_check", "data": {"has_conn_str": true, "len": 117}, "timestamp": 1773279337753, "hypothesisId": "H4"}
+{"sessionId": "30d23f", "location": "main.py:_resolve_network_drive", "message": "WNetGetConnectionW first call", "data": {"local_name": "M:", "result": 234, "size": 35}, "timestamp": 1773279337825, "hypothesisId": "H2"}
+{"sessionId": "30d23f", "location": "main.py:_resolve_network_drive", "message": "return UNC path", "data": {"unc_root": "\\\\fsrv.thibidi.com\\M\\Data\\THIBIDI", "rest": "P. Thiet Ke\\LUU TRU DU LIEU (THAO)", "unc_path": "\\\\fsrv.thibidi.com\\M\\Data\\THIBIDI\\P. Thiet Ke\\LUU TRU DU LIEU (THAO)", "exists": true}, "timestamp": 1773279337839, "hypothesisId": "H2,H4"}

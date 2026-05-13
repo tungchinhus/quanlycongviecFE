@@ -21,6 +21,8 @@ export interface TraCuuFilesSearchResult {
 export interface TraCuuFilesApiResponse {
   files?: string[];
   results?: TraCuuFilesSearchResult[];
+  aiAnswer?: string;
+  intent?: 'file_search' | 'reasoning';
   /** Số bản ghi trong index theo folder (trước khi lọc từ khóa). Để gợi ý khi results rỗng. */
   candidatesCount?: number;
   [key: string]: unknown;
@@ -36,7 +38,7 @@ export class TraCuuFilesService {
   /** Python service trên SERVER: chỉ còn dùng cho indexer. */
   private get serverBaseUrl(): string {
     const env = environment as { pythonServerUrl?: string; pythonServiceUrl?: string };
-    return env.pythonServerUrl ?? env.pythonServiceUrl ?? 'http://localhost:8000';
+    return env.pythonServerUrl ?? env.pythonServiceUrl ?? 'http://localhost:8100';
   }
 
   /** URL đang dùng cho Indexer (GET /index/status, /index/trigger). Để hiển thị trong UI khi lỗi kết nối. */
@@ -47,7 +49,7 @@ export class TraCuuFilesService {
   /** Python helper trên CLIENT: mở Explorer / chọn folder. */
   private get clientBaseUrl(): string {
     const env = environment as { pythonClientUrl?: string };
-    return env.pythonClientUrl ?? 'http://localhost:8000';
+    return env.pythonClientUrl ?? 'http://localhost:8100';
   }
 
   /** Endpoint mở Explorer: dùng backend khi openInExplorerUseBackend (Explorer mở trên server). */
@@ -62,6 +64,7 @@ export class TraCuuFilesService {
   constructor(private http: HttpClient) {}
 
   private readonly requestTimeoutMs = 30000;
+  private readonly aiRequestTimeoutMs = 120000;
   /** Giới hạn số kết quả search giống Python (mặc định 500). */
   private readonly maxResults = 500;
 
@@ -186,13 +189,24 @@ export class TraCuuFilesService {
    * Gọi API backend (ASP.NET) tìm kiếm file theo index SQL Server (FilesController.SearchFiles).
    * Backend đã implement logic bỏ dấu, synonym, match giống Python qua FileSearchKeywordHelper.
    */
-  search(folderPath: string, query: string, useAi = false): Observable<TraCuuFilesApiResponse> {
-    const params = new HttpParams()
+  search(
+    folderPath: string,
+    query: string,
+    useAi = false,
+    intentHint: 'auto' | 'file_search' | 'reasoning' = 'auto'
+  ): Observable<TraCuuFilesApiResponse> {
+    let params = new HttpParams()
       .set('folderPath', folderPath)
       .set('q', query);
+    if (useAi) {
+      params = params
+        .set('semantic', 'true')
+        .set('intentHint', intentHint);
+    }
+    const timeoutMs = useAi ? this.aiRequestTimeoutMs : this.requestTimeoutMs;
     return this.http
       .get<TraCuuFilesApiResponse>(`${this.backendApiUrl}/files/search`, { params })
-      .pipe(timeout(this.requestTimeoutMs));
+      .pipe(timeout(timeoutMs));
   }
 
   /**
@@ -213,6 +227,14 @@ export class TraCuuFilesService {
     const params = new HttpParams().set('path', fullPath);
     return this.http
       .get<{ ok: boolean; error?: string }>(this.openInExplorerEndpoint, { params })
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  /** Tải file trực tiếp từ đường dẫn vật lý trên server (AI mode). */
+  downloadByPath(fullPath: string): Observable<Blob> {
+    const params = new HttpParams().set('path', fullPath);
+    return this.http
+      .get(`${this.backendApiUrl}/files/download-by-path`, { params, responseType: 'blob' })
       .pipe(timeout(this.requestTimeoutMs));
   }
 

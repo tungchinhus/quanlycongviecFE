@@ -12,11 +12,12 @@ export const environment = {
   apiUrl: 'http://172.20.115.40:8080/api', // Cập nhật URL API production của bạn
   // Python service Tra Cứu Files (SERVER) — hiện dùng cho indexer.
   // LƯU Ý: phải dùng IP/host của server, KHÔNG dùng localhost (localhost sẽ là máy người dùng).
-  pythonServiceUrl: 'http://172.20.115.40:8000',
+  pythonServiceUrl: 'http://172.20.115.40:8100',
   // Python helper trên CLIENT — mở Explorer / chọn thư mục. Chạy local trên mỗi máy user.
-  pythonClientUrl: 'http://localhost:8000',
-  // false = gọi Python service trên máy user (pythonClientUrl) → Explorer mở và focus file trên máy user. Cần chạy Python service (C:\python-service, port 8000) trên mỗi máy.
+  pythonClientUrl: 'http://localhost:8100',
+  // false = gọi Python service trên máy user (pythonClientUrl) → Explorer mở và focus file trên máy user. Cần chạy Python service (C:\python-service, port mặc định 8100) trên mỗi máy.
   // true = gọi backend /api/files/open-in-explorer → Explorer mở trên SERVER (chỉ dùng khi mở app ngay trên server, VD RDP).
-  openInExplorerUseBackend: false
+  openInExplorerUseBackend: false,
+  // (Các key MSAL/Graph cho OneDrive đã bị gỡ khỏi project khi bỏ `onedrive-search`)
 };
 

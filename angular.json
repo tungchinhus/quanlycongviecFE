@@ -21,7 +21,8 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "allowedCommonJsDependencies": [
-              "xlsx-js-style"
+              "xlsx-js-style",
+              "xlsx"
             ],
             "assets": [
               {

@@ -1,0 +1,92 @@
+<div class="bao-cao-tuan-container">
+  <div class="page-header">
+    <h1>Báo cáo công tác tuần</h1>
+    <button mat-raised-button color="primary" (click)="openAdd()" [disabled]="isLoading()">
+      <mat-icon>add</mat-icon>
+      Thêm tuần mới
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="filter-date-field">
+      <mat-label>Từ ngày (cập nhật)</mat-label>
+      <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterTuNgayDate" name="filterTuNgayDate" />
+      <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+      <mat-datepicker #fromPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-date-field">
+      <mat-label>Đến ngày (cập nhật)</mat-label>
+      <input matInput [matDatepicker]="toPicker" [(ngModel)]="filterDenNgayDate" name="filterDenNgayDate" />
+      <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+      <mat-datepicker #toPicker></mat-datepicker>
+    </mat-form-field>
+
+    <button mat-stroked-button type="button" color="primary" (click)="applyDateFilter()" [disabled]="isLoading()">
+      <mat-icon>filter_list</mat-icon>
+      Lọc
+    </button>
+    <button mat-button type="button" (click)="clearDateFilter()" [disabled]="isLoading() || !hasDateFilter()">
+      Xóa lọc
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Đang tải danh sách...</p>
+    </div>
+  }
+
+  @if (!isLoading() && reports().length > 0) {
+    <mat-card class="table-card">
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="pagedList()" class="data-table">
+          <ng-container matColumnDef="tuanBaoCao">
+            <th mat-header-cell *matHeaderCellDef>Tuần báo cáo</th>
+            <td mat-cell *matCellDef="let row" class="col-tuan">{{ row.tuanBaoCao }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="updatedAt">
+            <th mat-header-cell *matHeaderCellDef>Cập nhật</th>
+            <td mat-cell *matCellDef="let row">{{ formatDate(row.updatedAt || row.createdAt) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Thao tác</th>
+            <td mat-cell *matCellDef="let row" class="actions">
+              <button mat-icon-button color="primary" (click)="openEdit(row)" matTooltip="Sửa">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Xóa">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+      <mat-paginator
+        [length]="reports().length"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="pageSizeOptions"
+        [showFirstLastButtons]="true"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+    </mat-card>
+  }
+
+  @if (!isLoading() && reports().length === 0) {
+    <div class="empty-container">
+      <mat-icon>inbox</mat-icon>
+      @if (hasDateFilter()) {
+        <p>Không có báo cáo trong khoảng ngày đã chọn.</p>
+      } @else {
+        <p>Chưa có báo cáo tuần cho tài khoản hiện tại.</p>
+      }
+    </div>
+  }
+</div>

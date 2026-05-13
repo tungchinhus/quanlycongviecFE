@@ -1,0 +1,108 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<mat-dialog-content class="bcc-dialog-content">
+  @if (isLoading) {
+    <div class="loading-wrap">
+      <mat-spinner diameter="38"></mat-spinner>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  } @else {
+    <div class="bcc-form-loaded">
+    <div class="meta-readonly meta-readonly-tuan" aria-label="Tuần báo cáo">
+      <div class="meta-readonly-row meta-readonly-row-full">
+        <span class="meta-label">Tuần báo cáo</span>
+        <span class="meta-value">{{ displayTuanBaoCao }}</span>
+      </div>
+    </div>
+
+    <div class="accordion-wrap">
+      <mat-accordion multi>
+        @for (m of majorBlocks; track m.start; let gi = $index) {
+          <mat-expansion-panel class="major-panel" [expanded]="gi === 0">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="major-header">
+                @if (rows[m.start].stt != null) {
+                  <span class="stt-badge">{{ rows[m.start].stt }}</span>
+                }
+                <span class="major-title-label">{{ displayLabel(rows[m.start].danhMuc1) }}</span>
+              </mat-panel-title>
+              <mat-panel-description class="major-meta">
+                @if (innerRowCount(m) > 0) {
+                  {{ innerRowCount(m) }} dòng chi tiết
+                } @else {
+                  Chỉ tiêu đề
+                }
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="panel-body">
+              @if (innerRowCount(m) === 0) {
+                <p class="hint-empty">Khối này chỉ có một dòng tiêu đề (danh mục cố định theo mẫu).</p>
+              } @else {
+                <div class="panel-columns-head subgrid-cols">
+                  <div class="col-dm2">Danh mục 2</div>
+                  <div>Kết quả thực hiện</div>
+                  <div class="col-small">Tổng SL</div>
+                  <div>Vướng mắc</div>
+                  <div>Đề xuất</div>
+                </div>
+
+                @for (sub of subsectionsForMajor(m); track sub.start; let sn = $index) {
+                  <section class="subsection">
+                    <div class="subsection-head">
+                      <span class="subsection-num">{{ sn + 1 }})</span>
+                      <span class="subsection-title-label">{{ displayLabel(rows[sub.start].danhMuc1) }}</span>
+                      <span class="subsection-colon" aria-hidden="true">:</span>
+                    </div>
+                    <div class="subsection-rows">
+                      @for (i of rowIndicesInGroup(sub); track i) {
+                        <div class="subgrid-row subgrid-cols leaf-row">
+                          <div class="cell col-dm2">
+                            <span class="dm2-label">{{ displayLabel(rows[i].danhMuc2) }}</span>
+                          </div>
+                          <div class="cell">
+                            <textarea [(ngModel)]="rows[i].ketQua" [name]="'kq_' + i" rows="3"></textarea>
+                          </div>
+                          <div class="cell col-small">
+                            <input
+                              type="text"
+                              class="tong-so-input"
+                              inputmode="numeric"
+                              autocomplete="off"
+                              [ngModel]="rows[i].tongSo"
+                              (ngModelChange)="onTongSoChange(i, $event)"
+                              [name]="'ts_' + i"
+                              maxlength="18"
+                            />
+                          </div>
+                          <div class="cell">
+                            <textarea [(ngModel)]="rows[i].vuongMac" [name]="'vm_' + i" rows="2"></textarea>
+                          </div>
+                          <div class="cell">
+                            <textarea [(ngModel)]="rows[i].deXuat" [name]="'dx_' + i" rows="2"></textarea>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </section>
+                }
+              }
+            </div>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    </div>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Hủy</button>
+  <button mat-raised-button color="primary" (click)="save()" [disabled]="isSaving || isLoading">
+    @if (isSaving) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      <mat-icon>save</mat-icon>
+    }
+    Lưu
+  </button>
+</mat-dialog-actions>

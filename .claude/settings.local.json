@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd E:/openclaw/openclaw/src && find . -maxdepth 1 -type d | head -30)",
+      "Read(//e/openclaw/openclaw/src/**)",
+      "Bash(cd E:/openclaw && find openclaw/src/agents -maxdepth 1 -type f -name \"*.ts\" | wc -l && find openclaw/src/chat -maxdepth 1 -type f -name \"*.ts\" | wc -l)",
+      "Read(//e/openclaw/**)"
+    ]
+  }
+}

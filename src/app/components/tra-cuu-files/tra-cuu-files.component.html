@@ -36,7 +36,7 @@
             class="ai-mode-btn"
             [class.ai-mode-on]="useAi()"
             (click)="useAi.set(!useAi())"
-            matTooltip="Bật để AI chuyển câu tự nhiên thành từ khóa (Gemini/OpenAI).">
+            matTooltip="Bật để tìm theo nghĩa (Ollama embedding + Qdrant trên server). Tắt: tìm theo tên file trong index SQL.">
             Chế độ AI
           </button>
           @if (searchTerm()) {
@@ -83,11 +83,30 @@
       @if (loading()) {
         <div class="loading-row">
           <mat-spinner diameter="40"></mat-spinner>
-          <span>Đang gọi Python với path đã chọn...</span>
+          <div class="loading-text">
+            <span>{{ loadingMessage() }}</span>
+            @if (useAi()) {
+              <small>Truy vấn AI có thể mất thêm vài giây, đặc biệt với câu hỏi suy luận.</small>
+            }
+          </div>
         </div>
       }
 
-      @if (!loading() && searchResults().length > 0) {
+      @if (!loading() && currentIntent() === 'reasoning' && aiAnswer()) {
+        <div class="ai-answer-box">
+          <p class="ai-answer-title">Trả lời AI</p>
+          <p class="ai-answer-content">{{ aiAnswer() }}</p>
+          @if (aiSource()) {
+            <div class="ai-source-box">
+              <p class="ai-source-title">Nguồn tham chiếu</p>
+              <p class="ai-source-item"><strong>File:</strong> {{ aiSource()?.name ?? '—' }}</p>
+              <p class="ai-source-item"><strong>Đường dẫn:</strong> {{ aiSource()?.fullPath ?? aiSource()?.path ?? '—' }}</p>
+            </div>
+          }
+        </div>
+      }
+
+      @if (!loading() && currentIntent() !== 'reasoning' && searchResults().length > 0) {
         <div class="results-info">
           <span>Tìm thấy <strong>{{ searchResults().length }}</strong> file</span>
         </div>
@@ -141,10 +160,21 @@
         </div>
       }
 
-      @if (!loading() && folderPath() && searchResults().length === 0 && !error()) {
+      @if (!loading() && currentIntent() === 'reasoning' && !aiAnswer() && !error()) {
+        <div class="empty-state">
+          <mat-icon>smart_toy</mat-icon>
+          <p>Chưa có nội dung suy luận để hiển thị. Hãy thử đặt câu hỏi rõ hơn hoặc gửi lại yêu cầu.</p>
+        </div>
+      }
+
+      @if (!loading() && currentIntent() !== 'reasoning' && folderPath() && searchResults().length === 0 && !error()) {
         <div class="empty-state">
           <mat-icon>search</mat-icon>
-          <p>Đã chọn path. Nhập từ khóa và bấm <strong>Tìm</strong> (hoặc Enter) để gọi Python với path vừa chọn.</p>
+          @if (useAi()) {
+            <p>Chưa tìm thấy tài liệu phù hợp trong dữ liệu đã index. Hãy nhập rõ mã TBKT (vd: 24050F-2000kVA) để tăng độ chính xác.</p>
+          } @else {
+            <p>Đã chọn path. Nhập từ khóa và bấm <strong>Tìm</strong> (hoặc Enter). Bật <strong>Chế độ AI</strong> để tìm theo nghĩa qua Qdrant (cần Ollama + Qdrant trên server).</p>
+          }
         </div>
       }
     </mat-card-content>

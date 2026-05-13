@@ -61,6 +61,7 @@ export class AppComponent implements OnInit, OnDestroy {
   currentYear = new Date().getFullYear();
   readonly traCuuExpanded = signal<boolean>(false);
   readonly nghiepVuExpanded = signal<boolean>(false);
+  readonly baoCaoTuanExpanded = signal<boolean>(false);
   readonly unreadNotificationCount = signal<number>(0);
   readonly showNotificationBadge = signal<boolean>(false);
   readonly notifications = signal<Notification[]>([]);
@@ -85,6 +86,8 @@ export class AppComponent implements OnInit, OnDestroy {
     '/tiep-nhan-thong-tin': '/tiep-nhan-thong-tin',
     '/ho-so-thau': '/ho-so-thau',
     '/may-sua-chua': '/may-sua-chua',
+    '/bao-cao-tuan': '/bao-cao-tuan',
+    '/bao-cao-tuan-admin': '/bao-cao-tuan-admin',
     '/users': '/users',
     '/roles': '/roles',
     '/page-permissions': '/page-permissions',
@@ -114,6 +117,9 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       if (url.includes('/tiep-nhan-thong-tin') || url.includes('/ho-so-thau') || url.includes('/may-sua-chua')) {
         this.nghiepVuExpanded.set(true);
+      }
+      if (url.includes('/bao-cao-tuan')) {
+        this.baoCaoTuanExpanded.set(true);
       }
       this.cdr.detectChanges();
     });
@@ -167,6 +173,9 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.router.url.includes('/tiep-nhan-thong-tin') || this.router.url.includes('/ho-so-thau') || this.router.url.includes('/may-sua-chua')) {
       this.nghiepVuExpanded.set(true);
+    }
+    if (this.router.url.includes('/bao-cao-tuan')) {
+      this.baoCaoTuanExpanded.set(true);
     }
     // Load notification preference and unread count if already authenticated
     if (this.isAuthenticated) {
@@ -266,13 +275,34 @@ export class AppComponent implements OnInit, OnDestroy {
     this.router.navigate([route]);
   }
 
+  isBaoCaoTuanActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/bao-cao-tuan');
+  }
+
+  toggleBaoCaoTuan(): void {
+    this.baoCaoTuanExpanded.update(v => !v);
+  }
+
+  navigateToBaoCaoTuan(route: string): void {
+    this.router.navigate([route]);
+  }
+
   /** Dùng cho [class.active] khi sub-item dùng (click) thay vì routerLink */
   isRouteActive(route: string): boolean {
     return this.router.url.includes(route);
   }
 
+  isRouteExact(route: string): boolean {
+    return this.router.url === route;
+  }
+
   canViewNghiepVu(): boolean {
     return this.canViewPage('/tiep-nhan-thong-tin') || this.canViewPage('/ho-so-thau') || this.canViewPage('/may-sua-chua');
+  }
+
+  canViewBaoCaoTuanMenu(): boolean {
+    return this.canViewPage('/bao-cao-tuan') || this.canViewBaoCaoTuanAdmin();
   }
 
   ngOnDestroy() {
@@ -473,6 +503,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
   hasManagerRole(): boolean {
     return this.authService.hasAnyRole([UserRole.Manager, 'ManagerL1', 'ManagerL2', 'Manager']);
+  }
+
+  /** Quản lý / xuất Excel báo cáo tuần toàn nhân viên (API Admin). */
+  canViewBaoCaoTuanAdmin(): boolean {
+    return this.authService.hasAnyRole([
+      UserRole.Administrator,
+      'Administrator',
+      'Admin',
+      UserRole.Manager,
+      'Manager',
+      'ManagerL1'
+    ]);
   }
 
   handleNavClick(event: Event): void {

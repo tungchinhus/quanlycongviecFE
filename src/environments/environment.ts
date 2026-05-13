@@ -10,15 +10,18 @@ export const environment = {
     measurementId: "G-GJTTZC70Y2"
   },
   apiUrl: 'http://localhost:5000/api', // Điều chỉnh theo URL API local của bạn
-  /** URL Python service Tra Cứu Files (SERVER) — dùng cho indexer (GET /index/status, /index/trigger). Port phải trùng với lúc chạy uvicorn (vd. 8000 hoặc 8100). */
-  pythonServerUrl: 'http://localhost:8000',
+  /** URL Python service Tra Cứu Files (SERVER) — dùng cho indexer (GET /index/status, /index/trigger). Port phải trùng với PORT trong .env (mặc định 8100). */
+  pythonServerUrl: 'http://localhost:8100',
   /**
    * URL Python helper trên CLIENT — chỉ dùng để mở Explorer / chọn thư mục.
    * Mặc định chạy local trên mỗi máy client.
    */
-  pythonClientUrl: 'http://localhost:8000',
-  // false = gọi Python local (pythonClientUrl) → Explorer mở trên máy dev. Chạy Python service port 8000 (hoặc 8100 nếu trùng).
+  pythonClientUrl: 'http://localhost:8100',
+  // false = gọi Python local (pythonClientUrl) → Explorer mở trên máy dev. Chạy Python service (C:\python-service, port mặc định 8100).
   // true = gọi backend → Explorer mở trên server.
-  openInExplorerUseBackend: false
+  openInExplorerUseBackend: false,
+  /**
+   * (Các key MSAL/Graph cho OneDrive đã bị gỡ khỏi project khi bỏ `onedrive-search`)
+   */
 };
 

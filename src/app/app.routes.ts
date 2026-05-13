@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './services/auth.guard';
 import { roleGuard } from './services/role-guard';
 import { UserRole } from './constants/enums';
+import { SettingsPage } from './pages/settings/settings.page';
 
 export const routes: Routes = [
   {
@@ -80,7 +81,7 @@ export const routes: Routes = [
   },
   {
     path: 'settings',
-    loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage),
+    component: SettingsPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: [UserRole.Administrator] }
   },
@@ -129,6 +130,17 @@ export const routes: Routes = [
     path: 'may-sua-chua',
     loadComponent: () => import('./components/may-sua-chua/may-sua-chua-list/may-sua-chua-list.component').then(m => m.MaySuaChuaListComponent),
     canActivate: [authGuard]
+  },
+  {
+    path: 'bao-cao-tuan',
+    loadComponent: () => import('./components/bao-cao-tuan/bao-cao-tuan.component').then(m => m.BaoCaoTuanComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'bao-cao-tuan-admin',
+    loadComponent: () => import('./components/bao-cao-tuan/bao-cao-tuan-admin.component').then(m => m.BaoCaoTuanAdminComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { anyOf: [UserRole.Administrator, 'Administrator', 'Admin', UserRole.Manager, 'Manager', 'ManagerL1'] }
   },
   {
     path: 'personal-info',

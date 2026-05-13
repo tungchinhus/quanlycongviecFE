@@ -1,0 +1,91 @@
+<div class="bcc-admin-wrap">
+  <div class="page-header">
+    <h1>Quản lý báo cáo tuần (toàn bộ nhân viên)</h1>
+    <p class="sub">Danh sách theo tháng cập nhật (ngày lưu gần nhất). Chỉ Administrator / Manager.</p>
+  </div>
+
+  <mat-card class="toolbar-card">
+    <div class="toolbar-row">
+      <mat-form-field appearance="outline" class="field-month">
+        <mat-label>Tháng cập nhật</mat-label>
+        <input
+          matInput
+          [matDatepicker]="monthPicker"
+          [(ngModel)]="monthAnchor"
+          name="monthAnchor"
+          readonly
+          (click)="monthPicker.open()" />
+        <mat-datepicker-toggle matIconSuffix [for]="monthPicker"></mat-datepicker-toggle>
+        <mat-datepicker
+          #monthPicker
+          [startAt]="monthAnchor"
+          startView="year"
+          (monthSelected)="onMonthSelected($event, monthPicker)"
+        ></mat-datepicker>
+      </mat-form-field>
+      <span class="spacer"></span>
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        (click)="exportWeeklyExcelCurrentWeek()"
+        [disabled]="isLoading() || isExporting()"
+        matTooltip="File Excel: toàn bộ dòng chi tiết các báo cáo có ngày cập nhật trong tuần hiện tại (Thứ Hai–Chủ Nhật, giờ VN), không phụ thuộc năm/tháng đang chọn">
+        <mat-icon>table_chart</mat-icon>
+        Xuất báo cáo tuần (Excel)
+      </button>
+      <button
+        mat-stroked-button
+        color="primary"
+        type="button"
+        (click)="exportMonthlyWorkbook()"
+        [disabled]="isLoading() || isExporting()"
+        matTooltip="File mẫu BAO CAO TONG HOP (Chinh) + sheet ChiTietHeThong">
+        <mat-icon>table_chart</mat-icon>
+        Xuất báo cáo tháng (Excel)
+      </button>
+    </div>
+  </mat-card>
+
+  @if (isLoading()) {
+    <div class="loading-box">
+      <mat-spinner diameter="44"></mat-spinner>
+      <p>Đang tải...</p>
+    </div>
+  } @else if (items().length === 0) {
+    <mat-card class="empty-card">
+      <mat-icon>inbox</mat-icon>
+      <p>Không có báo cáo tuần nào có ngày cập nhật trong tháng đã chọn.</p>
+    </mat-card>
+  } @else {
+    <mat-card class="table-card">
+      <div class="table-scroll">
+        <table class="excel-like-table">
+          <thead>
+            <tr>
+              <th class="col-stt">STT</th>
+              <th class="col-dm1">Danh mục công việc</th>
+              <th class="col-dm2">Danh mục 2</th>
+              @for (c of staffColumns(); track c.columnIndex) {
+                <th class="col-user">{{ c.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of matrixRows(); track r.rowIndex) {
+              <tr [class.block-header-row]="isBlockHeaderRow(r)">
+                <td class="col-stt" [class.stt-header]="isBlockHeaderRow(r)">{{ r.stt }}</td>
+                <td class="col-dm1" [class.dm1-merged]="!hasDanhMuc1Text(r)">{{ r.danhMuc1 }}</td>
+                <td class="col-dm2">{{ r.danhMuc2 }}</td>
+                @for (c of staffColumns(); track c.columnIndex) {
+                  <td class="col-user value">{{ matrixValue(r, c) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="footer-note">Bảng tổng hợp theo bố cục hàng/cột mẫu Excel tháng.</p>
+    </mat-card>
+  }
+</div>

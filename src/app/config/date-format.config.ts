@@ -16,6 +16,19 @@ export const DD_MM_YYYY_FORMAT = {
   },
 };
 
+/** Chỉ tháng/năm trong ô (vd. 05/2026) — dùng cho datepicker chọn tháng. */
+export const MM_YYYY_FORMAT = {
+  parse: {
+    dateInput: 'MM/YYYY',
+  },
+  display: {
+    dateInput: 'MM/YYYY',
+    monthYearLabel: 'MMM YYYY',
+    dateA11yLabel: 'LL',
+    monthYearA11yLabel: 'MMMM YYYY',
+  },
+};
+
 /**
  * Custom DateAdapter that formats dates as DD/MM/YYYY
  */
@@ -41,6 +54,10 @@ export class CustomDateAdapter extends NativeDateAdapter {
       const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
                          'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
       return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    } else if (displayFormat === 'MM/YYYY') {
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      return `${this._to2digit(month)}/${year}`;
     }
     return super.format(date, displayFormat);
   }
@@ -49,9 +66,20 @@ export class CustomDateAdapter extends NativeDateAdapter {
     if (!value || value.trim() === '') {
       return null;
     }
-    
-    // Try to parse DD/MM/YYYY format
-    const dateParts = value.trim().split('/');
+
+    const trimmed = value.trim();
+    const dateParts = trimmed.split('/');
+
+    // MM/YYYY (ngày luôn là 1)
+    if (dateParts.length === 2) {
+      const month = parseInt(dateParts[0], 10) - 1;
+      const year = parseInt(dateParts[1], 10);
+      if (!isNaN(month) && !isNaN(year) && month >= 0 && month < 12 && year >= 1000 && year <= 9999) {
+        return new Date(year, month, 1);
+      }
+    }
+
+    // DD/MM/YYYY
     if (dateParts.length === 3) {
       const day = parseInt(dateParts[0], 10);
       const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed

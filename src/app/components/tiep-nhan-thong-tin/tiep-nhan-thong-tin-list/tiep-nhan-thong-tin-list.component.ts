@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
@@ -31,6 +32,7 @@ import { TiepNhanThongTinImportDialogComponent } from '../tiep-nhan-thong-tin-im
     MatFormFieldModule,
     MatInputModule,
     MatMenuModule,
+    MatCheckboxModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
@@ -51,21 +53,72 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Danh sách đầy đủ từ API (trước khi lọc phân loại) */
   private allData: TiepNhanThongTin[] = [];
-  /** Thứ tự cột: Số TNTT → Tháng/Năm → Tên (P.KD) → S (kVA) → Biến áp → Số lượng → Tiêu chuẩn → Phụ kiện → Khách hàng → Ngày nhận → Ngày giao → Ngày lưu → Menu (bỏ hiển thị Người thực hiện, Ngày hoàn thành) */
-  readonly displayedColumns = [
-    'soTNTT',
-    'thangNam',
-    'tenNVPKD',
-    'skVA',
-    'dienAp',
-    'soLuong',
-    'tieuChuan',
-    'khachHang',
-    'ngayNhan',
-    'ngayGiao',
-    'ngayLuu',
-    'actions'
-  ];
+
+  private readonly columnsStorageKey = 'tiep-nhan-thong-tin.visible-columns.v1';
+  readonly columnOptions: ReadonlyArray<{ id: string; label: string; togglable: boolean }> = [
+    { id: 'soTNTT',    label: 'Số TNTT',        togglable: false },
+    { id: 'thangNam',  label: 'Tháng/Năm',       togglable: true },
+    { id: 'tenNVPKD',  label: 'Tên (P. KD)',      togglable: true },
+    { id: 'skVA',      label: 'S (kVA)',           togglable: true },
+    { id: 'dienAp',    label: 'Biến áp',           togglable: true },
+    { id: 'soLuong',   label: 'Số lượng',          togglable: true },
+    { id: 'tieuChuan', label: 'Tiêu chuẩn',        togglable: true },
+    { id: 'khachHang', label: 'Khách hàng',        togglable: true },
+    { id: 'ngayNhan',  label: 'Ngày nhận',         togglable: true },
+    { id: 'ngayGiao',  label: 'Ngày giao P. KD',   togglable: true },
+    { id: 'ngayLuu',   label: 'Ngày lưu',          togglable: true },
+    { id: 'actions',   label: 'Menu',              togglable: false }
+  ] as const;
+
+  readonly visibleColumnIds = signal<string[]>([
+    'soTNTT', 'thangNam', 'tenNVPKD', 'skVA', 'dienAp',
+    'soLuong', 'tieuChuan', 'khachHang', 'ngayNhan', 'ngayGiao', 'ngayLuu', 'actions'
+  ]);
+
+  displayedColumns(): string[] {
+    const set = new Set(this.visibleColumnIds());
+    set.add('soTNTT');
+    set.add('actions');
+    return this.columnOptions.map(c => c.id).filter(id => set.has(id));
+  }
+
+  isColumnVisible(id: string): boolean {
+    return this.visibleColumnIds().includes(id);
+  }
+
+  toggleColumn(id: string, checked: boolean): void {
+    const option = this.columnOptions.find(c => c.id === id);
+    if (!option || !option.togglable) return;
+    const current = new Set(this.visibleColumnIds());
+    if (checked) current.add(id);
+    else current.delete(id);
+    current.add('soTNTT');
+    current.add('actions');
+    this.visibleColumnIds.set(Array.from(current));
+    this.saveVisibleColumnsToStorage();
+  }
+
+  private loadVisibleColumnsFromStorage(): void {
+    try {
+      const raw = localStorage.getItem(this.columnsStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const allowed = new Set(this.columnOptions.map(c => c.id));
+      const ids = parsed.map(v => String(v)).filter(id => allowed.has(id));
+      if (ids.length > 0) this.visibleColumnIds.set(ids);
+    } catch {
+      // ignore
+    }
+  }
+
+  private saveVisibleColumnsToStorage(): void {
+    try {
+      localStorage.setItem(this.columnsStorageKey, JSON.stringify(this.visibleColumnIds()));
+    } catch {
+      // ignore
+    }
+  }
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -76,6 +129,7 @@ export class TiepNhanThongTinListComponent implements OnInit, OnDestroy, AfterVi
   ) {}
 
   ngOnInit(): void {
+    this.loadVisibleColumnsFromStorage();
     this.loadData();
   }
 
