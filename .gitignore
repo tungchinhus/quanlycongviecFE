@@ -40,6 +40,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+*.dll
+*.cache
+.cache/
 
 # Firebase Functions
 /functions/lib
